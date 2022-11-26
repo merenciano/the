@@ -10,13 +10,6 @@ namespace the
 		int _;
 	};
 
-	struct Material
-	{
-		void SetVertexShader(const std::string& NewShader);
-		void SetFragmentShader(const std::string& NewShader);
-		std::string vert_shader;
-		std::string frag_shader;
-	};
 
 	struct Transform
 	{
