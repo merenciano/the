@@ -1,3 +1,9 @@
+cmake_minimum_required(VERSION 3.13)
+
+set(CMAKE_DEBUG_POSTFIX _d)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED True)
+
 project(The VERSION 0.1.0)
 
 set(THE_NAME the)
@@ -24,3 +30,4 @@ target_include_directories(${THE_NAME} PUBLIC
 
 add_subdirectory(src)
 add_subdirectory(extern)
+add_subdirectory(examples)

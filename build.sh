@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Config
-EXEC_PATH=./bin/the-demo
 POSTFIX=_d
 BUILD_PATH=./build
 C_COMP=clang

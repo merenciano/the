@@ -83,7 +83,7 @@ typedef struct {
 	THE_Material *mat;
 } THE_UseMaterialData;
 
-typedef union THE_CommandData {
+typedef union {
 	THE_ClearCommandData clear;
 	THE_CreateBufferCommandData createbuff;
 	THE_CreateCubemapCommandData createcubemap;
@@ -97,11 +97,12 @@ typedef union THE_CommandData {
 	THE_UseMaterialData usemat;
 } THE_CommandData;
 
-typedef struct THE_RenderCommand {
-	void (*execute)(THE_CommandData* data);
-	THE_RenderCommand* next;
+struct THE_RenderCommand {
+	void (*execute)(THE_CommandData *data);
+	struct THE_RenderCommand *next;
 	THE_CommandData data;
-} THE_RenderCommand;
+};
+typedef struct THE_RenderCommand THE_RenderCommand;
 
 void THE_ClearExecute(THE_CommandData *data);
 
