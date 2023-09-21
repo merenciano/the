@@ -26,7 +26,7 @@ void THE_Init(THE_Config *cnfg)
 
 	cnfg->init_func();
 
-	THE_ScriptingExecute("../assets/scripts/init.lua");
+	THE_ScriptingExecute("assets/scripts/init.lua");
 	THE_ChronoEnd(&init_timer);
 	tools_data.init_time_ms = THE_ChronoDurationMS(&init_timer);
 	THE_LOG("THE initialized in %f milliseconds.\n", tools_data.init_time_ms);

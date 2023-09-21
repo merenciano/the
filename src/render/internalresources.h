@@ -25,8 +25,8 @@ typedef struct {
 	int32_t cpu_version;
 	int32_t gpu_version;
 	uint32_t texture_unit;
-	uint32_t width;
-	uint32_t height;
+	int32_t width;
+	int32_t height;
 	THE_TexType type;
 } THE_InternalTexture;
 
@@ -34,8 +34,8 @@ typedef struct {
 	int32_t internal_id;
 	int32_t cpu_version;
 	int32_t gpu_version;
-	uint32_t width;
-	uint32_t height;
+	int32_t width;
+	int32_t height;
 	THE_Texture color_tex;
 	THE_Texture depth_tex;
 	uint8_t color;
@@ -50,9 +50,9 @@ extern uint16_t buffer_count;
 extern uint16_t texture_count;
 extern uint16_t framebuffer_count;
 
-int32_t IsValidBuffer(THE_Buffer buff);
-int32_t IsValidTexture(THE_Texture tex);
-int32_t IsValidFramebuffer(THE_Framebuffer fb);
+bool IsValidBuffer(THE_Buffer buff);
+bool IsValidTexture(THE_Texture tex);
+bool IsValidFramebuffer(THE_Framebuffer fb);
 
 uint32_t InitInternalMaterial(const char *shader_name);
 void UseMaterial(THE_Material *mat);

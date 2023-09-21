@@ -1,2 +1,5 @@
+.cache/
 .vscode/
 build/
+lib/
+examples/matball/imgui.ini

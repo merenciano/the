@@ -1,11 +1,10 @@
-#ifndef __THE_RENDER_MATERIAL_H__
-#define __THE_RENDER_MATERIAL_H__
+#ifndef THE_RENDER_MATERIAL_H
+#define THE_RENDER_MATERIAL_H
 
 #include "core/definitions.h"
 #include "render/renderertypes.h"
 
-typedef enum
-{
+typedef enum {
 	THE_MT_BASIC = 0,
 	THE_MT_FULL_SCREEN_IMAGE,
 	THE_MT_SKYBOX,
@@ -21,14 +20,13 @@ typedef enum
 	THE_MT_NONE
 } THE_MaterialType;
 
-typedef struct  
-{
-        float *data; 
-        THE_Texture *tex;
-        THE_MaterialType type; // Acts as a handle
-        int32_t dcount;
-        int32_t tcount;
-        int32_t cube_start;
+typedef struct {
+	float *data; 
+	THE_Texture *tex;
+	THE_MaterialType type; // Acts as a handle
+	int32_t dcount;
+	int32_t tcount;
+	int32_t cube_start;
 } THE_Material;
 
 THE_Material THE_GetNewMaterial(void);
@@ -39,8 +37,7 @@ void THE_MaterialSetFrameData(THE_Material *mat, float *data, int32_t count); //
 void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // General allocator. It will not free itself
 void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // Like above but with frame allocator
 
-typedef struct
-{
+typedef struct {
 	float model_[16];
 	struct vec3 color;
 	float use_albedo_map;
@@ -54,16 +51,14 @@ typedef struct
 	float paddingg;
 } THE_PbrData;
 
-typedef struct
-{
+typedef struct {
 	struct mat4 view_projection;
 	struct vec3 camera_position;
 	float padding;
 	struct vec4 light_direction_intensity;
 } THE_PbrSceneData;
 
-typedef struct
-{
+typedef struct {
 	float model[16];
 	struct vec3 color;
 	float roughness;
@@ -71,25 +66,21 @@ typedef struct
 	float padding[3];
 } THE_VoxMatData;
 
-typedef struct
-{
+typedef struct {
 	struct mat4 vp;
 	struct vec3 camera_position;
 	float padding;
 	struct vec4 light_direction_intensity;
 } THE_VoxMatSceneData;
 
-typedef struct
-{
+typedef struct {
 	struct mat4 vp;
 } THE_EquirecToCubeData;
 
-typedef struct
-{
+typedef struct {
 	struct mat4 vp;
 	float roughness;
 	float padding[3];
 } THE_PrefilterEnvData;
 
 #endif
-

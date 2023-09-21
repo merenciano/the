@@ -5,7 +5,7 @@
 
 #define THE_HMAP_INVALID_VALUE (void*)0xFFFFFFFFFFFFFFFF
 
-typedef struct THE_HMap THE_HMap;
+typedef struct HMap THE_HMap;
 
 THE_HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size);
 void THE_HMapInsert(THE_HMap *hm, const char *key, void *value);

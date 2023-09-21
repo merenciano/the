@@ -16,7 +16,7 @@ target_compile_definitions(${MATBALLS} PUBLIC
 	)
 
 target_link_libraries(${MATBALLS} PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}/../../extern/lib/libcimgui.so
+	${CMAKE_CURRENT_SOURCE_DIR}/../../extern/cimgui/libcimgui.so
 	the
 	GL
 	X11

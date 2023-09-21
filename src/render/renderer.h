@@ -4,14 +4,13 @@
 #include "core/definitions.h"
 #include "renderertypes.h"
 #include "material.h"
+#include "rendercommands.h"
 
 #define THE_RENDER_QUEUE_CAPACITY 12000
 #define THE_FRAME_POOL_SIZE 1048576
 #define THE_MAX_TEXTURES 63
 #define THE_MAX_BUFFERS 127
 #define THE_MAX_FRAMEBUFFERS 8
-
-typedef struct THE_RenderCommand THE_RenderCommand;
 
 typedef struct {
 	THE_RenderCommand *curr;
@@ -42,16 +41,16 @@ void THE_SetBufferData(THE_Buffer buff, void *data, uint32_t count, THE_BufferTy
 THE_BufferType THE_GetBufferType(THE_Buffer buff);
 void THE_ReleaseBuffer(THE_Buffer buff); // Marks for deletion
 void THE_FreeBufferData(THE_Buffer buff); // Frees the RAM data (not the VRAM)
-int32_t IsValidBuffer(THE_Buffer buff);
+bool IsValidBuffer(THE_Buffer buff);
 
 // Texture
 THE_Texture THE_CreateTexture(const char *path, THE_TexType t);
-THE_Texture THE_CreateEmptyTexture(uint32_t width, uint32_t height, THE_TexType t);
+THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t);
 THE_Texture THE_CreateEmptyTextureRelativeToScreen(float width, float height, THE_TexType t);
 void THE_LoadTexture(THE_Texture tex, const char *path);
 void THE_ReleaseTexture(THE_Texture tex);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
-int32_t IsValidTexture(THE_Texture tex);
+bool IsValidTexture(THE_Texture tex);
 
 // Mesh
 THE_Mesh THE_GetNewMesh(void);
@@ -63,12 +62,12 @@ void THE_ReleaseMesh(THE_Mesh mesh);
 void THE_FreeMeshData(THE_Mesh mesh); // Frees the data from Ram (not the VRAM)
 
 // Framebuffer
-THE_Framebuffer THE_CreateFramebuffer(uint32_t width, uint32_t height, bool color, bool depth);
+THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth);
 void THE_ReleaseFramebuffer(THE_Framebuffer fb);
 
 // Material
-void THE_InitMaterial(THE_MaterialType t, const char* name); // name is the name of the shader files without extensions
-void THE_UseMaterial(THE_Material* mat);
+void THE_InitMaterial(THE_MaterialType t, const char *name); // name is the name of the shader files without extensions
+void THE_UseMaterial(THE_Material *mat);
 
 #endif
 

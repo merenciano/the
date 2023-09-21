@@ -11,26 +11,24 @@
 #define HMapGetNodeSize(HM) (HMapGetHeader(HM)->node_size)
 #define HMapGetValueSize(HM) (HMapGetHeader(HM)->value_size)
 
-typedef struct HMapHeader {
+typedef struct {
 	uint32_t capacity;
 	uint32_t count;
 	uint32_t node_size;
 	uint32_t value_size;
 } HMapHeader;
 
-typedef struct HMapKey {
+typedef struct {
 	union {
 		char name[8];
 		uint64_t hash;
 	};
 } HMapKey;
 
-typedef struct THE_HMap {
+typedef struct HMap {
 	HMapKey key;
 	void *value;
 } HMap;
-
-typedef HMap THE_HMap;
 
 static inline uint32_t NextPow2(uint32_t v)
 {
@@ -56,12 +54,12 @@ static inline HMap *GetNode(HMap *hm, uint32_t offset)
 	return (HMap*)((uint8_t*)hm + HMapGetNodeSize(hm) * offset);
 }
 
-THE_HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size)
+HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size)
 {
 	assert(capacity <= (1 << 31));
 	capacity = NextPow2(capacity);
 	size_t map_size = (value_size + sizeof(HMapKey)) * capacity + sizeof(HMapHeader);
-	HMapHeader *hm = (HMapHeader*)calloc(map_size, 1);
+	HMapHeader *hm = calloc(map_size, 1);
 
 	hm->capacity = capacity;
 	hm->count = 0;

@@ -28,13 +28,16 @@ typedef struct {
 
 void THE_ClearExecute(THE_CommandData *data)
 {
-	u32 mask = 0;
-	if (data->clear.bcolor)
+	uint32_t mask = 0;
+	if (data->clear.bcolor) {
 		mask |= GL_COLOR_BUFFER_BIT;
-	if (data->clear.bdepth)
+	}
+	if (data->clear.bdepth) {
 		mask |= GL_DEPTH_BUFFER_BIT;
-	if (data->clear.bstencil)
+	}
+	if (data->clear.bstencil) {
 		mask |= GL_STENCIL_BUFFER_BIT;
+	}
 	glClearColor(data->clear.color[0], data->clear.color[1],
 		data->clear.color[2], data->clear.color[3]);
 	glClear(mask);
@@ -402,7 +405,7 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(attrib_pos);
 
-	u32 index_count = buffers[CUBE_MESH.index].count; // Implicit cast to unsigned
+	uint32_t index_count = buffers[CUBE_MESH.index].count; // Implicit cast to unsigned
 
 	glDepthFunc(GL_LEQUAL);
 	glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, 0);
@@ -642,16 +645,16 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		}
 
 		THE_PrefilterEnvData pref_data;
-		for (s32 i = 0; i < 5; ++i) {
+		for (int i = 0; i < 5; ++i) {
 			// mip size
-			s32 s = (s32)((float)ipref->width * powf(0.5f, (float)i));
+			int32_t s = (float)ipref->width * powf(0.5f, (float)i);
 			glViewport(0, 0, s, s);
-			pref_data.roughness = (float)i / 4.0f;  // mip / max mip levels - 1
+			pref_data.roughness = i / 4.0f;  // mip / max mip levels - 1
 
 			THE_CommandData draw_cd;
 			draw_cd.draw.inst_count = 1U;
 			draw_cd.draw.mesh = CUBE_MESH;
-			for (s32 j = 0; j < 6; ++j) {
+			for (int j = 0; j < 6; ++j) {
                 pref_data.vp = smat4_multiply(proj, views[j]);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 				    GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, ipref->internal_id, i);
@@ -679,7 +682,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_CommandData draw_cd;
 		draw_cd.draw.mesh = QUAD_MESH;
 		draw_cd.draw.inst_count = 1U;
-		draw_cd.draw.mat = (THE_Material*)THE_AllocateFrameResource(sizeof(THE_Material));
+		draw_cd.draw.mat = THE_AllocateFrameResource(sizeof(THE_Material));
 		draw_cd.draw.mat->type = THE_MT_LUT_GEN;
 		THE_DrawExecute(&draw_cd);
 	}
@@ -850,14 +853,14 @@ void THE_UseFramebufferExecute(THE_CommandData *data)
 
 void THE_UseMaterialExecute(THE_CommandData *data)
 {
-	GLint *tu = (GLint*)malloc(data->usemat.mat->tcount * sizeof(GLint));
-	for (s32 i = 0; i < data->usemat.mat->tcount; ++i) {
+	GLint *tu = malloc(data->usemat.mat->tcount * sizeof(GLint));
+	for (int i = 0; i < data->usemat.mat->tcount; ++i) {
 		tu[i] = data->usemat.mat->tex[i] + 1;
 	}
 
 	GLuint program = materials[data->usemat.mat->type];
 	glUseProgram(program);
-	s32 uniform_pos = glGetUniformLocation(program, "u_scene_data");
+	int32_t uniform_pos = glGetUniformLocation(program, "u_scene_data");
 	glUniform4fv(uniform_pos, data->usemat.mat->dcount / 4, data->usemat.mat->data);
 	uniform_pos = glGetUniformLocation(program, "u_scene_tex");
 	glUniform1iv(uniform_pos, data->usemat.mat->cube_start, tu);

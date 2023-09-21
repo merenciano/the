@@ -193,11 +193,11 @@ size_t THE_RenderQueueUsed()
 }
 
 // BUFFER FUNCTIONS
-s32 IsValidBuffer(THE_Buffer buff)
+bool IsValidBuffer(THE_Buffer buff)
 {
 	for (THE_AvailableNode *node = available_buffer; node != NULL; node = node->next) {
 		if (node->value == buff) {
-			return 0;
+			return false;
 		}
 	}
 	return buff < buffer_count;
@@ -280,11 +280,11 @@ static THE_Texture GetAvailableTexture()
 	return ret;
 }
 
-s32 IsValidTexture(THE_Texture tex)
+bool IsValidTexture(THE_Texture tex)
 {
 	for (THE_AvailableNode *node = available_tex; node != NULL; node = node->next) {
 		if (node->value == tex) {
-			return 0;
+			return false;
 		}
 	}
 	return tex < texture_count && tex >= 0;
@@ -295,22 +295,22 @@ THE_Texture THE_CreateTexture(const char *path, THE_TexType t)
 	THE_ASSERT(*path != '\0', "For empty textures use THE_CreateEmptyTexture");
 
 	THE_Texture ret = GetAvailableTexture();
-        strcpy(textures[ret].path, path);
-        textures[ret].pix = NULL;
+	strcpy(textures[ret].path, path);
+	textures[ret].pix = NULL;
 	textures[ret].internal_id = THE_UNINIT;
-        textures[ret].cpu_version = 1;
-        textures[ret].gpu_version = 0;
-	textures[ret].texture_unit = THE_UNINIT; // TODO: Make sure no runtime casts
-        textures[ret].width = 0;
-        textures[ret].height = 0;
-        textures[ret].type = t;
+	textures[ret].cpu_version = 1;
+	textures[ret].gpu_version = 0;
+	textures[ret].texture_unit = THE_UNINIT;
+	textures[ret].width = 0;
+	textures[ret].height = 0;
+	textures[ret].type = t;
 
 	return ret;
 }
 
-THE_Texture THE_CreateEmptyTexture(u32 width, u32 height, THE_TexType t)
+THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t)
 {
-	THE_ASSERT(width != 0 && height != 0, "Incorrect dimensions");
+	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
 
 	THE_Texture ret = GetAvailableTexture();
 	*(textures[ret].path) = '\0';
@@ -338,8 +338,8 @@ THE_Texture THE_CreateEmptyTextureRelativeToScreen(float width, float height, TH
 	textures[ret].cpu_version = 1;
 	textures[ret].gpu_version = 0;
 	textures[ret].texture_unit = THE_UNINIT;
-	textures[ret].width = (u32)((float)THE_WindowGetWidth() * width);
-	textures[ret].height = (u32)((float)THE_WindowGetHeight() * height);
+	textures[ret].width = THE_WindowGetWidth() * width;
+	textures[ret].height = THE_WindowGetHeight() * height;
 	textures[ret].type = t;
 
 	return ret;
@@ -350,51 +350,34 @@ void THE_LoadTexture(THE_Texture tex, const char *path)
 	THE_ASSERT(*path != '\0', "Invalid path");
 	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 
-        int width, height, nchannels = 0;
-        stbi_set_flip_vertically_on_load(1);
-        /*if (textures[tex].type == THE_TEX_RGB_F16 || textures[tex].type == THE_TEX_RGBA_F16 || textures[tex].type == THE_TEX_LUT) {
-		textures[tex].pix = (void*)stbi_loadf(path, &width, &height, &nchannels, 0);
-		THE_ASSERT(textures[tex].pix && "The image couldn't be loaded");
-        } else {
-		int a = 0;
-		if (textures[tex].type == THE_TEX_RGB || textures[tex].type == THE_TEX_SRGB) {
-			a = 3;
-			nchannels = 3;
-		} else if (textures[tex].type == THE_TEX_R) {
-			a = 1;
-			nchannels = 1;
-		}
-		textures[tex].pix = (void*)stbi_load(path, &width, &height, &nchannels, a);
-		THE_ASSERT(textures[tex].pix && "The image couldn't be loaded.");
-        }*/
+	int32_t width, height, nchannels = 0;
+	stbi_set_flip_vertically_on_load(1);
 
 	switch (textures[tex].type)
 	{
 	case THE_TEX_RGB_F16:
 	case THE_TEX_RGBA_F16:
 	case THE_TEX_LUT:
-		textures[tex].pix = (void*)stbi_loadf(path, &width, &height, &nchannels, 0);
+		textures[tex].pix = stbi_loadf(path, &width, &height, &nchannels, 0);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded");
 		break;
 	
 	case THE_TEX_RGB:
 	case THE_TEX_SRGB:
 		nchannels = 3;
-		textures[tex].pix = (void*)stbi_load(path, &width, &height, &nchannels, 3);
+		textures[tex].pix = stbi_load(path, &width, &height, &nchannels, 3);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
 		break;
 	
 	case THE_TEX_R:
 		nchannels = 1;
-		textures[tex].pix = (void*)stbi_load(path, &width, &height, &nchannels, 1);
+		textures[tex].pix = stbi_load(path, &width, &height, &nchannels, 1);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
 		break;
 
 	default:
 		THE_ASSERT(false, "Default case LoadTexture.");
 		return;
-		//textures[tex].pix = (void*)stbi_load(path, &width, &height, &nchannels, 0);
-		//THE_ASSERT(textures[tex].pix && "The image couldn't be loaded.");
 	}
 
 	strcpy(textures[tex].path, path);
@@ -425,9 +408,10 @@ void THE_FreeTextureData(THE_Texture tex)
 // MESH FUNCTIONS
 THE_Mesh THE_GetNewMesh()
 {
-	THE_Mesh m;
-	m.index = THE_UNINIT;
-	m.vertex = THE_UNINIT;
+	THE_Mesh m = {
+		.vertex = THE_UNINIT,
+		.index = THE_UNINIT
+	};
 	return m;
 }
 
@@ -437,8 +421,8 @@ THE_Mesh THE_CreateCubeMesh()
 	static const int32_t IDX_COUNT = 36;
 
 	THE_Mesh ret;
-	float *vert = THE_Alloc(VTX_COUNT * sizeof *vert);
-	uint32_t *ind = THE_Alloc(IDX_COUNT * sizeof *ind);
+	float *vert = THE_Alloc(VTX_COUNT * sizeof(*vert));
+	uint32_t *ind = THE_Alloc(IDX_COUNT * sizeof(*ind));
 	float vertices[] = { // TODO: Probar a inicializarlo asi en la memoria reservada para evitar la copia de despues
 		// positions          // normals           // uv 
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -472,11 +456,11 @@ THE_Mesh THE_CreateCubeMesh()
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
 	};
 
-	for (s32 i = 0; i < VTX_COUNT; ++i) {
+	for (int i = 0; i < VTX_COUNT; ++i) {
 		vert[i] = vertices[i];
 	}
 
-	u32 indices[] = {
+	uint32_t indices[] = {
 		0,  2,  1,  2,  0,  3,
 		4,  5,  6,  6,  7,  4,
 		8,  9, 10, 10, 11,  8,
@@ -485,7 +469,7 @@ THE_Mesh THE_CreateCubeMesh()
 		23, 22, 20, 22, 21, 20,
 	};
 
-	for (s32 i = 0; i < IDX_COUNT; ++i) {
+	for (int i = 0; i < IDX_COUNT; ++i) {
 		ind[i] = indices[i];
 	}
 
@@ -497,18 +481,18 @@ THE_Mesh THE_CreateCubeMesh()
 	return ret;
 }
 
-THE_Mesh THE_CreateSphereMesh(s32 x_segments, s32 y_segments)
+THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
 {
 	THE_ASSERT(x_segments > 0 && y_segments > 0, "Invalid number of segments");
 	static const float PI = 3.14159265359f;
 
 	THE_Mesh ret;
-	float *vert = THE_Alloc(((1 + x_segments) * (1 + y_segments) * 8) * sizeof *vert);
-	uint32_t *ind = THE_Alloc((x_segments * y_segments * 6) * sizeof *ind);
-	s32 i = 0;
+	float *vert = THE_Alloc(((1 + x_segments) * (1 + y_segments) * 8) * sizeof(*vert));
+	uint32_t *ind = THE_Alloc((x_segments * y_segments * 6) * sizeof(*ind));
+	int i = 0;
 
-	for (s32 y = 0; y <= y_segments; ++y) {
-		for (s32 x = 0; x <= x_segments; ++x) {
+	for (int y = 0; y <= y_segments; ++y) {
+		for (int x = 0; x <= x_segments; ++x) {
 			float x_segment = (float)x / (float)x_segments;
 			float y_segment = (float)y / (float)y_segments;
 			float px = cosf(x_segment * (2.0f * PI)) * sinf(y_segment * PI);
@@ -534,8 +518,8 @@ THE_Mesh THE_CreateSphereMesh(s32 x_segments, s32 y_segments)
 	}
 
 	i = 0;
-	for (s32 y = 0; y < y_segments; ++y) {
-		for (s32 x = 0; x < x_segments; ++x) {
+	for (int y = 0; y < y_segments; ++y) {
+		for (int x = 0; x < x_segments; ++x) {
 			ind[i++] = ((y + 1) * (x_segments + 1) + x);
 			ind[i++] = (y       * (x_segments + 1) + x);
 			ind[i++] = (y       * (x_segments + 1) + x + 1);
@@ -556,8 +540,8 @@ THE_Mesh THE_CreateSphereMesh(s32 x_segments, s32 y_segments)
 THE_Mesh THE_CreateQuadMesh()
 {
 	THE_Mesh ret;
-	float *v = THE_Alloc(32 * sizeof *v);
-	uint32_t *ind = THE_Alloc(6 * sizeof *ind);
+	float *v = THE_Alloc(32 * sizeof(*v));
+	uint32_t *ind = THE_Alloc(6 * sizeof(*ind));
 	float vertices[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  0.0f,
 		1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  0.0f,
@@ -587,14 +571,15 @@ THE_Mesh THE_CreateQuadMesh()
 static void FileReader(void *ctx, const char *path, int is_mtl, const char *obj_path, char **buf, size_t *size)
 {
 	FILE *f = fopen(path, "rb");
-	if (!f)
+	if (!f) {
 		return;
+	}
 
 	fseek(f, 0L, SEEK_END);
 	*size = ftell(f);
 	rewind(f);
 
-	*buf = (char*)malloc(*size + 1);
+	*buf = malloc(*size + 1);
 	THE_ASSERT(*buf, "Allocation failed.");
 
 	if (fread(*buf, *size, 1, f) != 1) {
@@ -635,7 +620,7 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 	uint32_t index_offset = 0;
 	for (size_t i = 0; i < attrib.num_face_num_verts; ++i)
 	{
-	    for (size_t f = 0; f < (size_t)attrib.face_num_verts[i] / 3; ++f)
+	    for (size_t f = 0; f < attrib.face_num_verts[i] / 3; ++f)
 	    {
 	        tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset++];
 	        float v1[14], v2[14], v3[14];
@@ -698,22 +683,22 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 	        v3[10] = bitan.y;
 	        v3[11] = bitan.z;
 
-	        for (s32 j = 0; j < 14; ++j)
+	        for (int j = 0; j < 14; ++j)
 	        {
 				*vit++ = v1[j];
 	        }
 
-	        for (s32 j = 0; j < 14; ++j)
+	        for (int j = 0; j < 14; ++j)
 	        {
 				*vit++ = v2[j];
 	        }
 
-	        for (s32 j = 0; j < 14; ++j)
+	        for (int j = 0; j < 14; ++j)
 	        {
 				*vit++ = v3[j];
 	        }
 
-			for (s32 j = 0; j < 3; ++j, ++ii)
+			for (int j = 0; j < 3; ++j, ++ii)
 			{
 				indices[ii] = ii;
 			}
@@ -756,17 +741,17 @@ static THE_Framebuffer GetAvailableFramebuffer()
 	return ret;
 }
 
-s32 IsValidFramebuffer(THE_Framebuffer fb)
+bool IsValidFramebuffer(THE_Framebuffer fb)
 {
 	for (THE_AvailableNode *node = available_fb; node != NULL; node = node->next) {
 		if (node->value == fb) {
-			return 0;
+			return false;
 		}
 	}
 	return fb < framebuffer_count && fb >= 0;
 }
 
-THE_Framebuffer THE_CreateFramebuffer(u32 width, u32 height, bool color, bool depth)
+THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth)
 {
 	THE_ASSERT(width > 0 && height > 0, "Invalid dimensions");
 
@@ -776,12 +761,12 @@ THE_Framebuffer THE_CreateFramebuffer(u32 width, u32 height, bool color, bool de
 	framebuffers[ret].depth_tex = THE_CreateEmptyTexture(width, height, THE_TEX_DEPTH);
 
 	framebuffers[ret].internal_id = THE_UNINIT;
-        framebuffers[ret].cpu_version = 1;
-        framebuffers[ret].gpu_version = 0;
-        framebuffers[ret].color = color;
-        framebuffers[ret].depth = depth;
-        framebuffers[ret].width = width;
-        framebuffers[ret].height = height;
+	framebuffers[ret].cpu_version = 1;
+	framebuffers[ret].gpu_version = 0;
+	framebuffers[ret].color = color;
+	framebuffers[ret].depth = depth;
+	framebuffers[ret].width = width;
+	framebuffers[ret].height = height;
 
 	return ret;
 }
@@ -921,7 +906,7 @@ u32 InitInternalMaterial(const char* shader_name)
 	char *vert, *frag;
 	char vert_path[256], frag_path[256];
 	memset(frag_path, '\0', 256);
-	strcpy(frag_path, "../assets/shaders/");
+	strcpy(frag_path, "assets/shaders/");
 	strcat(frag_path, shader_name);
 
 	strcpy(vert_path, frag_path);

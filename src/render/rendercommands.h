@@ -1,7 +1,7 @@
 #ifndef THE_RENDER_COMMANDS_H
 #define THE_RENDER_COMMANDS_H
 
-#include "renderer.h"
+#include "material.h"
 
 #define THE_BLEND_FUNC_BIT     1
 #define THE_ENABLE_BLEND_BIT   1 << 1
@@ -11,9 +11,9 @@
 
 typedef struct {
 	float color[4];
-	s8 bcolor;
-	s8 bdepth;
-	s8 bstencil;
+	int8_t bcolor;
+	int8_t bdepth;
+	int8_t bstencil;
 } THE_ClearCommandData;
 
 typedef struct {
@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct {
 	THE_Texture tex;
-	s32 release_ram;
+	int32_t release_ram;
 } THE_CreateTextureCommandData;
 
 typedef struct {
@@ -42,7 +42,7 @@ typedef struct {
 	THE_Mesh mesh;
 	THE_Material *mat;
 	THE_Buffer inst_attr;
-	u32 inst_count;
+	uint32_t inst_count;
 } THE_DrawCommandData;
 
 typedef struct {
@@ -57,7 +57,6 @@ typedef enum {
 	THE_BLENDFUNC_SRC_ALPHA,
 	THE_BLENDFUNC_ONE_MINUS_SRC_ALPHA,
 	THE_BLENDFUNC_ZERO,
-
 	THE_CULLFACE_DISABLED,
 	THE_CULLFACE_FRONT,
 	THE_CULLFACE_BACK,
@@ -65,18 +64,18 @@ typedef enum {
 } THE_RenderOptions;
 
 typedef struct {
-	u32 changed_mask;
+	uint32_t changed_mask;
 	THE_RenderOptions sfactor;
 	THE_RenderOptions dfactor;
 	THE_RenderOptions cull_face;
-	s8 depth_test;
-	s8 write_depth;
-	s8 blend;
+	int8_t depth_test;
+	int8_t write_depth;
+	int8_t blend;
 } THE_RenderOptionsData;
 
 typedef struct {
 	THE_Framebuffer fb;
-	s8 def;
+	int8_t def;
 } THE_UseFramebufferData;
 
 typedef struct {
@@ -97,33 +96,22 @@ typedef union {
 	THE_UseMaterialData usemat;
 } THE_CommandData;
 
-struct THE_RenderCommand {
+typedef struct THE_RenderCommand {
 	void (*execute)(THE_CommandData *data);
 	struct THE_RenderCommand *next;
 	THE_CommandData data;
-};
-typedef struct THE_RenderCommand THE_RenderCommand;
+} THE_RenderCommand;
 
-void THE_ClearExecute(THE_CommandData *data);
-
-void THE_CreateBufferExecute(THE_CommandData *data);
-
-void THE_CreateCubemapExecute(THE_CommandData *data);
-
-void THE_CreateFramebufferExecute(THE_CommandData *data);
-
-void THE_CreateTextureExecute(THE_CommandData *data);
-
-void THE_SkyboxExecute(THE_CommandData *data);
-
-void THE_DrawExecute(THE_CommandData *data);
-
-void THE_EquirectToCubeExecute(THE_CommandData *data);
-
-void THE_RenderOptionsExecute(THE_CommandData *data);
-
-void THE_UseFramebufferExecute(THE_CommandData *data);
-
-void THE_UseMaterialExecute(THE_CommandData *data);
+extern void THE_ClearExecute(THE_CommandData *data);
+extern void THE_CreateBufferExecute(THE_CommandData *data);
+extern void THE_CreateCubemapExecute(THE_CommandData *data);
+extern void THE_CreateFramebufferExecute(THE_CommandData *data);
+extern void THE_CreateTextureExecute(THE_CommandData *data);
+extern void THE_SkyboxExecute(THE_CommandData *data);
+extern void THE_DrawExecute(THE_CommandData *data);
+extern void THE_EquirectToCubeExecute(THE_CommandData *data);
+extern void THE_RenderOptionsExecute(THE_CommandData *data);
+extern void THE_UseFramebufferExecute(THE_CommandData *data);
+extern void THE_UseMaterialExecute(THE_CommandData *data);
 
 #endif
