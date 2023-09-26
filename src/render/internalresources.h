@@ -46,9 +46,10 @@ extern THE_InternalBuffer *buffers;
 extern THE_InternalTexture *textures;
 extern THE_InternalFramebuffer *framebuffers;
 extern THE_InternalMaterial *materials;
-extern uint16_t buffer_count;
-extern uint16_t texture_count;
-extern uint16_t framebuffer_count;
+extern size_t buffer_count;
+extern size_t texture_count;
+extern size_t framebuffer_count;
+extern size_t material_count;
 
 bool IsValidBuffer(THE_Buffer buff);
 bool IsValidTexture(THE_Texture tex);

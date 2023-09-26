@@ -3,7 +3,7 @@
 #include "render/rendercommands.h"
 
 static THE_Entity entities[256];
-static s32 entities_last;
+static int32_t entities_last;
 
 THE_Entity *THE_EntityCreate()
 {
@@ -15,12 +15,12 @@ THE_Entity *THE_GetEntities()
 	return entities;
 }
 
-s32 THE_EntitiesSize()
+int32_t THE_EntitiesSize()
 {
 	return entities_last;
 }
 
-void THE_RenderEntities(THE_Entity *entities, s32 count)
+void THE_RenderEntities(THE_Entity *entities, int32_t count)
 {
 	THE_ASSERT(entities && count, "Nothing to render.");
 
@@ -32,7 +32,7 @@ void THE_RenderEntities(THE_Entity *entities, s32 count)
 	prev->data.draw.inst_count = 1;
 	prev->execute = THE_DrawExecute;
 
-	for (s32 i = 1; i < count; ++i)
+	for (int i = 1; i < count; ++i)
 	{
 		THE_RenderCommand *com = THE_AllocateCommand();
 

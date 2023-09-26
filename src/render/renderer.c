@@ -85,12 +85,13 @@ void THE_InitRender()
 	available_fb = NULL;
 
 	// InternalMaterial initialization
-	materials = THE_PersistentAlloc(sizeof(THE_InternalMaterial) * THE_MT_MAX, 0);
+	materials = THE_PersistentAlloc(sizeof(THE_InternalMaterial) * (THE_MT_MAX + 8), 0);
 	materials[THE_MT_FULL_SCREEN_IMAGE] = InitInternalMaterial("fullscreen-img");
 	materials[THE_MT_SKYBOX] = InitInternalMaterial("skybox");
 	materials[THE_MT_EQUIREC_TO_CUBE] = InitInternalMaterial("eqr-to-cube");
 	materials[THE_MT_PREFILTER_ENV] = InitInternalMaterial("prefilter-env");
 	materials[THE_MT_LUT_GEN] = InitInternalMaterial("lut-gen");
+	material_count = THE_MT_MAX;
 
 	/* 
 	2 Frame allocator (2 frame since is the lifetime of render resources)

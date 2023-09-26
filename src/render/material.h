@@ -13,6 +13,7 @@ typedef enum {
 	THE_MT_LUT_GEN,
 	// USER DEFINED MATERIALS START FROM HERE
 	THE_MT_PBR,
+	THE_MT_HELLO,
 	THE_MT_VOXMAT,
 	THE_MT_MAX,
 	// MT_NONE after MT_MAX because MT_MAX is used set the

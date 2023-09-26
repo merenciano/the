@@ -5,6 +5,7 @@
 #include "renderertypes.h"
 #include "material.h"
 #include "rendercommands.h"
+#include <bits/stdint-intn.h>
 
 #define THE_RENDER_QUEUE_CAPACITY 12000
 #define THE_FRAME_POOL_SIZE 1048576
