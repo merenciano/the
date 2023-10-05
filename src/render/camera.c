@@ -33,6 +33,11 @@ struct vec3 THE_CameraPosition(THE_Camera *cam)
 	return svec3(inv.m14, inv.m24, inv.m34);
 }
 
+struct vec3 THE_CameraForward(THE_Camera *cam)
+{
+	return svec3(cam->view_mat.m13, cam->view_mat.m23, cam->view_mat.m33);
+}
+
 THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
 {
 	return framebuffers[cam->fb].color_tex;
@@ -70,6 +75,10 @@ void THE_CameraMovementSystem(THE_Camera *cam)
 
 		rot_x += mouse_offset[1];
 		rot_y -= mouse_offset[0];
+
+		struct vec3 z = THE_CameraPosition(cam); z.z += 1.0f;
+		struct vec3 x = svec3_normalize(svec3_cross(svec3(0.0f, 1.0f, 0.0f), z));
+		struct vec3 y = svec3_normalize(svec3_cross(z, x));
 
 		tr = THE_TransformRotateYWorld(tr, -mouse_offset[0]);
 		tr = smat4_multiply(smat4_rotation_x(mouse_offset[1]), tr);

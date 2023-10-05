@@ -5,7 +5,6 @@
 #include "renderertypes.h"
 #include "material.h"
 #include "rendercommands.h"
-#include <bits/stdint-intn.h>
 
 #define THE_RENDER_QUEUE_CAPACITY 12000
 #define THE_FRAME_POOL_SIZE 1048576
@@ -47,7 +46,6 @@ bool IsValidBuffer(THE_Buffer buff);
 // Texture
 THE_Texture THE_CreateTexture(const char *path, THE_TexType t);
 THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t);
-THE_Texture THE_CreateEmptyTextureRelativeToScreen(float width, float height, THE_TexType t);
 void THE_LoadTexture(THE_Texture tex, const char *path);
 void THE_ReleaseTexture(THE_Texture tex);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)

@@ -327,25 +327,6 @@ THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t)
 	return ret;
 }
 
-THE_Texture THE_CreateEmptyTextureRelativeToScreen(float width, float height, THE_TexType t)
-{
-	THE_ASSERT(width > 0.0f && height > 0.0f && width <= 1.0f && height <= 1.0f,
-		   "Incorrect dimensions");
-
-	THE_Texture ret = GetAvailableTexture();
-	*(textures[ret].path) = '\0';
-	textures[ret].pix = NULL;
-	textures[ret].internal_id = THE_UNINIT;
-	textures[ret].cpu_version = 1;
-	textures[ret].gpu_version = 0;
-	textures[ret].texture_unit = THE_UNINIT;
-	textures[ret].width = THE_WindowGetWidth() * width;
-	textures[ret].height = THE_WindowGetHeight() * height;
-	textures[ret].type = t;
-
-	return ret;
-}
-
 void THE_LoadTexture(THE_Texture tex, const char *path)
 {
 	THE_ASSERT(*path != '\0', "Invalid path");
