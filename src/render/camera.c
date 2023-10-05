@@ -4,8 +4,10 @@
 #include "ecs/transform.h"
 #include "internalresources.h"
 
-float rot_x = 0.0f;
-float rot_y = 0.0f;
+static const float SENSIBILITY = 1.0f / 1000.0f;
+static const float SPEED = 10.0f;
+static const float SCROLL_SENSIBILITY = 1.0f;
+static const struct vec3 UP = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
 
 void THE_CameraInit(THE_Camera *cam, float fov, float far, u32 width, u32 height, u8 is_light)
 {
@@ -35,7 +37,7 @@ struct vec3 THE_CameraPosition(THE_Camera *cam)
 
 struct vec3 THE_CameraForward(THE_Camera *cam)
 {
-	return svec3(cam->view_mat.m13, cam->view_mat.m23, cam->view_mat.m33);
+	return svec3(cam->view_mat.m31, cam->view_mat.m32, cam->view_mat.m33);
 }
 
 THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
@@ -45,17 +47,12 @@ THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
 
 void THE_CameraMovementSystem(THE_Camera *cam)
 {
-	static const float ksensibility = 1.0f / 1000.0f;
-	static const float kspeed = 10.0f;
-	static const float kscroll_sensibility = 1.0f;
 
+	struct vec3 eye = THE_CameraPosition(cam);
+	struct vec3 fwd = svec3_negative(svec3_normalize(THE_CameraForward(cam)));
 	static float mouse_down_pos[2] = { 0.0, 0.0 };
 	static float fov = 70.0f;
-
-	float speed = kspeed * THE_DeltaTime();
-
-	//struct mat4 tr = smat4_inverse(cam->view_mat);
-	struct mat4 tr = smat4_identity();
+	float speed = SPEED * THE_DeltaTime();
 
 	// Rotation
 	if (THE_InputIsButtonDown(THE_MOUSE_RIGHT)) {
@@ -70,19 +67,11 @@ void THE_CameraMovementSystem(THE_Camera *cam)
 			mouse_down_pos[1] - THE_InputGetMouseY()
 		}; // Y axis inverted
 
-		mouse_offset[0] *= ksensibility;
-		mouse_offset[1] *= ksensibility;
+		mouse_offset[0] *= SENSIBILITY;
+		mouse_offset[1] *= SENSIBILITY;
 
-		rot_x += mouse_offset[1];
-		rot_y -= mouse_offset[0];
-
-		struct vec3 z = THE_CameraPosition(cam); z.z += 1.0f;
-		struct vec3 x = svec3_normalize(svec3_cross(svec3(0.0f, 1.0f, 0.0f), z));
-		struct vec3 y = svec3_normalize(svec3_cross(z, x));
-
-		tr = THE_TransformRotateYWorld(tr, -mouse_offset[0]);
-		tr = smat4_multiply(smat4_rotation_x(mouse_offset[1]), tr);
-		//tr = THE_TransformRotateInPlace(tr, mouse_offset[1], -mouse_offset[0]);
+		fwd = svec3_add(fwd, svec3_multiply_f(svec3_cross(UP, fwd), -mouse_offset[0]));
+		fwd = svec3_add(fwd, svec3_multiply_f(UP, mouse_offset[1]));
 
 		mouse_down_pos[0] = THE_InputGetMouseX();
 		mouse_down_pos[1] = THE_InputGetMouseY();
@@ -91,44 +80,41 @@ void THE_CameraMovementSystem(THE_Camera *cam)
 	// Position
 	if (THE_InputIsButtonPressed(THE_KEY_UP))
 	{
-		//tr = THE_TransformTranslateLocal(tr, svec3(0.0f, 0.0f, -speed));
-		tr = smat4_translate(tr, svec3(0.0f, 0.0f, -speed));
+		eye = svec3_add(eye, svec3_multiply_f(fwd, speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_DOWN))
 	{
-		tr = smat4_translate(tr, svec3(0.0f, 0.0f, speed));
+		eye = svec3_add(eye, svec3_multiply_f(fwd, -speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_LEFT))
 	{
-		tr = smat4_translate(tr, svec3(-speed, 0.0f, 0.0f));
+		eye = svec3_add(eye, svec3_multiply_f(svec3_cross(UP, fwd), speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_RIGHT))
 	{
-		tr = smat4_translate(tr, svec3(speed, 0.0f, 0.0f));
+		eye = svec3_add(eye, svec3_multiply_f(svec3_cross(UP, fwd), -speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_1))
 	{
-		tr = smat4_translate(tr, svec3(0.0f, speed, 0.0f));
+		eye = svec3_add(eye, svec3_multiply_f(UP, speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_4))
 	{
-		tr = smat4_translate(tr, svec3(0.0f, -speed, 0.0f));
+		eye = svec3_add(eye, svec3_multiply_f(UP, -speed));
 	}
 
-	tr = smat4_multiply(smat4_inverse(cam->view_mat), tr);
+	cam->view_mat = smat4_look_at(eye, svec3_add(eye, fwd), UP);
 
 	// Zoom
 	if (THE_InputGetScroll() != 0.0f)
 	{
-		fov -= THE_InputGetScroll() * kscroll_sensibility;
+		fov -= THE_InputGetScroll() * SCROLL_SENSIBILITY;
 		fov = clampf(fov, 1.0f, 120.0f);
 		cam->proj_mat = smat4_perspective(to_radians(fov), (float)THE_WindowGetWidth() / (float)THE_WindowGetHeight(), 0.1f, camera.far_value);
 	}
-
-	cam->view_mat = smat4_inverse(tr);
 }
