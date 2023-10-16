@@ -278,7 +278,6 @@ void Update(void)
 
 	THE_RenderCommand* fbuff = THE_AllocateCommand();
 	fbuff->data.usefb.fb = camera.fb;
-	fbuff->data.usefb.def = 0;
 	fbuff->execute = THE_UseFramebufferExecute;
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
@@ -333,7 +332,7 @@ void Update(void)
 	rops->next = sky;
 
 	fbuff = THE_AllocateCommand();
-	fbuff->data.usefb.def = 1;
+	fbuff->data.usefb.fb = THE_DEFAULT;
 	fbuff->execute = THE_UseFramebufferExecute;
 	sky->next = fbuff;
 

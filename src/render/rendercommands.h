@@ -17,24 +17,6 @@ typedef struct {
 } THE_ClearCommandData;
 
 typedef struct {
-	THE_Buffer buffer;
-} THE_CreateBufferCommandData;
-
-typedef struct {
-	THE_Texture texture;
-} THE_CreateCubemapCommandData;
-
-// TODO: Hide framebuffer concept from API
-typedef struct {
-	THE_Framebuffer fb;
-} THE_CreateFramebufferCommandData;
-
-typedef struct {
-	THE_Texture tex;
-	int32_t release_ram;
-} THE_CreateTextureCommandData;
-
-typedef struct {
 	THE_Texture cubemap;
 } THE_SkyboxCommandData;
 
@@ -75,7 +57,6 @@ typedef struct {
 
 typedef struct {
 	THE_Framebuffer fb;
-	int8_t def;
 } THE_UseFramebufferData;
 
 typedef struct {
@@ -84,10 +65,6 @@ typedef struct {
 
 typedef union {
 	THE_ClearCommandData clear;
-	THE_CreateBufferCommandData createbuff;
-	THE_CreateCubemapCommandData createcubemap;
-	THE_CreateFramebufferCommandData createfb;
-	THE_CreateTextureCommandData createtex;
 	THE_SkyboxCommandData skybox;
 	THE_DrawCommandData draw;
 	THE_EquirectToCubeData eqr_cube;
@@ -103,10 +80,6 @@ typedef struct THE_RenderCommand {
 } THE_RenderCommand;
 
 extern void THE_ClearExecute(THE_CommandData *data);
-extern void THE_CreateBufferExecute(THE_CommandData *data);
-extern void THE_CreateCubemapExecute(THE_CommandData *data);
-extern void THE_CreateFramebufferExecute(THE_CommandData *data);
-extern void THE_CreateTextureExecute(THE_CommandData *data);
 extern void THE_SkyboxExecute(THE_CommandData *data);
 extern void THE_DrawExecute(THE_CommandData *data);
 extern void THE_EquirectToCubeExecute(THE_CommandData *data);

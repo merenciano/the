@@ -26,26 +26,9 @@ typedef struct {
 	s32 channels;
 } THE_TextureConfig;
 
-void THE_ClearExecute(THE_CommandData *data)
+static void CreateBuffer(THE_Buffer buffer)
 {
-	uint32_t mask = 0;
-	if (data->clear.bcolor) {
-		mask |= GL_COLOR_BUFFER_BIT;
-	}
-	if (data->clear.bdepth) {
-		mask |= GL_DEPTH_BUFFER_BIT;
-	}
-	if (data->clear.bstencil) {
-		mask |= GL_STENCIL_BUFFER_BIT;
-	}
-	glClearColor(data->clear.color[0], data->clear.color[1],
-		data->clear.color[2], data->clear.color[3]);
-	glClear(mask);
-}
-
-void THE_CreateBufferExecute(THE_CommandData *data)
-{
-	THE_InternalBuffer *b = buffers + (data->createbuff.buffer);
+	THE_InternalBuffer *b = buffers + buffer;
 	THE_ASSERT(b->cpu_version > 0, "This buffer hasn't got any data yet");
 	THE_ASSERT(b->internal_id == (u32)THE_UNINIT, "Initialized buffer");
 
@@ -68,149 +51,9 @@ void THE_CreateBufferExecute(THE_CommandData *data)
 	//THE_FreeBufferData(data->createbuff.buffer);
 }
 
-void THE_CreateCubemapExecute(THE_CommandData *data)
-{
-	THE_CubeConfig config;
-	THE_Texture tex = data->createcubemap.texture;
-	THE_InternalTexture *t = textures + tex;
-
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
-	THE_ASSERT(t->cpu_version > t->gpu_version, "Texture not created on CPU or already created on GPU");
-	THE_ASSERT(tex < 62, "Start thinking about the max textures");
-	THE_ASSERT(t->internal_id == THE_UNINIT, "Texture already created in the gpu");
-
-	switch (t->type) {
-	case THE_TEX_SKYBOX:
-		config.format = GL_RGB;
-		config.internal_format = GL_SRGB;
-		config.type = GL_UNSIGNED_BYTE;
-		config.min_filter = GL_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	case THE_TEX_ENVIRONMENT:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB16F;
-		config.type = GL_FLOAT;
-		config.min_filter = GL_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	case THE_TEX_PREFILTER_ENVIRONMENT:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB16F;
-		config.type = GL_FLOAT;
-		config.min_filter = GL_LINEAR_MIPMAP_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	default:
-		THE_SLOG_ERROR("Trying to create a cubemap with an invalid format");
-		return;
-	}
-
-	glGenTextures(1, (GLuint*)&(t->internal_id));
-	t->texture_unit = tex + 1;
-	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, t->internal_id);
-
-	// The path for cubemaps will be the directory where the skyboxfaces are
-	// and inside the directory the faces must have these names
-	if (t->type == THE_TEX_SKYBOX) {
-		char *faces[6] = {
-			// MEGA TODO: Fix this soon
-			/*
-			strcat(t.path, "/right.jpg"),
-			strcat(t.path, "/left.jpg"),
-			strcat(t.path, "/up.jpg"),
-			strcat(t.path, "/down.jpg"),
-			strcat(t.path, "/front.jpg"),
-			strcat(t.path, "/back.jpg"),*/
-	
-		};
-	
-		int width, height, nchannels;
-		stbi_set_flip_vertically_on_load(0);
-		for (u32 i = 0; i < 6; ++i) {
-			u8 *img_data = stbi_load(faces[i], &width, &height, &nchannels, 0);
-			THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-				config.internal_format, width, height, 0,
-				config.format, config.type, img_data);
-			stbi_image_free(img_data);
-		}
-		t->width = width;
-		t->height = height;
-	} else {
-		THE_ASSERT(t->width > 0 && t->height > 0,
-			"The texture have to have size for the empty environment");
-		for (u32 i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-				config.internal_format, t->width,
-				t->height, 0, config.format, config.type, 0);
-		}
-	}
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, config.min_filter);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, config.mag_filter);
-	if (t->type == THE_TEX_PREFILTER_ENVIRONMENT) {
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	}
-	t->gpu_version = t->cpu_version;
-}
-
-void THE_CreateFramebufferExecute(THE_CommandData *data)
-{
-	THE_Framebuffer fb = data->createfb.fb;
-	THE_InternalFramebuffer *ifb = framebuffers + fb;
-
-	if (ifb->internal_id == THE_UNINIT) {
-		glGenFramebuffers(1, (GLuint*)&(ifb->internal_id));
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, ifb->internal_id);
-
-	if (ifb->color_tex >= 0) {
-		if (textures[ifb->color_tex].gpu_version == 0) {
-			THE_CommandData texcd;
-			texcd.createtex.tex = ifb->color_tex;
-			texcd.createtex.release_ram = 0;
-			THE_CreateTextureExecute(&texcd);
-		}
-
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, textures[ifb->color_tex].internal_id, 0);
-		ifb->width = textures[ifb->color_tex].width;
-		ifb->height = textures[ifb->color_tex].height;
-	}
-
-	if (ifb->depth_tex >= 0) {
-		if (textures[ifb->depth_tex].gpu_version == 0) {
-			THE_CommandData texcd;
-			texcd.createtex.tex = ifb->depth_tex;
-			texcd.createtex.release_ram = 0;
-			THE_CreateTextureExecute(&texcd);
-		}
-
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-			GL_TEXTURE_2D, textures[ifb->depth_tex].internal_id, 0);
-		ifb->width = textures[ifb->depth_tex].width;
-		ifb->height = textures[ifb->depth_tex].height;
-	}
-
-	ifb->gpu_version = ifb->cpu_version;
-}
-
-void THE_CreateTextureExecute(THE_CommandData *data)
+static void CreateTexture(THE_Texture tex, bool release_from_ram)
 {
 	THE_TextureConfig config;
-	THE_Texture tex = data->createtex.tex;
 	THE_InternalTexture *t = textures + tex;
 
 	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
@@ -310,7 +153,7 @@ void THE_CreateTextureExecute(THE_CommandData *data)
 		THE_ASSERT(t->pix, "The image couldn't be loaded");
 		glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width, t->height, 0,
 			config.format, config.type, t->pix);
-		if (data->createtex.release_ram) {
+		if (release_from_ram) {
 			stbi_image_free(t->pix);
 			t->pix = NULL;
 		}
@@ -327,7 +170,7 @@ void THE_CreateTextureExecute(THE_CommandData *data)
 		glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width, t->height, 0,
 			config.format, config.type, t->pix);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		if (data->createtex.release_ram) {
+		if (release_from_ram) {
 			stbi_image_free(t->pix);
 			t->pix = NULL;
 		}
@@ -343,6 +186,175 @@ void THE_CreateTextureExecute(THE_CommandData *data)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, config.wrap);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, config.wrap);
 	t->gpu_version = t->cpu_version;
+}
+
+static void CreateCubemap(THE_Texture tex)
+{
+	THE_CubeConfig config;
+	THE_InternalTexture *t = textures + tex;
+
+	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
+	THE_ASSERT(t->cpu_version > t->gpu_version, "Texture not created on CPU or already created on GPU");
+	THE_ASSERT(tex < 62, "Start thinking about the max textures");
+	THE_ASSERT(t->internal_id == THE_UNINIT, "Texture already created in the gpu");
+
+	switch (t->type) {
+	case THE_TEX_SKYBOX:
+		config.format = GL_RGB;
+		config.internal_format = GL_SRGB;
+		config.type = GL_UNSIGNED_BYTE;
+		config.min_filter = GL_LINEAR;
+		config.mag_filter = GL_LINEAR;
+		config.wrap = GL_CLAMP_TO_EDGE;
+		break;
+
+	case THE_TEX_ENVIRONMENT:
+		config.format = GL_RGB;
+		config.internal_format = GL_RGB16F;
+		config.type = GL_FLOAT;
+		config.min_filter = GL_LINEAR;
+		config.mag_filter = GL_LINEAR;
+		config.wrap = GL_CLAMP_TO_EDGE;
+		break;
+
+	case THE_TEX_PREFILTER_ENVIRONMENT:
+		config.format = GL_RGB;
+		config.internal_format = GL_RGB16F;
+		config.type = GL_FLOAT;
+		config.min_filter = GL_LINEAR_MIPMAP_LINEAR;
+		config.mag_filter = GL_LINEAR;
+		config.wrap = GL_CLAMP_TO_EDGE;
+		break;
+
+	default:
+		THE_SLOG_ERROR("Trying to create a cubemap with an invalid format");
+		return;
+	}
+
+	glGenTextures(1, (GLuint*)&(t->internal_id));
+	t->texture_unit = tex + 1;
+	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, t->internal_id);
+
+	// The path for cubemaps will be the directory where the skyboxfaces are
+	// and inside the directory the faces must have these names
+	if (t->type == THE_TEX_SKYBOX) {
+		char *faces[6] = {
+			// MEGA TODO: Fix this soon
+			/*
+			strcat(t.path, "/right.jpg"),
+			strcat(t.path, "/left.jpg"),
+			strcat(t.path, "/up.jpg"),
+			strcat(t.path, "/down.jpg"),
+			strcat(t.path, "/front.jpg"),
+			strcat(t.path, "/back.jpg"),*/
+	
+		};
+	
+		int width, height, nchannels;
+		stbi_set_flip_vertically_on_load(0);
+		for (u32 i = 0; i < 6; ++i) {
+			u8 *img_data = stbi_load(faces[i], &width, &height, &nchannels, 0);
+			THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+				config.internal_format, width, height, 0,
+				config.format, config.type, img_data);
+			stbi_image_free(img_data);
+		}
+		t->width = width;
+		t->height = height;
+	} else {
+		THE_ASSERT(t->width > 0 && t->height > 0,
+			"The texture have to have size for the empty environment");
+		for (u32 i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+				config.internal_format, t->width,
+				t->height, 0, config.format, config.type, 0);
+		}
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, config.wrap);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, config.wrap);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, config.wrap);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, config.min_filter);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, config.mag_filter);
+	if (t->type == THE_TEX_PREFILTER_ENVIRONMENT) {
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	}
+	t->gpu_version = t->cpu_version;
+}
+
+static void UseMaterial(THE_Material *mat)
+{
+	GLint u_loc;
+
+	// Load textures
+	THE_ASSERT(mat->tcount < 16, "So many textures, increase array size");
+	s32 tex_units[16];
+	for (s32 i = 0; i < mat->tcount; ++i)
+	{
+		if (mat->tex[i] != THE_UNINIT)
+		{
+			THE_ASSERT(mat->tex[i] != -1, "Texture not created");
+			THE_ASSERT(textures[mat->tex[i]].cpu_version != -1, "Texture released");
+			if (textures[mat->tex[i]].gpu_version == 0)
+			{
+				CreateTexture(mat->tex[i], true);
+			}
+		}
+		tex_units[i] = textures[mat->tex[i]].texture_unit;
+	}
+
+	// TODO: Change enum values and if type < MT_ENGINE_MAX
+	if (mat->type == THE_MT_FULL_SCREEN_IMAGE ||
+		mat->type == THE_MT_SKYBOX ||
+		mat->type == THE_MT_EQUIREC_TO_CUBE ||
+		mat->type == THE_MT_PREFILTER_ENV ||
+		mat->type == THE_MT_LUT_GEN)
+	{
+		glUseProgram(materials[mat->type]);
+	}
+
+	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_data");
+	if (u_loc >= 0)
+	{
+		glUniform4fv(u_loc, mat->dcount / 4, mat->data);
+	}
+
+	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_tex");
+	if (u_loc >= 0)
+	{
+		glUniform1iv(u_loc, mat->cube_start, tex_units);
+	}
+
+	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_cube");
+	if (u_loc >= 0)
+	{
+		glUniform1iv(u_loc, mat->tcount - mat->cube_start,
+			tex_units + mat->cube_start);
+	}
+
+	if (mat->type == THE_MT_FULL_SCREEN_IMAGE)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+}
+
+void THE_ClearExecute(THE_CommandData *data)
+{
+	uint32_t mask = 0;
+	if (data->clear.bcolor) {
+		mask |= GL_COLOR_BUFFER_BIT;
+	}
+	if (data->clear.bdepth) {
+		mask |= GL_DEPTH_BUFFER_BIT;
+	}
+	if (data->clear.bstencil) {
+		mask |= GL_STENCIL_BUFFER_BIT;
+	}
+	glClearColor(data->clear.color[0], data->clear.color[1],
+		data->clear.color[2], data->clear.color[3]);
+	glClear(mask);
 }
 
 void THE_SkyboxExecute(THE_CommandData *data)
@@ -433,18 +445,14 @@ void THE_DrawExecute(THE_CommandData *data)
 
 	// Create the OpenGL vertex buffer if it has not been created yet
 	if (buffers[mesh.vertex].gpu_version == 0) {
-		THE_CommandData cbcd;
-		cbcd.createbuff.buffer = mesh.vertex;
-		THE_CreateBufferExecute(&cbcd);
+		CreateBuffer(mesh.vertex);
 	} else {
 	    glBindBuffer(GL_ARRAY_BUFFER, buffers[mesh.vertex].internal_id);
 	}
 
 	// Create the OpenGL index buffer if it has not been created yet
 	if (buffers[mesh.index].gpu_version == 0) {
-		THE_CommandData cbcd;
-		cbcd.createbuff.buffer = mesh.index;
-		THE_CreateBufferExecute(&cbcd);
+		CreateBuffer(mesh.index);
 	} else {
 	    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
 	        buffers[mesh.index].internal_id);
@@ -557,9 +565,7 @@ void THE_DrawExecute(THE_CommandData *data)
 			"The instance attributes buffer has the wrong type.");
 
 		if (buffers[attr].gpu_version == 0) {
-			THE_CommandData cbcd;
-			cbcd.createbuff.buffer = attr;
-			THE_CreateBufferExecute(&cbcd);
+			CreateBuffer(attr);
 		} else {
 			glBindBuffer(GL_ARRAY_BUFFER, buffers[attr].internal_id);
 		}
@@ -584,9 +590,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	THE_InternalTexture *icu = textures + o_cube;
 
 	if (icu->cpu_version > icu->gpu_version) {
-		THE_CommandData cccd;
-		cccd.createcubemap.texture = o_cube;
-		THE_CreateCubemapExecute(&cccd);
+		CreateCubemap(o_cube);
 	}
 
 	struct mat4 proj = smat4_perspective(to_radians(90.0f), 1.0f, 0.1f, 10.0f);
@@ -605,10 +609,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	glViewport(0, 0, icu->width, icu->height);
 	// Manually sync framebuffer here after changing textures
 	THE_Texture equirec = THE_CreateTexture(path, THE_TEX_RGB_F16);
-	THE_CommandData ctcd;
-	ctcd.createtex.release_ram = 0;
-	ctcd.createtex.tex = equirec;
-	THE_CreateTextureExecute(&ctcd);
+	CreateTexture(equirec, false);
 	THE_CommandData ro;
 	ro.renderops.cull_face = THE_CULLFACE_DISABLED;
 	ro.renderops.changed_mask = THE_CULL_FACE_BIT;
@@ -632,9 +633,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	if (o_pref != THE_UNINIT) {
 		THE_InternalTexture *ipref = textures + o_pref;
 		if (ipref->cpu_version > ipref->gpu_version) {
-			THE_CommandData cccd;
-			cccd.createcubemap.texture = o_pref;
-			THE_CreateCubemapExecute(&cccd);
+			CreateCubemap(o_pref);
 		}
 
 		THE_PrefilterEnvData pref_data;
@@ -664,10 +663,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	if (o_lut != THE_UNINIT) {
 		THE_InternalTexture *ilut = textures + o_lut;
 		if (ilut->cpu_version > ilut->gpu_version) {
-			THE_CommandData createtex_cd;
-			createtex_cd.createtex.tex = o_lut;
-			createtex_cd.createtex.release_ram = 0;
-			THE_CreateTextureExecute(&createtex_cd);
+			CreateTexture(o_lut, false);
 		}
 		glViewport(0, 0, ilut->width, ilut->height);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ilut->internal_id, 0);
@@ -786,7 +782,7 @@ void THE_RenderOptionsExecute(THE_CommandData *data)
 
 void THE_UseFramebufferExecute(THE_CommandData *data)
 {
-	if (data->usefb.def) {
+	if (data->usefb.fb == THE_DEFAULT) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		return;
 	}
@@ -798,15 +794,11 @@ void THE_UseFramebufferExecute(THE_CommandData *data)
 	if (ifb->gpu_version == 0) {
 		THE_ASSERT(data->usefb.fb >= 0 && ifb->cpu_version > 0, "Framebuffer not created");
 		glGenFramebuffers(1, (GLuint*)&(ifb->internal_id));
-		THE_CommandData ctcd;
-		ctcd.createtex.release_ram = 0;
 		if (ifb->color_tex >= 0) {
-			ctcd.createtex.tex = ifb->color_tex;
-			THE_CreateTextureExecute(&ctcd);
+			CreateTexture(ifb->color_tex, false);
 		}
 		if (ifb->depth_tex >= 0) {
-			ctcd.createtex.tex = ifb->depth_tex;
-			THE_CreateTextureExecute(&ctcd);
+			CreateTexture(ifb->depth_tex, false);
 		}
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, ifb->internal_id);
