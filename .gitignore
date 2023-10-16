@@ -3,7 +3,7 @@
 build/
 lib/*.a
 lib/*.so
-examples/matball/matballs
-examples/matball/imgui.ini
-examples/hello/hello
 extern/cimgui/*.so
+examples/*/imgui.ini
+examples/matball/matballs
+examples/hello/hello
