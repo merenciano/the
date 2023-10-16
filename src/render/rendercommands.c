@@ -170,23 +170,16 @@ void THE_CreateFramebufferExecute(THE_CommandData *data)
 	THE_Framebuffer fb = data->createfb.fb;
 	THE_InternalFramebuffer *ifb = framebuffers + fb;
 
-	THE_ASSERT(!((ifb->color && ifb->depth) && (
-		(textures[ifb->color_tex].width !=
-		 textures[ifb->depth_tex].width) ||
-		(textures[ifb->color_tex].height !=
-		 textures[ifb->depth_tex].height)
-		)), "The size of the color and depth buffer has to be the same");
-
 	if (ifb->internal_id == THE_UNINIT) {
 		glGenFramebuffers(1, (GLuint*)&(ifb->internal_id));
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, ifb->internal_id);
 
-	if (ifb->color) {
+	if (ifb->color_tex >= 0) {
 		if (textures[ifb->color_tex].gpu_version == 0) {
 			THE_CommandData texcd;
-			texcd.createtex.tex = ifb->color;
+			texcd.createtex.tex = ifb->color_tex;
 			texcd.createtex.release_ram = 0;
 			THE_CreateTextureExecute(&texcd);
 		}
@@ -197,7 +190,7 @@ void THE_CreateFramebufferExecute(THE_CommandData *data)
 		ifb->height = textures[ifb->color_tex].height;
 	}
 
-	if (ifb->depth) {
+	if (ifb->depth_tex >= 0) {
 		if (textures[ifb->depth_tex].gpu_version == 0) {
 			THE_CommandData texcd;
 			texcd.createtex.tex = ifb->depth_tex;
@@ -807,11 +800,11 @@ void THE_UseFramebufferExecute(THE_CommandData *data)
 		glGenFramebuffers(1, (GLuint*)&(ifb->internal_id));
 		THE_CommandData ctcd;
 		ctcd.createtex.release_ram = 0;
-		if (ifb->color) {
+		if (ifb->color_tex >= 0) {
 			ctcd.createtex.tex = ifb->color_tex;
 			THE_CreateTextureExecute(&ctcd);
 		}
-		if (ifb->depth) {
+		if (ifb->depth_tex >= 0) {
 			ctcd.createtex.tex = ifb->depth_tex;
 			THE_CreateTextureExecute(&ctcd);
 		}
@@ -819,31 +812,31 @@ void THE_UseFramebufferExecute(THE_CommandData *data)
 	glBindFramebuffer(GL_FRAMEBUFFER, ifb->internal_id);
 
 	// Set viewport
-	if (ifb->color) {
-		width = (s32)textures[ifb->color_tex].width;
-		height = (s32)textures[ifb->color_tex].height;
+	if (ifb->color_tex >= 0) {
+		width = textures[ifb->color_tex].width;
+		height = textures[ifb->color_tex].height;
 		glViewport(0, 0, width, height);
 	}
 
-	if (ifb->depth) {
-		if (ifb->color) {
+	if (ifb->depth_tex >= 0) {
+		if (ifb->color_tex >= 0) {
 			THE_ASSERT(width == (GLsizei)textures[ifb->depth_tex].width &&
                 height == (GLsizei)textures[ifb->depth_tex].height,
 				"Color and depth texture sizes of framebuffer not matching");
 		} else {
-			width = (s32)textures[ifb->depth_tex].width;
-			height = (s32)textures[ifb->depth_tex].height;
+			width = textures[ifb->depth_tex].width;
+			height = textures[ifb->depth_tex].height;
 			glViewport(0, 0, width, height);
 		}
 	}
 
 	// Update framebuffer if the textures have been changed
 	if (ifb->gpu_version < ifb->cpu_version) {
-		if (ifb->color) {
+		if (ifb->color_tex >= 0) {
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 				textures[ifb->color_tex].internal_id, 0);
 		}
-		if (ifb->depth) {
+		if (ifb->depth_tex >= 0) {
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 				textures[ifb->depth_tex].internal_id, 0);
 		}

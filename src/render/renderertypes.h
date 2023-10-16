@@ -27,9 +27,9 @@ typedef enum {
 	THE_TEX_PREFILTER_ENVIRONMENT,
 } THE_TexType;
 
-typedef s32 THE_Texture;
-typedef s32 THE_Buffer;
-typedef s32 THE_Framebuffer;
+typedef int32_t THE_Texture;
+typedef int32_t THE_Buffer;
+typedef int32_t THE_Framebuffer;
 
 typedef struct {
 	THE_Buffer vertex;

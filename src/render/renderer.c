@@ -60,7 +60,7 @@ static THE_Texture AddTexture()
 	return texture_count++;
 }
 
-static THE_Buffer AddFramebuffer()
+static THE_Framebuffer AddFramebuffer()
 {
 	THE_ASSERT(framebuffer_count < THE_MAX_FRAMEBUFFERS, "Max framebuffers reached");
 	return framebuffer_count++;
@@ -370,6 +370,10 @@ void THE_LoadTexture(THE_Texture tex, const char *path)
 
 void THE_ReleaseTexture(THE_Texture tex)
 {
+	if (tex < 0) {
+		return;
+	}
+
 	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 	// TODO System that seeks MARKED FOR DELETE resources and deletes them in GPU
 	// and adds the index to avaiable resource list
@@ -736,17 +740,24 @@ bool IsValidFramebuffer(THE_Framebuffer fb)
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth)
 {
 	THE_ASSERT(width > 0 && height > 0, "Invalid dimensions");
-
+	THE_ASSERT(color || depth, "Textureless framebuffers not permitted");
 	THE_Framebuffer ret = GetAvailableFramebuffer();
 
-	framebuffers[ret].color_tex = THE_CreateEmptyTexture(width, height, THE_TEX_RGBA_F16);
-	framebuffers[ret].depth_tex = THE_CreateEmptyTexture(width, height, THE_TEX_DEPTH);
+	if (color) {
+		framebuffers[ret].color_tex = THE_CreateEmptyTexture(width, height, THE_TEX_RGBA_F16);
+	} else {
+		framebuffers[ret].color_tex = THE_INACTIVE;
+	}
+
+	if (depth) {
+		framebuffers[ret].depth_tex = THE_CreateEmptyTexture(width, height, THE_TEX_DEPTH);
+	} else {
+		framebuffers[ret].depth_tex = THE_INACTIVE;
+	}
 
 	framebuffers[ret].internal_id = THE_UNINIT;
 	framebuffers[ret].cpu_version = 1;
 	framebuffers[ret].gpu_version = 0;
-	framebuffers[ret].color = color;
-	framebuffers[ret].depth = depth;
 	framebuffers[ret].width = width;
 	framebuffers[ret].height = height;
 

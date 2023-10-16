@@ -2,7 +2,7 @@
 #define __THE_RENDER_INTERNAL_RESOURCES_H__
 
 #include "core/definitions.h"
-#include "renderer.h" // TODO: Solo por THE_BufferType y THE_TexType... revisar
+#include "renderertypes.h"
 
 typedef uint32_t THE_InternalMaterial; // OpenGL program (compiled shaders)
 
@@ -38,8 +38,6 @@ typedef struct {
 	int32_t height;
 	THE_Texture color_tex;
 	THE_Texture depth_tex;
-	uint8_t color;
-	uint8_t depth;
 } THE_InternalFramebuffer;
 
 extern THE_InternalBuffer *buffers;
@@ -56,6 +54,5 @@ bool IsValidTexture(THE_Texture tex);
 bool IsValidFramebuffer(THE_Framebuffer fb);
 
 uint32_t InitInternalMaterial(const char *shader_name);
-void UseMaterial(THE_Material *mat);
 
 #endif

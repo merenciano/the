@@ -19,7 +19,6 @@ target_sources(${THE_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.h
 	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.c
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/transform.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderertypes.h
