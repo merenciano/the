@@ -1,7 +1,6 @@
 #include "camera.h"
 #include "core/io.h"
 #include "core/manager.h"
-#include "ecs/transform.h"
 #include "internalresources.h"
 
 static const float SENSIBILITY = 1.0f / 1000.0f;
@@ -45,14 +44,13 @@ THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
 	return framebuffers[cam->fb].color_tex;
 }
 
-void THE_CameraMovementSystem(THE_Camera *cam)
+void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 {
-
 	struct vec3 eye = THE_CameraPosition(cam);
 	struct vec3 fwd = svec3_negative(svec3_normalize(THE_CameraForward(cam)));
 	static float mouse_down_pos[2] = { 0.0, 0.0 };
 	static float fov = 70.0f;
-	float speed = SPEED * THE_DeltaTime();
+	float speed = SPEED * deltatime;
 
 	// Rotation
 	if (THE_InputIsButtonDown(THE_MOUSE_RIGHT)) {

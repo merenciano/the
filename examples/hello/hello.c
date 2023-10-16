@@ -1,4 +1,3 @@
-#include "render/renderer.h"
 #include "the.h"
 #include <string.h>
 
@@ -34,7 +33,7 @@ void Init(void)
 void Update(void)
 {
 	THE_InputUpdate();
-	THE_CameraMovementSystem(&camera);
+	THE_CameraMovementSystem(&camera, THE_DeltaTime());
 
 	// Render commands
 	data.data.fields.vp = smat4_multiply(camera.proj_mat, camera.view_mat);

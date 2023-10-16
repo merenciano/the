@@ -262,7 +262,7 @@ void Update(void)
 {
 	//THE_ScriptingExecute("assets/scripts/update.lua");
 	THE_InputUpdate();
-	THE_CameraMovementSystem(&camera);
+	THE_CameraMovementSystem(&camera, THE_DeltaTime());
 
 	// Render commands
 	THE_PbrSceneData pbr_sd;

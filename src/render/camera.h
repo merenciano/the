@@ -14,6 +14,6 @@ extern THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam);
  */
 extern struct mat4 THE_CameraStaticViewProjection(THE_Camera *cam);
 
-extern void THE_CameraMovementSystem(THE_Camera *cam);
+extern void THE_CameraMovementSystem(THE_Camera *cam, float deltatime);
 
 #endif
