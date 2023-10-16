@@ -1,5 +1,9 @@
 .cache/
 .vscode/
 build/
-lib/
+lib/*.a
+lib/*.so
+examples/matball/matballs
 examples/matball/imgui.ini
+examples/hello/hello
+extern/cimgui/*.so
