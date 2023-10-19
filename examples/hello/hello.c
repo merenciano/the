@@ -55,7 +55,7 @@ void Update(void)
 	THE_RenderCommand *usemat = THE_AllocateCommand();
 	usemat->data.usemat.data = THE_MaterialDefault();
 	usemat->data.usemat.mat = hellomat;
-	usemat->execute = THE_UseNewMatExecute;
+	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
 

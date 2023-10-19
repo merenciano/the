@@ -337,7 +337,7 @@ void Update(void)
 	THE_MaterialSetFrameTexture(&newmatdat, scene_tex, 3, 1);
 	usemat->data.usemat.data = newmatdat;
 	usemat->data.usemat.mat = g_mats.pbr;
-	usemat->execute = THE_UseNewMatExecute;
+	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
 
@@ -380,7 +380,7 @@ void Update(void)
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
 	usefullscreen->data.usemat.mat = g_mats.fullscreen_img;
 	usefullscreen->data.usemat.data = full_screen_img;
-	usefullscreen->execute = THE_UseNewMatExecute;
+	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();

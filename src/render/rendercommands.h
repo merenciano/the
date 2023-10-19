@@ -72,7 +72,7 @@ typedef union {
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
 	THE_UseFramebufferData usefb;
-	THE_UseMaterialData usemat;
+	THE_UseShaderData usemat;
 } THE_CommandData;
 
 typedef struct THE_RenderCommand {
@@ -87,6 +87,6 @@ extern void THE_DrawExecute(THE_CommandData *data);
 extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);
 extern void THE_UseFramebufferExecute(THE_CommandData *data);
-extern void THE_UseNewMatExecute(THE_CommandData *data);
+extern void THE_UseShaderExecute(THE_CommandData *data);
 
 #endif

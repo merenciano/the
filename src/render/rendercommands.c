@@ -420,13 +420,12 @@ static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
 	}
 }
 
-void THE_UseNewMatExecute(THE_CommandData *data)
+void THE_UseShaderExecute(THE_CommandData *data)
 {
 	THE_InternalShader *m = shaders + data->usemat.mat;
 	if (m->program_id == THE_UNINIT) {
 		CreateShader(m);
 	}
-
 	glUseProgram(m->program_id);
 	SetMaterialData(data->usemat.mat, data->usemat.data, 0);
 }
@@ -475,7 +474,7 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	THE_CommandData usenewmatdata;
 	usenewmatdata.usemat.data = skymatdata;
 	usenewmatdata.usemat.mat = mat;
-	THE_UseNewMatExecute(&usenewmatdata);
+	THE_UseShaderExecute(&usenewmatdata);
 
 	// Create the OpenGL vertex buffer if it has not been created yet
 	if (buffers[CUBE_MESH.vertex].gpu_version == 0) {
@@ -729,7 +728,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_CommandData cmdata;
 		cmdata.usemat.mat = dcd.draw.newmat;
 		cmdata.usemat.data = dcd.draw.matdata;
-		THE_UseNewMatExecute(&cmdata);
+		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
 
@@ -761,7 +760,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 				THE_CommandData cmdata;
 				cmdata.usemat.mat = draw_cd.draw.newmat;
 				cmdata.usemat.data = draw_cd.draw.matdata;
-				THE_UseNewMatExecute(&cmdata);
+				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
 		}
@@ -783,7 +782,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_CommandData cmdata;
 		cmdata.usemat.mat = draw_cd.draw.newmat;
 		cmdata.usemat.data = draw_cd.draw.matdata;
-		THE_UseNewMatExecute(&cmdata);
+		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}
 
