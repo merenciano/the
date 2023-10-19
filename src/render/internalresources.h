@@ -4,8 +4,6 @@
 #include "core/definitions.h"
 #include "renderertypes.h"
 
-typedef uint32_t THE_InternalMaterial; // OpenGL program (compiled shaders)
-
 typedef struct {
 	union {
 		float *vertices;
@@ -44,29 +42,26 @@ typedef struct {
     int32_t data;
     int32_t tex;
     int32_t cubemap;
-} THE_InternalNewMatLocations;
+} THE_DataLocations;
 
 typedef struct {
     const char *shader_name;
-    int32_t shader_id;
-    THE_InternalNewMatLocations data_loc[2];
-} THE_InternalNewMat;
+    int32_t program_id;
+	THE_ShaderData common_data;
+    THE_DataLocations data_loc[2];
+} THE_InternalShader;
 
 extern THE_InternalBuffer *buffers;
 extern THE_InternalTexture *textures;
 extern THE_InternalFramebuffer *framebuffers;
-extern THE_InternalMaterial *materials;
-extern THE_InternalNewMat *newmats;
+extern THE_InternalShader *shaders;
 extern size_t buffer_count;
 extern size_t texture_count;
 extern size_t framebuffer_count;
-extern size_t material_count;
-extern size_t newmat_count;
+extern size_t shader_count;
 
 bool IsValidBuffer(THE_Buffer buff);
 bool IsValidTexture(THE_Texture tex);
 bool IsValidFramebuffer(THE_Framebuffer fb);
-
-uint32_t InitInternalMaterial(const char *shader_name);
 
 #endif

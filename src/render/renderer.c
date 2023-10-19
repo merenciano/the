@@ -84,8 +84,8 @@ void THE_InitRender()
 	available_tex = NULL;
 	available_fb = NULL;
 
-	newmats = THE_PersistentAlloc(sizeof(THE_InternalNewMat) * 64, 0);
-	newmat_count = 0;
+	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64, 0);
+	shader_count = 0;
 
 	/* 
 	2 Frame allocator (2 frame since is the lifetime of render resources)
@@ -586,7 +586,7 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 	if (result != TINYOBJ_SUCCESS)
 	{
 		THE_LOG_ERROR("Error loading obj. Err: %d", result);
-		return *(THE_Mesh*)&ret; // TODO: Better way to hide warning (uninit var).
+		return CUBE_MESH;
 	}
 
 	size_t tri_count = attrib.num_face_num_verts;
@@ -768,41 +768,14 @@ void THE_ReleaseFramebuffer(THE_Framebuffer fb)
 	THE_ReleaseTexture(framebuffers[fb].depth_tex);
 }
 
-void THE_InitMaterial(THE_MaterialType t, const char* name)
-{
-	materials[t] = InitInternalMaterial(name);
-}
-
-THE_Material THE_GetNewMaterial()
-{
-	THE_Material mat;
-	mat.data = NULL;
-	mat.tex = NULL;
-	mat.cube_start = -1;
-	mat.dcount = 0;
-	mat.tcount = 0;
-	mat.type = THE_MT_NONE;
-	return mat;
-}
-
-void THE_InitNewMaterial(THE_Material* mat)
-{
-	mat->data = NULL;
-	mat->tex = NULL;
-	mat->cube_start = -1;
-	mat->dcount = 0;
-	mat->tcount = 0;
-	mat->type = THE_MT_NONE;
-}
-
-void THE_MaterialSetModel(THE_MaterialData *mat, float *data)
+void THE_MaterialSetModel(THE_Material *mat, float *data)
 {
 	THE_ASSERT(data, "Invalid data parameter");
 	THE_ASSERT(mat->data, "This function expects at least 64B allocated in mat->data");
 	memcpy(mat->data, data, 64);
 }
 
-void THE_MaterialSetFrameData(THE_MaterialData *mat, float *data, s32 count)
+void THE_MaterialSetFrameData(THE_Material *mat, float *data, s32 count)
 {
 	THE_ASSERT(!mat->data || THE_IsInsideFramePool(mat->data),
 		"There are some non-temporary data in this material that must be freed");
@@ -818,7 +791,7 @@ void THE_MaterialSetFrameData(THE_MaterialData *mat, float *data, s32 count)
 	memcpy(mat->data, data, count * sizeof(float));
 }
 
-void THE_MaterialSetData(THE_MaterialData *mat, float *data, s32 count)
+void THE_MaterialSetData(THE_Material *mat, float *data, s32 count)
 {
 	// Align to fvec4
 	int32_t offset = count & 3;
@@ -831,7 +804,7 @@ void THE_MaterialSetData(THE_MaterialData *mat, float *data, s32 count)
 	memcpy(mat->data, data, count * sizeof *mat->data);
 }
 
-void THE_MaterialSetFrameTexture(THE_MaterialData *mat, THE_Texture *tex, int32_t count, int32_t cube_start)
+void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start)
 {
 	THE_ASSERT(!mat->tex || THE_IsInsideFramePool(mat->tex),
 		"There are some non-temporary textures in this material that must be freed");
@@ -842,7 +815,7 @@ void THE_MaterialSetFrameTexture(THE_MaterialData *mat, THE_Texture *tex, int32_
 	memcpy(mat->tex, tex, count * sizeof *mat->tex);
 }
 
-void THE_MaterialSetTexture(THE_MaterialData *mat, THE_Texture *tex, int32_t count, int32_t cube_start)
+void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start)
 {
 	THE_Free(mat->tex);
 	mat->tex = THE_Alloc(count * sizeof *mat->tex);
@@ -941,18 +914,18 @@ u32 InitInternalMaterial(const char* shader_name)
 	return program;
 }
 
-THE_NewMat THE_CreateNewMat(const char *shader)
+THE_Shader THE_CreateShader(const char *shader)
 {
-	THE_NewMat ret = newmat_count++;
-	newmats[ret].shader_name = shader;
-	newmats[ret].shader_id = THE_UNINIT;
-	memset(newmats[ret].data_loc, -1, sizeof(newmats[ret].data_loc)); // TODO: Quitar, no fa farta
+	THE_Shader ret = shader_count++;
+	shaders[ret].shader_name = shader;
+	shaders[ret].program_id = THE_UNINIT;
+	memset(shaders[ret].data_loc, -1, sizeof(shaders[ret].data_loc)); // TODO: Quitar, no fa farta
 	return ret;
 }
 
-THE_MaterialData THE_MaterialDataDefault(void)
+THE_Material THE_MaterialDefault(void)
 {
-	THE_MaterialData ret = {
+	THE_Material ret = {
 		.data = NULL,
 		.dcount = 0,
 		.tex = NULL,

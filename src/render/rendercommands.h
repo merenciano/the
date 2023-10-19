@@ -22,8 +22,8 @@ typedef struct {
 
 typedef struct {
 	THE_Mesh mesh;
-	THE_NewMat newmat;
-	THE_MaterialData matdata;
+	THE_Shader newmat;
+	THE_Material matdata;
 	THE_Buffer inst_attr;
 	uint32_t inst_count;
 } THE_DrawCommandData;
@@ -61,13 +61,9 @@ typedef struct {
 } THE_UseFramebufferData;
 
 typedef struct {
-	THE_Material *mat;
+	THE_Shader mat;
+	THE_Material data;
 } THE_UseMaterialData;
-
-typedef struct {
-	THE_NewMat mat;
-	THE_MaterialData data;
-} THE_UseNewMatData;
 
 typedef union {
 	THE_ClearCommandData clear;
@@ -77,7 +73,6 @@ typedef union {
 	THE_RenderOptionsData renderops;
 	THE_UseFramebufferData usefb;
 	THE_UseMaterialData usemat;
-	THE_UseNewMatData usenewmat;
 } THE_CommandData;
 
 typedef struct THE_RenderCommand {
@@ -92,7 +87,6 @@ extern void THE_DrawExecute(THE_CommandData *data);
 extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);
 extern void THE_UseFramebufferExecute(THE_CommandData *data);
-extern void THE_UseMaterialExecute(THE_CommandData *data);
 extern void THE_UseNewMatExecute(THE_CommandData *data);
 
 #endif

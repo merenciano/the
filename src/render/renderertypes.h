@@ -30,11 +30,22 @@ typedef enum {
 typedef int32_t THE_Texture;
 typedef int32_t THE_Buffer;
 typedef int32_t THE_Framebuffer;
+typedef int32_t THE_Shader;
 
 typedef struct {
 	THE_Buffer vertex;
 	THE_Buffer index;
 } THE_Mesh;
+
+typedef struct {
+	float *data;
+	THE_Texture *tex;
+	int32_t dcount;
+	int32_t tcount;
+	int32_t cube_start;
+} THE_ShaderData;
+
+typedef THE_ShaderData THE_Material;
 
 typedef struct {
 	struct mat4 view_mat;

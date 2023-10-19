@@ -6,8 +6,8 @@
 typedef struct {
 	struct mat4 transform;
 	THE_Mesh mesh;
-	THE_NewMat mat;
-	THE_MaterialData mat_data;
+	THE_Shader mat;
+	THE_Material mat_data;
 } THE_Entity;
 
 THE_Entity *THE_EntityCreate(void);

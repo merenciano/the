@@ -64,8 +64,5 @@ void THE_FreeMeshData(THE_Mesh mesh); // Frees the data from Ram (not the VRAM)
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth);
 void THE_ReleaseFramebuffer(THE_Framebuffer fb);
 
-// Material
-void THE_InitMaterial(THE_MaterialType t, const char *name); // name is the name of the shader files without extensions
-
 #endif
 

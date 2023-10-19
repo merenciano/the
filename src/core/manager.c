@@ -3,18 +3,16 @@
 #include "io.h"
 #include "mem.h"
 #include "render/renderer.h"
-#include "render/rendercommands.h"
 #include "render/internalresources.h"
 #include "tools/lua-scripting.h"
 
-THE_ResourceMap resource_map;
+THE_ResourceMap resource_map; // TODO: Resourcemap fuera de manager
 static float delta_time;
 static THE_Chrono frame_timer;
 
 void THE_InitManager(THE_Config *cnfg)
 {
 	size_t total_mem = MAX_BUFFERS * sizeof(THE_InternalBuffer) + MAX_TEXTURES * sizeof(THE_InternalTexture);
-	total_mem += THE_MT_MAX * sizeof(THE_InternalMaterial);
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(void*); // 2 because current and next
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(THE_CommandData);
 	total_mem += cnfg->alloc_capacity;

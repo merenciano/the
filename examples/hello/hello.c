@@ -14,12 +14,12 @@ typedef struct {
 
 HelloMatData data;
 
-THE_NewMat hellomat;
+THE_Shader hellomat;
 THE_Entity *e;
 
 void Init(void)
 {
-	hellomat = THE_CreateNewMat("hello");
+	hellomat = THE_CreateShader("hello");
 
 	data.data.fields.color[0] = 1.0f;
 	data.data.fields.color[1] = 0.0f;
@@ -30,7 +30,7 @@ void Init(void)
 	e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 0.0f));
 	e->mesh = SPHERE_MESH;
 	e->mat = hellomat;
-	e->mat_data = THE_MaterialDataDefault();
+	e->mat_data = THE_MaterialDefault();
 }
 
 void Update(void)
@@ -53,8 +53,8 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.usenewmat.data = THE_MaterialDataDefault();
-	usemat->data.usenewmat.mat = hellomat;
+	usemat->data.usemat.data = THE_MaterialDefault();
+	usemat->data.usemat.mat = hellomat;
 	usemat->execute = THE_UseNewMatExecute;
 	clear->next = usemat;
 	usemat->next = NULL;

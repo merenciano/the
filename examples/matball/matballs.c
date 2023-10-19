@@ -2,24 +2,24 @@
 #include <string.h>
 
 struct Materials {
-	THE_NewMat fullscreen_img;
-	THE_NewMat skybox;
-	THE_NewMat eqr_to_cube;
-	THE_NewMat prefilter_env;
-	THE_NewMat lut_gen;
-	THE_NewMat pbr;
+	THE_Shader fullscreen_img;
+	THE_Shader skybox;
+	THE_Shader eqr_to_cube;
+	THE_Shader prefilter_env;
+	THE_Shader lut_gen;
+	THE_Shader pbr;
 };
 
 struct Materials g_mats;
 
 void Init(void)
 {
-	g_mats.fullscreen_img = THE_CreateNewMat("fullscreen-img");
-	g_mats.skybox = THE_CreateNewMat("skybox");
-	g_mats.eqr_to_cube = THE_CreateNewMat("eqr-to-cube");
-	g_mats.prefilter_env = THE_CreateNewMat("prefilter-env");
-	g_mats.lut_gen = THE_CreateNewMat("lut-gen");
-	g_mats.pbr = THE_CreateNewMat("pbr");
+	g_mats.fullscreen_img = THE_CreateShader("fullscreen-img");
+	g_mats.skybox = THE_CreateShader("skybox");
+	g_mats.eqr_to_cube = THE_CreateShader("eqr-to-cube");
+	g_mats.prefilter_env = THE_CreateShader("prefilter-env");
+	g_mats.lut_gen = THE_CreateShader("lut-gen");
+	g_mats.pbr = THE_CreateShader("pbr");
 
 	THE_ResourceMap *rm = &resource_map;
 
@@ -92,7 +92,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Gold_A");
@@ -111,7 +111,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Shore_A");
@@ -130,7 +130,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Peel_A");
@@ -149,7 +149,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Rust_A");
@@ -168,7 +168,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Tiles_A");
@@ -187,7 +187,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Future_A");
@@ -206,7 +206,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Cliff_A");
@@ -225,7 +225,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Granit_A");
@@ -244,7 +244,7 @@ void Init(void)
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDataDefault();
+		e->mat_data = THE_MaterialDefault();
 		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Foam_A");
@@ -296,7 +296,7 @@ void Update(void)
 	pbr_sd.camera_position = THE_CameraPosition(&camera);
 	pbr_sd.light_direction_intensity = sun_dir_intensity;
 
-	THE_MaterialData full_screen_img = THE_MaterialDataDefault();
+	THE_Material full_screen_img = THE_MaterialDefault();
 	THE_Texture fbtex = THE_CameraOutputColorTexture(&camera); // TODO: Revisar si deberia hacerse en aqui algo tan low level del renderer (algo como link camera to tex?)
 	THE_MaterialSetFrameTexture(&full_screen_img, &fbtex, 1, -1);
 
@@ -332,11 +332,11 @@ void Update(void)
 	scene_tex[2] = THE_ResourceMapGetTexture(&resource_map, "Prefilte"); //GM.resource_map()->textures.at("PrefilterSpec");
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	THE_MaterialData newmatdat = THE_MaterialDataDefault();
+	THE_Material newmatdat = THE_MaterialDefault();
 	THE_MaterialSetFrameData(&newmatdat, (float*)&pbr_sd, sizeof(THE_PbrSceneData) / sizeof(float));
 	THE_MaterialSetFrameTexture(&newmatdat, scene_tex, 3, 1);
-	usemat->data.usenewmat.data = newmatdat;
-	usemat->data.usenewmat.mat = g_mats.pbr;
+	usemat->data.usemat.data = newmatdat;
+	usemat->data.usemat.mat = g_mats.pbr;
 	usemat->execute = THE_UseNewMatExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
@@ -378,8 +378,8 @@ void Update(void)
 	rops2->next = clear;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.usenewmat.mat = g_mats.fullscreen_img;
-	usefullscreen->data.usenewmat.data = full_screen_img;
+	usefullscreen->data.usemat.mat = g_mats.fullscreen_img;
+	usefullscreen->data.usemat.data = full_screen_img;
 	usefullscreen->execute = THE_UseNewMatExecute;
 	clear->next = usefullscreen;
 
