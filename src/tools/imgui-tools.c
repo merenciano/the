@@ -156,8 +156,8 @@ static void THE_UIToolsComponentInspector()
 	  a crash in the best case
 	*/
     THE_Entity *e = THE_GetEntities() + selected_entity;
-    if (e->mat.type == THE_MT_PBR) {
-        THE_PbrData *data = (THE_PbrData*)e->mat.data;
+    if (e->mat == 5) {
+        THE_PbrData *data = (THE_PbrData*)e->mat_data.data;
         igColorEdit3   ("Color"            , (float*)(&data->color), 0);
         igInputFloat   ("Texture tiling X" , &data->tiling_x, 0.0f, 0.0f, "%.3f", 0);
         igInputFloat   ("Texture tiling Y" , &data->tiling_y, 0.0f, 0.0f, "%.3f", 0);

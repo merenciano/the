@@ -40,14 +40,28 @@ typedef struct {
 	THE_Texture depth_tex;
 } THE_InternalFramebuffer;
 
+typedef struct {
+    int32_t data;
+    int32_t tex;
+    int32_t cubemap;
+} THE_InternalNewMatLocations;
+
+typedef struct {
+    const char *shader_name;
+    int32_t shader_id;
+    THE_InternalNewMatLocations data_loc[2];
+} THE_InternalNewMat;
+
 extern THE_InternalBuffer *buffers;
 extern THE_InternalTexture *textures;
 extern THE_InternalFramebuffer *framebuffers;
 extern THE_InternalMaterial *materials;
+extern THE_InternalNewMat *newmats;
 extern size_t buffer_count;
 extern size_t texture_count;
 extern size_t framebuffer_count;
 extern size_t material_count;
+extern size_t newmat_count;
 
 bool IsValidBuffer(THE_Buffer buff);
 bool IsValidTexture(THE_Texture tex);

@@ -32,11 +32,6 @@ typedef struct {
 
 THE_Material THE_GetNewMaterial(void);
 void THE_InitNewMaterial(THE_Material* mat);
-void THE_MaterialSetModel(THE_Material *mat, float *data); // This funcion copies a mat4 in the first 64 bytes of the already allocated data.
-void THE_MaterialSetData(THE_Material *mat, float *data, int32_t count); // General allocator. It will not free itself
-void THE_MaterialSetFrameData(THE_Material *mat, float *data, int32_t count); // Like above but with frame allocator
-void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // General allocator. It will not free itself
-void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // Like above but with frame allocator
 
 typedef struct {
 	float model_[16];
@@ -83,5 +78,26 @@ typedef struct {
 	float roughness;
 	float padding[3];
 } THE_PrefilterEnvData;
+
+// NEW MAT
+typedef struct {
+    float *data;
+    THE_Texture *tex;
+    int32_t dcount;
+    int32_t tcount;
+    int32_t cube_start;
+} THE_MaterialData;
+
+typedef int32_t THE_NewMat;
+
+THE_NewMat THE_CreateNewMat(const char *shader);
+THE_MaterialData THE_MaterialDataDefault(void);
+void THE_RendUseNewMat(THE_NewMat mat, THE_MaterialData data);
+
+void THE_MaterialSetModel(THE_MaterialData *mat, float *data); // This funcion copies a mat4 in the first 64 bytes of the already allocated data.
+void THE_MaterialSetData(THE_MaterialData *mat, float *data, int32_t count); // General allocator. It will not free itself
+void THE_MaterialSetFrameData(THE_MaterialData *mat, float *data, int32_t count); // Like above but with frame allocator
+void THE_MaterialSetTexture(THE_MaterialData *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // General allocator. It will not free itself
+void THE_MaterialSetFrameTexture(THE_MaterialData *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // Like above but with frame allocator
 
 #endif

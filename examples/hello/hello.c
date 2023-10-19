@@ -13,11 +13,13 @@ typedef struct {
 } HelloMatData;
 
 HelloMatData data;
+
+THE_NewMat hellomat;
 THE_Entity *e;
 
 void Init(void)
 {
-	THE_InitMaterial(THE_MT_HELLO, "hello");
+	hellomat = THE_CreateNewMat("hello");
 
 	data.data.fields.color[0] = 1.0f;
 	data.data.fields.color[1] = 0.0f;
@@ -27,7 +29,8 @@ void Init(void)
 	e = THE_EntityCreate();
 	e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 0.0f));
 	e->mesh = SPHERE_MESH;
-	e->mat.type = THE_MT_HELLO;
+	e->mat = hellomat;
+	e->mat_data = THE_MaterialDataDefault();
 }
 
 void Update(void)
@@ -37,7 +40,7 @@ void Update(void)
 
 	// Render commands
 	data.data.fields.vp = smat4_multiply(camera.proj_mat, camera.view_mat);
-	THE_MaterialSetData(&e->mat, data.data.buffer, sizeof(HelloMatData) / 4);
+	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
 	clear->data.clear.bcolor = 1;
@@ -50,10 +53,9 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.usemat.mat = THE_AllocateFrameResource(sizeof(THE_Material));
-	THE_InitNewMaterial(usemat->data.usemat.mat);
-	usemat->data.usemat.mat->type = THE_MT_HELLO;
-	usemat->execute = THE_UseMaterialExecute;
+	usemat->data.usenewmat.data = THE_MaterialDataDefault();
+	usemat->data.usenewmat.mat = hellomat;
+	usemat->execute = THE_UseNewMatExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
 

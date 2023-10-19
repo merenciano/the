@@ -16,7 +16,7 @@ void THE_CreateEntity(const char *mesh, const char *tex)
     pbr.roughness = 0.5f;
     pbr.normal_map_intensity = 0.0f;
     e->mesh = THE_ResourceMapGetMesh(&resource_map, mesh);
-    e->mat.type = THE_MT_PBR;
+    //e->mat = g_mats.pbr;
     THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
     THE_Texture t[4];
     for (s32 i = 0; i < 4; ++i) {

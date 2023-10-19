@@ -1,8 +1,26 @@
 #include "the.h"
 #include <string.h>
 
+struct Materials {
+	THE_NewMat fullscreen_img;
+	THE_NewMat skybox;
+	THE_NewMat eqr_to_cube;
+	THE_NewMat prefilter_env;
+	THE_NewMat lut_gen;
+	THE_NewMat pbr;
+};
+
+struct Materials g_mats;
+
 void Init(void)
 {
+	g_mats.fullscreen_img = THE_CreateNewMat("fullscreen-img");
+	g_mats.skybox = THE_CreateNewMat("skybox");
+	g_mats.eqr_to_cube = THE_CreateNewMat("eqr-to-cube");
+	g_mats.prefilter_env = THE_CreateNewMat("prefilter-env");
+	g_mats.lut_gen = THE_CreateNewMat("lut-gen");
+	g_mats.pbr = THE_CreateNewMat("pbr");
+
 	THE_ResourceMap *rm = &resource_map;
 
 	THE_ResourceMapAddMeshFromPath(rm, "MatBall", "assets/obj/matball-n.obj");
@@ -67,21 +85,21 @@ void Init(void)
 	pbr.normal_map_intensity = 1.0f;
 
 	sun_dir_intensity = svec4(0.0f, -1.0f, -0.1f, 1.0f);
-	THE_InitMaterial(THE_MT_PBR, "pbr");
 
 	// CelticGold
 	{
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Gold_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Gold_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Gold_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Gold_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Shore
@@ -92,14 +110,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Shore_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Shore_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Shore_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Shore_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Peeling
@@ -110,14 +129,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 0.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Peel_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Peel_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Peel_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Peel_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Rusted
@@ -128,14 +148,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Rust_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Rust_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Rust_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Rust_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Tiles
@@ -146,14 +167,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Tiles_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Tiles_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Tiles_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Tiles_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Ship Panels
@@ -164,14 +186,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 2.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Future_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Future_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Future_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Future_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Cliff
@@ -182,14 +205,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Cliff_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Cliff_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Cliff_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Cliff_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Granite
@@ -200,14 +224,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(4.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Granit_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Granit_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Granit_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Granit_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Foam
@@ -218,14 +243,15 @@ void Init(void)
 		THE_Entity *e = THE_EntityCreate();
 		e->transform = smat4_translation(smat4_identity(), svec3(6.0f, 0.0f, 4.0f));
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.type = THE_MT_PBR;
-		THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+		e->mat = g_mats.pbr;
+		e->mat_data = THE_MaterialDataDefault();
+		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(THE_PbrData) / 4);
 		THE_Texture t[4];
 		t[0] = THE_ResourceMapGetTexture(rm, "Foam_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Foam_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Foam_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Foam_N");
-		THE_MaterialSetTexture(&e->mat, t, 4, -1);
+		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	THE_RenderCommand *rendops = THE_AllocateCommand();
@@ -240,15 +266,15 @@ void Init(void)
 
 	THE_RenderCommand *sky = THE_AllocateCommand();
 	strcpy(sky->data.eqr_cube.in_path, "assets/tex/env/helipad-env.hdr");
-	sky->data.eqr_cube.out_cube = THE_ResourceMapGetTexture(rm, "Skybox"); //GM.resource_map()->textures.at("Skybox");
-	sky->data.eqr_cube.out_prefilt = THE_ResourceMapGetTexture(rm, "Prefilte");  //GM.resource_map()->textures.at("PrefilterSpec");
-	sky->data.eqr_cube.out_lut = THE_ResourceMapGetTexture(rm, "LutMap");  //GM.resource_map()->textures.at("LutMap");
+	sky->data.eqr_cube.out_cube = THE_ResourceMapGetTexture(rm, "Skybox");
+	sky->data.eqr_cube.out_prefilt = THE_ResourceMapGetTexture(rm, "Prefilte");
+	sky->data.eqr_cube.out_lut = THE_ResourceMapGetTexture(rm, "LutMap");
 	sky->execute = THE_EquirectToCubeExecute;
 	rendops->next = sky;
 
 	THE_RenderCommand *irradiance = THE_AllocateCommand();
 	strcpy(irradiance->data.eqr_cube.in_path, "assets/tex/env/helipad-dif.hdr");
-	irradiance->data.eqr_cube.out_cube = THE_ResourceMapGetTexture(rm, "Irradian");  //GM.resource_map()->textures.at("IrradianceEnv");
+	irradiance->data.eqr_cube.out_cube = THE_ResourceMapGetTexture(rm, "Irradian");
 	irradiance->data.eqr_cube.out_prefilt = THE_UNINIT;
 	irradiance->data.eqr_cube.out_lut = THE_UNINIT;
 	irradiance->execute = THE_EquirectToCubeExecute;
@@ -270,11 +296,9 @@ void Update(void)
 	pbr_sd.camera_position = THE_CameraPosition(&camera);
 	pbr_sd.light_direction_intensity = sun_dir_intensity;
 
-	THE_Material *full_screen_img = THE_AllocateFrameResource(sizeof(THE_Material));
-	THE_InitNewMaterial(full_screen_img);
-	full_screen_img->type = THE_MT_FULL_SCREEN_IMAGE;
+	THE_MaterialData full_screen_img = THE_MaterialDataDefault();
 	THE_Texture fbtex = THE_CameraOutputColorTexture(&camera); // TODO: Revisar si deberia hacerse en aqui algo tan low level del renderer (algo como link camera to tex?)
-	THE_MaterialSetFrameTexture(full_screen_img, &fbtex, 1, -1);
+	THE_MaterialSetFrameTexture(&full_screen_img, &fbtex, 1, -1);
 
 	THE_RenderCommand* fbuff = THE_AllocateCommand();
 	fbuff->data.usefb.fb = camera.fb;
@@ -308,12 +332,12 @@ void Update(void)
 	scene_tex[2] = THE_ResourceMapGetTexture(&resource_map, "Prefilte"); //GM.resource_map()->textures.at("PrefilterSpec");
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.usemat.mat = THE_AllocateFrameResource(sizeof(THE_Material));
-	THE_InitNewMaterial(usemat->data.usemat.mat);
-	usemat->data.usemat.mat->type = THE_MT_PBR;
-	THE_MaterialSetFrameData(usemat->data.usemat.mat, (float*)&pbr_sd, sizeof(THE_PbrSceneData) / sizeof(float));
-	THE_MaterialSetFrameTexture(usemat->data.usemat.mat, scene_tex, 3, 1);
-	usemat->execute = THE_UseMaterialExecute;
+	THE_MaterialData newmatdat = THE_MaterialDataDefault();
+	THE_MaterialSetFrameData(&newmatdat, (float*)&pbr_sd, sizeof(THE_PbrSceneData) / sizeof(float));
+	THE_MaterialSetFrameTexture(&newmatdat, scene_tex, 3, 1);
+	usemat->data.usenewmat.data = newmatdat;
+	usemat->data.usenewmat.mat = g_mats.pbr;
+	usemat->execute = THE_UseNewMatExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
 
@@ -353,12 +377,19 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 	rops2->next = clear;
 
+	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
+	usefullscreen->data.usenewmat.mat = g_mats.fullscreen_img;
+	usefullscreen->data.usenewmat.data = full_screen_img;
+	usefullscreen->execute = THE_UseNewMatExecute;
+	clear->next = usefullscreen;
+
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.mat = full_screen_img;
+	draw->data.draw.newmat = g_mats.fullscreen_img;
+	draw->data.draw.matdata = full_screen_img;
 	draw->data.draw.inst_count = 1;
 	draw->execute = THE_DrawExecute;
-	clear->next = draw;
+	usefullscreen->next = draw;
 	draw->next = NULL;
 
 	THE_AddCommands(rops);

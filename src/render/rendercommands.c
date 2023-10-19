@@ -3,6 +3,8 @@
 #include "internalresources.h"
 #include "camera.h"
 
+#include <string.h>
+
 #define THE_OPENGL // Hardcoded define until another render backend is implemented.
 #ifdef THE_OPENGL
 #include "glad/glad.h"
@@ -284,60 +286,149 @@ static void CreateCubemap(THE_Texture tex)
 	t->gpu_version = t->cpu_version;
 }
 
-static void UseMaterial(THE_Material *mat)
+static THE_ErrorCode LoadFile(const char *path, char *buffer, size_t buffsize)
 {
-	GLint u_loc;
+	FILE* fp = fopen(path, "r");
 
-	// Load textures
-	THE_ASSERT(mat->tcount < 16, "So many textures, increase array size");
-	s32 tex_units[16];
-	for (s32 i = 0; i < mat->tcount; ++i)
+	if (!fp) {
+		THE_LOG_ERROR("File %s couldn't be opened.", path);
+		return THE_EC_FILE;
+	}
+
+	fread((void*)buffer, 1, buffsize - 1, fp);
+	fclose(fp);
+
+	if (buffer[buffsize - 1] != '\0') {
+		THE_LOG_ERROR("File %s bigger than buffer size.", path);
+		return THE_EC_ALLOC;
+	}
+
+	return THE_EC_SUCCESS;
+}
+
+static THE_ErrorCode CreateShader(THE_InternalNewMat *mat)
+{
+	#define SHADER_BUFFSIZE 4096
+	THE_ASSERT(mat->shader_id == THE_UNINIT, "The material must be uninitialized.");
+	THE_ASSERT(mat->shader_name, "Empty shader name");
+
+	char vert[SHADER_BUFFSIZE] = {'\0'};
+	char frag[SHADER_BUFFSIZE] = {'\0'};
+	char vert_path[256] = {'\0'};
+	char frag_path[256] = {'\0'};
+	strcpy(frag_path, "assets/shaders/");
+	strcat(frag_path, mat->shader_name);
+	strcpy(vert_path, frag_path);
+	strcat(vert_path, "-vert.glsl");
+	strcat(frag_path, "-frag.glsl");
+
+	if (LoadFile(vert_path, vert, SHADER_BUFFSIZE) != THE_EC_SUCCESS) {
+		return THE_EC_FILE;
+	}
+
+	if (LoadFile(frag_path, frag, SHADER_BUFFSIZE) != THE_EC_SUCCESS) {
+		if (frag[SHADER_BUFFSIZE - 1] != '\0') {
+			THE_LOG_ERROR("File %s bigger than buffer size.", frag_path);
+		}
+		return THE_EC_FILE;
+	}
+	#undef SHADER_BUFFSIZE
+
+	GLint err;
+	GLchar output_log[512];
+	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+	const GLchar *shader_src = &vert[0];
+	glShaderSource(vert_shader, 1, &shader_src, NULL);
+	glCompileShader(vert_shader);
+	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &err);
+	if (!err) {
+		glGetShaderInfoLog(vert_shader, 512, NULL, output_log);
+		THE_LOG_ERROR("%s vertex shader compilation failed:\n%s\n", mat->shader_name, output_log);
+		return THE_EC_FAIL;
+	}
+	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+	shader_src = &frag[0];
+	glShaderSource(frag_shader, 1, &shader_src, NULL);
+	glCompileShader(frag_shader);
+	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &err);
+	if (!err) {
+		glGetShaderInfoLog(frag_shader, 512, NULL, output_log);
+		THE_LOG_ERROR("%s fragment shader compilation failed:\n%s\n", mat->shader_name, output_log);
+		return THE_EC_FAIL;
+	}
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vert_shader);
+	glAttachShader(program, frag_shader);
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &err);
+	if (!err)
 	{
-		if (mat->tex[i] != THE_UNINIT)
+		glGetProgramInfoLog(program, 512, NULL, output_log);
+		THE_LOG_ERROR("%s program error:\n%s\n", mat->shader_name, output_log);
+		return THE_EC_FAIL;
+	}
+
+	mat->shader_id = program;
+	// TODO: crear defines para uniforms de scena y enitdad y usarlos como indice.
+	// TODO: Cambiar el nombre de los uniforms de scene quitando scene.
+	mat->data_loc[0].data = glGetUniformLocation(mat->shader_id, "u_scene_data");
+	mat->data_loc[0].tex = glGetUniformLocation(mat->shader_id, "u_scene_tex");
+	mat->data_loc[0].cubemap = glGetUniformLocation(mat->shader_id, "u_scene_cube");
+	mat->data_loc[1].data = glGetUniformLocation(mat->shader_id, "u_entity_data");
+	mat->data_loc[1].tex = glGetUniformLocation(mat->shader_id, "u_entity_tex");
+	mat->data_loc[1].cubemap = glGetUniformLocation(mat->shader_id, "u_entity_cube");
+
+	return THE_EC_SUCCESS;
+}
+
+static void SetMaterialData(THE_NewMat mat, THE_MaterialData data, int32_t group)
+{
+	THE_InternalNewMat *m = newmats + mat;
+
+	THE_ASSERT(data.tcount < 16, "So many textures, increase array size");
+	// TODO: Tex units igual que el handle de textura (saltarse la textura 0 si hace falta)
+	int32_t tex_units[16];
+	for (int i = 0; i < data.tcount; ++i)
+	{
+		if (data.tex[i] != THE_UNINIT)
 		{
-			THE_ASSERT(mat->tex[i] != -1, "Texture not created");
-			THE_ASSERT(textures[mat->tex[i]].cpu_version != -1, "Texture released");
-			if (textures[mat->tex[i]].gpu_version == 0)
+			THE_ASSERT(data.tex[i] != -1, "Texture not created");
+			THE_ASSERT(textures[data.tex[i]].cpu_version != -1, "Texture released");
+			if (textures[data.tex[i]].gpu_version == 0)
 			{
-				CreateTexture(mat->tex[i], true);
+				CreateTexture(data.tex[i], true);
 			}
 		}
-		tex_units[i] = textures[mat->tex[i]].texture_unit;
+		tex_units[i] = textures[data.tex[i]].texture_unit;
 	}
 
-	// TODO: Change enum values and if type < MT_ENGINE_MAX
-	if (mat->type == THE_MT_FULL_SCREEN_IMAGE ||
-		mat->type == THE_MT_SKYBOX ||
-		mat->type == THE_MT_EQUIREC_TO_CUBE ||
-		mat->type == THE_MT_PREFILTER_ENV ||
-		mat->type == THE_MT_LUT_GEN)
+	// TODO: Quitar estos IF
+	if (m->data_loc[group].data >= 0)
 	{
-		glUseProgram(materials[mat->type]);
+		glUniform4fv(m->data_loc[group].data, data.dcount / 4, data.data);
 	}
 
-	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_data");
-	if (u_loc >= 0)
+	if (m->data_loc[group].tex >= 0)
 	{
-		glUniform4fv(u_loc, mat->dcount / 4, mat->data);
+		glUniform1iv(m->data_loc[group].tex, data.cube_start, tex_units);
 	}
 
-	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_tex");
-	if (u_loc >= 0)
+	if (m->data_loc[group].cubemap >= 0)
 	{
-		glUniform1iv(u_loc, mat->cube_start, tex_units);
+		glUniform1iv(m->data_loc[group].cubemap, data.tcount - data.cube_start,
+			tex_units + data.cube_start);
+	}
+}
+
+void THE_UseNewMatExecute(THE_CommandData *data)
+{
+	THE_InternalNewMat *m = newmats + data->usenewmat.mat;
+	if (m->shader_id == THE_UNINIT) {
+		CreateShader(m);
 	}
 
-	u_loc = glGetUniformLocation(materials[mat->type], "u_entity_cube");
-	if (u_loc >= 0)
-	{
-		glUniform1iv(u_loc, mat->tcount - mat->cube_start,
-			tex_units + mat->cube_start);
-	}
-
-	if (mat->type == THE_MT_FULL_SCREEN_IMAGE)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
+	glUseProgram(m->shader_id);
+	SetMaterialData(data->usenewmat.mat, data->usenewmat.data, 0);
 }
 
 void THE_ClearExecute(THE_CommandData *data)
@@ -359,16 +450,15 @@ void THE_ClearExecute(THE_CommandData *data)
 
 void THE_SkyboxExecute(THE_CommandData *data)
 {
-	THE_Material *mat = (THE_Material*)THE_AllocateFrameResource(sizeof(THE_Material));
 	struct mat4 static_vp = THE_CameraStaticViewProjection(&camera);
-	mat->type = THE_MT_SKYBOX;
-	mat->data = (float*)THE_AllocateFrameResource(16 * sizeof(float));
-	mat4_assign(mat->data, (float*)&static_vp);
-	mat->dcount = 16;
-	mat->tex = (THE_Texture*)THE_AllocateFrameResource(sizeof(THE_Texture));
-	*(mat->tex) = data->skybox.cubemap;
-	mat->tcount = 1;
-	mat->cube_start = 0;
+	THE_MaterialData skymatdata = THE_MaterialDataDefault();
+	skymatdata.data = THE_AllocateFrameResource(16 * sizeof(float));
+	mat4_assign(skymatdata.data, (float*)&static_vp);
+	skymatdata.dcount = 16;
+	skymatdata.tex = THE_AllocateFrameResource(sizeof(THE_Texture));
+	*(skymatdata.tex) = data->skybox.cubemap;
+	skymatdata.tcount = 1;
+	skymatdata.cube_start = 0;
 
 	THE_ASSERT(CUBE_MESH.vertex != THE_UNINIT,
 		"You are trying to draw with an uninitialized vertex buffer");
@@ -380,7 +470,12 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	THE_ASSERT(buffers[CUBE_MESH.index].cpu_version > 0, "Index buffer without data");
 
 	// Set the uniforms
-	UseMaterial(mat);
+	THE_NewMat mat = 1; // skybox
+	THE_InternalNewMat *m = newmats + mat;
+	THE_CommandData usenewmatdata;
+	usenewmatdata.usenewmat.data = skymatdata;
+	usenewmatdata.usenewmat.mat = mat;
+	THE_UseNewMatExecute(&usenewmatdata);
 
 	// Create the OpenGL vertex buffer if it has not been created yet
 	if (buffers[CUBE_MESH.vertex].gpu_version == 0) {
@@ -406,7 +501,7 @@ void THE_SkyboxExecute(THE_CommandData *data)
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[CUBE_MESH.index].internal_id);
 	}
 
-	GLint attrib_pos = glGetAttribLocation(materials[mat->type], "a_position");
+	GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_position");
 	glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(attrib_pos);
 
@@ -425,7 +520,8 @@ void THE_DrawExecute(THE_CommandData *data)
 {
 	THE_ASSERT(data->draw.inst_count > 0, "Set inst count");
 	THE_Mesh mesh = data->draw.mesh;
-	THE_Material *mat = data->draw.mat;
+	THE_InternalNewMat *m = newmats + data->draw.newmat;
+	//THE_Material *mat = data->draw.mat;
 
 	//int32_t vertex_handle = geo.vertex_buffer().handle();
 	//int32_t index_handle = geo.index_buffer().handle();
@@ -438,10 +534,11 @@ void THE_DrawExecute(THE_CommandData *data)
 
 	THE_ASSERT(buffers[mesh.vertex].cpu_version > 0, "Vertex buffer without data");
 	THE_ASSERT(buffers[mesh.index].cpu_version > 0, "Index buffer without data");
-	THE_ASSERT(mat->type != THE_MT_NONE, "Material type not setted");
+	//THE_ASSERT(mat->type != THE_MT_NONE, "Material type not setted");
 
 	// Set the uniforms
-	UseMaterial(mat);
+	//UseMaterial(mat);
+	SetMaterialData(data->draw.newmat, data->draw.matdata, 1);
 
 	// Create the OpenGL vertex buffer if it has not been created yet
 	if (buffers[mesh.vertex].gpu_version == 0) {
@@ -458,17 +555,18 @@ void THE_DrawExecute(THE_CommandData *data)
 	        buffers[mesh.index].internal_id);
 	}
 
+	// TODO: Guardar info de attrib pos, stride y offset en el material en un vector y implementar esto con un bucle cojones
 	switch(buffers[mesh.vertex].type) {
 	case THE_BUFFER_VERTEX_3P_3N: {
 		// POSITION
-		GLint attrib_pos = glGetAttribLocation(materials[mat->type],"a_position");
+		GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_position");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			6 * sizeof(float), (void*)0);
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// NORMAL
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_normal");
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_normal");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			6 * sizeof(float), (void*)(3 * sizeof(float)));
@@ -478,14 +576,14 @@ void THE_DrawExecute(THE_CommandData *data)
 
 	case THE_BUFFER_VERTEX_3P_2UV: {
 		// POSITION
-		GLint attrib_pos = glGetAttribLocation(materials[mat->type],"a_position");
+		GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_position");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			5 * sizeof(float), (void*)0);
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// UV
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_uv");
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_uv");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
 			5 * sizeof(float), (void*)(3 * sizeof(float)));
@@ -494,21 +592,21 @@ void THE_DrawExecute(THE_CommandData *data)
 	}
 	case THE_BUFFER_VERTEX_3P_3N_2UV: {
 		// POSITION
-		GLint attrib_pos = glGetAttribLocation(materials[mat->type],"a_position");
+		GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_position");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			8 * sizeof(float), (void*)0);
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// NORMAL
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_normal"); 
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_normal"); 
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			8 * sizeof(float), (void*)(3 * sizeof(float)));
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// UV
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_uv");
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_uv");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
 			8 * sizeof(float), (void*)(6 * sizeof(float)));
@@ -518,35 +616,35 @@ void THE_DrawExecute(THE_CommandData *data)
 
 	case THE_BUFFER_VERTEX_3P_3N_3T_3B_2UV: {
 		// POSITION
-		GLint attrib_pos = glGetAttribLocation(materials[mat->type],"a_position");
+		GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_position");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			14 * sizeof(float), (void*)0);
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// NORMAL
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_normal"); 
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_normal"); 
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			14 * sizeof(float), (void*)(3 * sizeof(float)));
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// TANGENT
-		attrib_pos = glGetAttribLocation(materials[mat->type],"a_tangent"); 
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_tangent"); 
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			14 * sizeof(float), (void*)(6 * sizeof(float)));
 		glVertexAttribDivisor(attrib_pos, 0);
 	
 		// BITANGENT
-		attrib_pos = glGetAttribLocation(materials[mat->type],"a_bitangent"); 
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_bitangent"); 
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			14 * sizeof(float), (void*)(9 * sizeof(float)));
 		glVertexAttribDivisor(attrib_pos, 0);
 
 		// UV
-		attrib_pos = glGetAttribLocation(materials[mat->type], "a_uv");
+		attrib_pos = glGetAttribLocation(m->shader_id, "a_uv");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
 			14 * sizeof(float), (void*)(12 * sizeof(float)));
@@ -558,6 +656,7 @@ void THE_DrawExecute(THE_CommandData *data)
 		break;
 	}
 
+	// TODO: Implementar bien el instanced si lo quiero. Debe ir por shader.
 	if (data->draw.inst_count > 1U) {
 		THE_Buffer attr = data->draw.inst_attr;
 		THE_ASSERT(attr != THE_UNINIT, "Instance count must be greater than one.");
@@ -570,14 +669,14 @@ void THE_DrawExecute(THE_CommandData *data)
 			glBindBuffer(GL_ARRAY_BUFFER, buffers[attr].internal_id);
 		}
 
-		GLint attrib_pos = glGetAttribLocation(materials[mat->type],"a_offset");
+		GLint attrib_pos = glGetAttribLocation(m->shader_id, "a_offset");
 		glEnableVertexAttribArray(attrib_pos);
 		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
 			3 * sizeof(float), (void*)0);
 		glVertexAttribDivisor(attrib_pos, 1);
 	}
 
-	u32 index_count = buffers[mesh.index].count; // Implicit cast to unsigned
+	uint32_t index_count = buffers[mesh.index].count; // Implicit cast to unsigned
 	glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, 0, data->draw.inst_count);
 }
 
@@ -623,10 +722,14 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, icu->internal_id, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
-		dcd.draw.mat = (THE_Material*)THE_AllocateFrameResource(sizeof(THE_Material));
-		THE_MaterialSetFrameTexture(dcd.draw.mat, &equirec, 1, -1);
-		dcd.draw.mat->type = THE_MT_EQUIREC_TO_CUBE;
-		THE_MaterialSetFrameData(dcd.draw.mat, (float*)&vp, 16);
+		dcd.draw.newmat = 2; // eq to cube
+		dcd.draw.matdata = THE_MaterialDataDefault();
+		THE_MaterialSetFrameTexture(&(dcd.draw.matdata), &equirec, 1, -1);
+		THE_MaterialSetFrameData(&dcd.draw.matdata, (float*)&vp, 16);
+		THE_CommandData cmdata;
+		cmdata.usenewmat.mat = dcd.draw.newmat;
+		cmdata.usenewmat.data = dcd.draw.matdata;
+		THE_UseNewMatExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
 
@@ -651,10 +754,14 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 				    GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, ipref->internal_id, i);
 				glClear(GL_COLOR_BUFFER_BIT);
-				draw_cd.draw.mat = (THE_Material*)THE_AllocateFrameResource(sizeof(THE_Material));
-				draw_cd.draw.mat->type = THE_MT_PREFILTER_ENV;
-                THE_MaterialSetFrameTexture(draw_cd.draw.mat, &o_cube, 1, 0);
-                THE_MaterialSetFrameData(draw_cd.draw.mat, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
+				draw_cd.draw.newmat = 3; // prefilter env
+				draw_cd.draw.matdata = THE_MaterialDataDefault();
+                THE_MaterialSetFrameTexture(&draw_cd.draw.matdata, &o_cube, 1, 0);
+                THE_MaterialSetFrameData(&draw_cd.draw.matdata, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
+				THE_CommandData cmdata;
+				cmdata.usenewmat.mat = draw_cd.draw.newmat;
+				cmdata.usenewmat.data = draw_cd.draw.matdata;
+				THE_UseNewMatExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
 		}
@@ -671,8 +778,12 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_CommandData draw_cd;
 		draw_cd.draw.mesh = QUAD_MESH;
 		draw_cd.draw.inst_count = 1U;
-		draw_cd.draw.mat = THE_AllocateFrameResource(sizeof(THE_Material));
-		draw_cd.draw.mat->type = THE_MT_LUT_GEN;
+		draw_cd.draw.newmat = 4; // THE_MT_LUT_GEN;
+		draw_cd.draw.matdata = THE_MaterialDataDefault();
+		THE_CommandData cmdata;
+		cmdata.usenewmat.mat = draw_cd.draw.newmat;
+		cmdata.usenewmat.data = draw_cd.draw.matdata;
+		THE_UseNewMatExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}
 
