@@ -48,6 +48,17 @@ static int8_t *frame_pool[2];
 static int8_t *frame_pool_last;
 static int8_t frame_switch;
 
+static THE_Mesh AddMesh()
+{
+	THE_ASSERT(mesh_count < THE_MAX_MESHES, "Max meshes reached");
+	meshes[mesh_count].internal_id = THE_UNINIT;
+	meshes[mesh_count].internal_buffers_id[0] = THE_UNINIT;
+	meshes[mesh_count].internal_buffers_id[1] = THE_UNINIT;
+	meshes[mesh_count].attr_flags = 0;
+	meshes[mesh_count].elements = 0;
+	return mesh_count++;
+}
+
 static THE_Buffer AddBuffer()
 {
 	THE_ASSERT(buffer_count < THE_MAX_BUFFERS, "Max buffers reached");
@@ -74,9 +85,11 @@ void THE_InitRender()
 	next_pool_last = next_pool;
 
 	buffers = THE_PersistentAlloc(sizeof(THE_InternalBuffer) * THE_MAX_BUFFERS, 0);
+	meshes = THE_PersistentAlloc(sizeof(THE_InternalMesh) * THE_MAX_MESHES, 0);
 	textures = THE_PersistentAlloc(sizeof(THE_InternalTexture) * THE_MAX_TEXTURES, 0);
 	framebuffers = THE_PersistentAlloc(sizeof(THE_InternalFramebuffer) * THE_MAX_FRAMEBUFFERS, 0);
 	buffer_count = 0;
+	mesh_count = 0;
 	texture_count = 0;
 	framebuffer_count = 0;
 
@@ -385,25 +398,9 @@ void THE_FreeTextureData(THE_Texture tex)
 	}
 }
 
-// MESH FUNCTIONS
-THE_Mesh THE_GetNewMesh()
-{
-	THE_Mesh m = {
-		.vertex = THE_UNINIT,
-		.index = THE_UNINIT
-	};
-	return m;
-}
-
 THE_Mesh THE_CreateCubeMesh()
 {
-	static const int32_t VTX_COUNT = 24 * 8;
-	static const int32_t IDX_COUNT = 36;
-
-	THE_Mesh ret;
-	float *vert = THE_Alloc(VTX_COUNT * sizeof(*vert));
-	uint32_t *ind = THE_Alloc(IDX_COUNT * sizeof(*ind));
-	float vertices[] = { // TODO: Probar a inicializarlo asi en la memoria reservada para evitar la copia de despues
+	static const float VERTICES[] = {
 		// positions          // normals           // uv 
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
@@ -436,11 +433,7 @@ THE_Mesh THE_CreateCubeMesh()
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
 	};
 
-	for (int i = 0; i < VTX_COUNT; ++i) {
-		vert[i] = vertices[i];
-	}
-
-	uint32_t indices[] = {
+	static const uint32_t INDICES[] = {
 		0,  2,  1,  2,  0,  3,
 		4,  5,  6,  6,  7,  4,
 		8,  9, 10, 10, 11,  8,
@@ -449,14 +442,18 @@ THE_Mesh THE_CreateCubeMesh()
 		23, 22, 20, 22, 21, 20,
 	};
 
-	for (int i = 0; i < IDX_COUNT; ++i) {
-		ind[i] = indices[i];
-	}
-
-	ret.vertex = THE_CreateBuffer();
-	THE_SetBufferData(ret.vertex, vert, VTX_COUNT, THE_BUFFER_VERTEX_3P_3N_2UV);
-	ret.index = THE_CreateBuffer();
-	THE_SetBufferData(ret.index, ind, IDX_COUNT, THE_BUFFER_INDEX);
+	THE_Mesh ret = AddMesh();
+	meshes[ret].internal_id = THE_UNINIT;
+	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
+	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
+	meshes[ret].attr_flags = 
+		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
+	meshes[ret].vtx = malloc(sizeof(VERTICES));
+	memcpy(meshes[ret].vtx, VERTICES, sizeof(VERTICES));
+	meshes[ret].idx = malloc(sizeof(INDICES));
+	memcpy(meshes[ret].idx, INDICES, sizeof(INDICES));
+	meshes[ret].vtx_size = sizeof(VERTICES);
+	meshes[ret].elements = sizeof(INDICES) / sizeof(*INDICES);
 
 	return ret;
 }
@@ -466,84 +463,97 @@ THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
 	THE_ASSERT(x_segments > 0 && y_segments > 0, "Invalid number of segments");
 	static const float PI = 3.14159265359f;
 
-	THE_Mesh ret;
-	float *vert = THE_Alloc(((1 + x_segments) * (1 + y_segments) * 8) * sizeof(*vert));
-	uint32_t *ind = THE_Alloc((x_segments * y_segments * 6) * sizeof(*ind));
-	int i = 0;
+	size_t vtx_size = (1 + x_segments * (y_segments - 1)) * 8 * sizeof(float);
+	size_t idx_size = x_segments * y_segments * 6 * sizeof(uint32_t);
 
-	for (int y = 0; y <= y_segments; ++y) {
-		for (int x = 0; x <= x_segments; ++x) {
-			float x_segment = (float)x / (float)x_segments;
-			float y_segment = (float)y / (float)y_segments;
-			float px = cosf(x_segment * (2.0f * PI)) * sinf(y_segment * PI);
-			float py = cosf(y_segment * PI);
-			float pz = sinf(x_segment * (2.0f * PI)) * sinf(y_segment * PI);
+	THE_Mesh ret = AddMesh();
+	meshes[ret].internal_id = THE_UNINIT;
+	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
+	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
+	meshes[ret].vtx = THE_Alloc(vtx_size + idx_size);
+	meshes[ret].idx = (uint32_t*)meshes[ret].vtx + (vtx_size / sizeof(float));
+	meshes[ret].vtx_size = vtx_size;
+	meshes[ret].elements = idx_size / sizeof(uint32_t);
+	meshes[ret].attr_flags = 
+		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 
-			float nx = px;
-			float ny = py;
-			float nz = pz;
+	float x_step = (2.0f * PI) / (float)x_segments;
+	float y_step = PI / (float)y_segments;
 
-			float uvx = atan2(nx, nz) / (2.0f * PI) + 0.5f;
-			float uvy = ny * 0.5f + 0.5f;
-
-			vert[i++] = px;
-			vert[i++] = py;
-			vert[i++] = pz;
-			vert[i++] = nx;
-			vert[i++] = ny;
-			vert[i++] = nz;
-			vert[i++] = uvx;
-			vert[i++] = uvy;
-		}
-	}
-
-	i = 0;
-	for (int y = 0; y < y_segments; ++y) {
+	float *v = meshes[ret].vtx;
+	for (int y = 1; y < y_segments; ++y) {
 		for (int x = 0; x < x_segments; ++x) {
-			ind[i++] = ((y + 1) * (x_segments + 1) + x);
-			ind[i++] = (y       * (x_segments + 1) + x);
-			ind[i++] = (y       * (x_segments + 1) + x + 1);
-			ind[i++] = ((y + 1) * (x_segments + 1) + x);
-			ind[i++] = (y       * (x_segments + 1) + x + 1);
-			ind[i++] = ((y + 1) * (x_segments + 1) + x + 1);
+			float x_segment = x * x_step;
+			float y_segment = y * y_step;
+			v[0] = cosf(x_segment) * sinf(y_segment);
+			v[1] = cosf(y_segment);
+			v[2] = sinf(x_segment) * sinf(y_segment);
+			v[3] = v[0];
+			v[4] = v[1];
+			v[5] = v[2];
+			v[6] = 0.5f + atan2(v[3], v[5]) / (2.0f * PI);
+			v[7] = 0.5f + v[4] * 0.5f;
+		}
+		v += x_segments * 8;
+	}
+	memset(v, 0, 16 * sizeof(float));
+	v[1] = -1.0f;
+	v[4] = -1.0f;
+	v[6] = 0.5f;
+	v[1 + 8] = 1.0f;
+	v[4 + 8] = 1.0f;
+	v[6 + 8] = 0.5f;
+	v[7 + 8] = 1.0f;
+
+	uint32_t *i = meshes[ret].idx;
+	for (int y = 0; y < y_segments - 1; ++y) {
+		for (int x = 0; x < x_segments; ++x) {
+			i[0] = (y + 1) * x_segments + x;
+			i[1] = y * x_segments + x;
+			i[2] = y * x_segments + ((x + 1) % x_segments);
+			i[3] = (y + 1) * x_segments + x;
+			i[4] = y * x_segments + ((x + 1) % x_segments);
+			i[5] = (y + 1) * x_segments + ((x + 1) % x_segments);
+			i += 6;
 		}
 	}
 
-	ret.vertex = THE_CreateBuffer();
-	THE_SetBufferData(ret.vertex, vert, (1 + x_segments) * (1 + y_segments) * 8, THE_BUFFER_VERTEX_3P_3N_2UV);
-	ret.index = THE_CreateBuffer();
-	THE_SetBufferData(ret.index, ind, x_segments * y_segments * 6, THE_BUFFER_INDEX);
+	for (int x = 0; x < x_segments; ++x) {
+		/* Last circumference and last vertex triangles. */
+		i[0] = x_segments * (y_segments - 1);
+		i[1] = (y_segments - 1) * x_segments + x;
+		i[2] = (y_segments - 1) * x_segments + ((x + 1) % x_segments);
+		/* First vertex and first circumference triangles. */
+		i[3] = x;
+		i[4] = x_segments * (y_segments - 1) + 1;
+		i[5] = (x + 1) % x_segments;
+		i += 6;
+	}
 
 	return ret;
 }
 
 THE_Mesh THE_CreateQuadMesh()
 {
-	THE_Mesh ret;
-	float *v = THE_Alloc(32 * sizeof(*v));
-	uint32_t *ind = THE_Alloc(6 * sizeof(*ind));
-	float vertices[] = {
+	static float VERTICES[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  0.0f,
 		1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  0.0f,
 		1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  1.0f,
 		-1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  1.0f,
 	};
 
-	for (int i = 0; i < 32; ++i) {
-		v[i] = vertices[i];
-	}
+	static uint32_t INDICES[] = {0, 1, 2, 0, 2, 3};
 
-	*(ind + 0) = 0;
-	*(ind + 1) = 1;
-	*(ind + 2) = 2;
-	*(ind + 3) = 0;
-	*(ind + 4) = 2;
-	*(ind + 5) = 3;
-
-	ret.vertex = THE_CreateBuffer();
-	THE_SetBufferData(ret.vertex, v, 32, THE_BUFFER_VERTEX_3P_3N_2UV);
-	ret.index = THE_CreateBuffer();
-	THE_SetBufferData(ret.index, ind, 6, THE_BUFFER_INDEX);
+	THE_Mesh ret = AddMesh();
+	meshes[ret].internal_id = THE_UNINIT;
+	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
+	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
+	meshes[ret].attr_flags = 
+		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
+	meshes[ret].vtx = &VERTICES[0];
+	meshes[ret].idx = &INDICES[0];
+	meshes[ret].vtx_size = sizeof(VERTICES);
+	meshes[ret].elements = sizeof(INDICES) / sizeof(*INDICES);
 
 	return ret;
 }
@@ -571,8 +581,6 @@ static void FileReader(void *ctx, const char *path, int is_mtl, const char *obj_
 
 THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 {
-	THE_Mesh ret;
-
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t *shapes = NULL;
 	size_t shape_count;
@@ -583,8 +591,7 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 		path, FileReader, NULL, TINYOBJ_FLAG_TRIANGULATE);
 
 	THE_ASSERT(result == TINYOBJ_SUCCESS, "Obj loader failed.");
-	if (result != TINYOBJ_SUCCESS)
-	{
+	if (result != TINYOBJ_SUCCESS) {
 		THE_LOG_ERROR("Error loading obj. Err: %d", result);
 		return CUBE_MESH;
 	}
@@ -598,111 +605,111 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 	size_t ii = 0;
 
 	uint32_t index_offset = 0;
-	for (size_t i = 0; i < attrib.num_face_num_verts; ++i)
-	{
-	    for (size_t f = 0; f < attrib.face_num_verts[i] / 3; ++f)
-	    {
-	        tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset++];
-	        float v1[14], v2[14], v3[14];
+	for (size_t i = 0; i < attrib.num_face_num_verts; ++i) {
+		for (size_t f = 0; f < attrib.face_num_verts[i] / 3; ++f) {
+			tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset++];
+			float v1[14], v2[14], v3[14];
 
-	        v1[0] = attrib.vertices[3 * idx.v_idx + 0]; // Cast the 3 to int64_t in case of overflow (that would be a large obj)
-	        v1[1] = attrib.vertices[3*idx.v_idx+1];
-	        v1[2] = attrib.vertices[3*idx.v_idx+2];
-	        v1[3] = attrib.normals[3*idx.vn_idx+0];
-	        v1[4] = attrib.normals[3*idx.vn_idx+1];
-	        v1[5] = attrib.normals[3*idx.vn_idx+2];
-	        v1[12] = attrib.texcoords[2*idx.vt_idx+0];
-	        v1[13] = attrib.texcoords[2*idx.vt_idx+1];
+			v1[0] = attrib.vertices[3 * idx.v_idx + 0]; // Cast the 3 to int64_t in case of overflow (that would be a large obj)
+			v1[1] = attrib.vertices[3*idx.v_idx+1];
+			v1[2] = attrib.vertices[3*idx.v_idx+2];
+			v1[3] = attrib.normals[3*idx.vn_idx+0];
+			v1[4] = attrib.normals[3*idx.vn_idx+1];
+			v1[5] = attrib.normals[3*idx.vn_idx+2];
+			v1[12] = attrib.texcoords[2*idx.vt_idx+0];
+			v1[13] = attrib.texcoords[2*idx.vt_idx+1];
 
-	        idx = attrib.faces[3 * f + index_offset++];
-	        v2[0] = attrib.vertices[3*idx.v_idx+0];
-	        v2[1] = attrib.vertices[3*idx.v_idx+1];
-	        v2[2] = attrib.vertices[3*idx.v_idx+2];
-	        v2[3] = attrib.normals[3*idx.vn_idx+0];
-	        v2[4] = attrib.normals[3*idx.vn_idx+1];
-	        v2[5] = attrib.normals[3*idx.vn_idx+2];
-	        v2[12] = attrib.texcoords[2*idx.vt_idx+0];
-	        v2[13] = attrib.texcoords[2*idx.vt_idx+1];
+			idx = attrib.faces[3 * f + index_offset++];
+			v2[0] = attrib.vertices[3*idx.v_idx+0];
+			v2[1] = attrib.vertices[3*idx.v_idx+1];
+			v2[2] = attrib.vertices[3*idx.v_idx+2];
+			v2[3] = attrib.normals[3*idx.vn_idx+0];
+			v2[4] = attrib.normals[3*idx.vn_idx+1];
+			v2[5] = attrib.normals[3*idx.vn_idx+2];
+			v2[12] = attrib.texcoords[2*idx.vt_idx+0];
+			v2[13] = attrib.texcoords[2*idx.vt_idx+1];
 
-	        idx = attrib.faces[3 * f + index_offset++];
-	        v3[0] = attrib.vertices[3*idx.v_idx+0];
-	        v3[1] = attrib.vertices[3*idx.v_idx+1];
-	        v3[2] = attrib.vertices[3*idx.v_idx+2];
-	        v3[3] = attrib.normals[3*idx.vn_idx+0];
-	        v3[4] = attrib.normals[3*idx.vn_idx+1];
-	        v3[5] = attrib.normals[3*idx.vn_idx+2];
-	        v3[12] = attrib.texcoords[2*idx.vt_idx+0];
-	        v3[13] = attrib.texcoords[2*idx.vt_idx+1];
+			idx = attrib.faces[3 * f + index_offset++];
+			v3[0] = attrib.vertices[3*idx.v_idx+0];
+			v3[1] = attrib.vertices[3*idx.v_idx+1];
+			v3[2] = attrib.vertices[3*idx.v_idx+2];
+			v3[3] = attrib.normals[3*idx.vn_idx+0];
+			v3[4] = attrib.normals[3*idx.vn_idx+1];
+			v3[5] = attrib.normals[3*idx.vn_idx+2];
+			v3[12] = attrib.texcoords[2*idx.vt_idx+0];
+			v3[13] = attrib.texcoords[2*idx.vt_idx+1];
 
-	        // Calculate tangent and bitangent
+			// Calculate tangent and bitangent
 			struct vec3 delta_p1 = svec3_subtract(svec3(v2[0], v2[1], v2[2]), svec3(v1[0], v1[1], v1[2]));
 			struct vec3 delta_p2 = svec3_subtract(svec3(v3[0], v3[1], v3[2]), svec3(v1[0], v1[1], v1[2]));
 			struct vec2 delta_uv1 = svec2_subtract(svec2(v2[12], v2[13]), svec2(v1[12], v1[13]));
 			struct vec2 delta_uv2 = svec2_subtract(svec2(v3[12], v3[13]), svec2(v1[12], v1[13]));
-	        float r = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+			float r = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
 			struct vec3 tan = svec3_multiply_f(svec3_subtract(svec3_multiply_f(delta_p1, delta_uv2.y), svec3_multiply_f(delta_p2, delta_uv1.y)), r);
 			struct vec3 bitan = svec3_multiply_f(svec3_subtract(svec3_multiply_f(delta_p2, delta_uv1.x), svec3_multiply_f(delta_p1, delta_uv2.x)), r);
 
-	        v1[6] = tan.x;
-	        v1[7] = tan.y;
-	        v1[8] = tan.z;
-	        v2[6] = tan.x;
-	        v2[7] = tan.y;
-	        v2[8] = tan.z;
-	        v3[6] = tan.x;
-	        v3[7] = tan.y;
-	        v3[8] = tan.z;
+			v1[6] = tan.x;
+			v1[7] = tan.y;
+			v1[8] = tan.z;
+			v2[6] = tan.x;
+			v2[7] = tan.y;
+			v2[8] = tan.z;
+			v3[6] = tan.x;
+			v3[7] = tan.y;
+			v3[8] = tan.z;
 
-	        v1[9]  = bitan.x;
-	        v1[10] = bitan.y;
-	        v1[11] = bitan.z;
-	        v2[9]  = bitan.x;
-	        v2[10] = bitan.y;
-	        v2[11] = bitan.z;
-	        v3[9]  = bitan.x;
-	        v3[10] = bitan.y;
-	        v3[11] = bitan.z;
+			v1[9]  = bitan.x;
+			v1[10] = bitan.y;
+			v1[11] = bitan.z;
+			v2[9]  = bitan.x;
+			v2[10] = bitan.y;
+			v2[11] = bitan.z;
+			v3[9]  = bitan.x;
+			v3[10] = bitan.y;
+			v3[11] = bitan.z;
 
-	        for (int j = 0; j < 14; ++j)
-	        {
+			for (int j = 0; j < 14; ++j) {
 				*vit++ = v1[j];
-	        }
+			}
 
-	        for (int j = 0; j < 14; ++j)
-	        {
+			for (int j = 0; j < 14; ++j) {
 				*vit++ = v2[j];
-	        }
+			}
 
-	        for (int j = 0; j < 14; ++j)
-	        {
+			for (int j = 0; j < 14; ++j) {
 				*vit++ = v3[j];
-	        }
+			}
 
-			for (int j = 0; j < 3; ++j, ++ii)
-			{
+			for (int j = 0; j < 3; ++j, ++ii) {
 				indices[ii] = ii;
 			}
-	    }
+		}
 	}
 
-	ret.vertex = THE_CreateBuffer();
-	THE_SetBufferData(ret.vertex, vertices, vertices_count, THE_BUFFER_VERTEX_3P_3N_3T_3B_2UV);
-	ret.index = THE_CreateBuffer();
-	THE_SetBufferData(ret.index, indices, indices_count, THE_BUFFER_INDEX);
+	THE_Mesh ret = AddMesh();
+	meshes[ret].internal_id = THE_UNINIT;
+	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
+	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
+	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
+		(1 << A_TANGENT) | (1 << A_BITANGENT) | (1 << A_UV);
+	meshes[ret].vtx = vertices;
+	meshes[ret].idx = indices;
+	meshes[ret].vtx_size = vertices_count * sizeof(float);
+	meshes[ret].elements = indices_count;
 
 	return ret;
 }
 
 void THE_ReleaseMesh(THE_Mesh mesh)
 {
-	THE_ReleaseBuffer(mesh.vertex);
-	THE_ReleaseBuffer(mesh.index);
+	//TODO: THE_ReleaseBuffer(mesh.vertex);
+	//TODO: THE_ReleaseBuffer(mesh.index);
 }
 
 void THE_FreeMeshData(THE_Mesh mesh)
 {
-	THE_FreeBufferData(mesh.vertex);
-	THE_FreeBufferData(mesh.index);
+	// TODO: THE_Free(meshes[mesh].vtx);
+	// TODO: THE_Free(meshes[mesh].idx);
 }
 
 // FRAMEBUFFER
@@ -791,6 +798,11 @@ void THE_MaterialSetFrameData(THE_Material *mat, float *data, s32 count)
 	memcpy(mat->data, data, count * sizeof(float));
 }
 
+THE_ShaderData *THE_ShaderCommonData(THE_Shader shader)
+{
+	return &(shaders + shader)->common_data;
+}
+
 void THE_MaterialSetData(THE_Material *mat, float *data, s32 count)
 {
 	// Align to fvec4
@@ -799,9 +811,9 @@ void THE_MaterialSetData(THE_Material *mat, float *data, s32 count)
 		count += 4 - offset;
 	}
 	THE_Free(mat->data);
-	mat->data = THE_Alloc(count * sizeof *mat->data);
+	mat->data = THE_Alloc(count * sizeof(float));
 	mat->dcount = count;
-	memcpy(mat->data, data, count * sizeof *mat->data);
+	memcpy(mat->data, data, count * sizeof(float));
 }
 
 void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start)

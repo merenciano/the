@@ -4,6 +4,15 @@
 #include "core/definitions.h"
 #include "renderertypes.h"
 
+typedef enum {
+	A_POSITION = 0,
+	A_NORMAL,
+	A_TANGENT,
+	A_BITANGENT,
+	A_UV,
+	VERTEX_ATTRIBUTE_COUNT
+} THE_VertexAttributes;
+
 typedef struct {
 	union {
 		float *vertices;
@@ -15,6 +24,16 @@ typedef struct {
 	int32_t gpu_version;
 	THE_BufferType type;
 } THE_InternalBuffer;
+
+typedef struct {
+	float *vtx;
+	uint32_t *idx;
+	size_t vtx_size;
+	size_t elements;
+	int32_t attr_flags;
+	int32_t internal_id;
+	uint32_t internal_buffers_id[2];
+} THE_InternalMesh;
 
 typedef struct {
 	char path[64];
@@ -39,23 +58,25 @@ typedef struct {
 } THE_InternalFramebuffer;
 
 typedef struct {
-    int32_t data;
-    int32_t tex;
-    int32_t cubemap;
+	int32_t data;
+	int32_t tex;
+	int32_t cubemap;
 } THE_DataLocations;
 
 typedef struct {
-    const char *shader_name;
-    int32_t program_id;
+	const char *shader_name;
+	int32_t program_id;
 	THE_ShaderData common_data;
-    THE_DataLocations data_loc[2];
+	THE_DataLocations data_loc[2];
 } THE_InternalShader;
 
 extern THE_InternalBuffer *buffers;
+extern THE_InternalMesh *meshes;
 extern THE_InternalTexture *textures;
 extern THE_InternalFramebuffer *framebuffers;
 extern THE_InternalShader *shaders;
 extern size_t buffer_count;
+extern size_t mesh_count;
 extern size_t texture_count;
 extern size_t framebuffer_count;
 extern size_t shader_count;

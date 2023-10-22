@@ -53,6 +53,80 @@ static void CreateBuffer(THE_Buffer buffer)
 	//THE_FreeBufferData(data->createbuff.buffer);
 }
 
+static GLint GetAttribSize(THE_VertexAttributes attr)
+{
+	switch(attr) {
+		case A_POSITION:
+		case A_NORMAL:
+		case A_TANGENT:
+		case A_BITANGENT:
+			return 3;
+		case A_UV:
+			return 2;
+		default:
+			return -1;
+	}
+}
+
+static GLsizei GetAttribStride(int32_t attr_flags)
+{
+	switch(attr_flags)
+	{
+		case (1 << A_POSITION):
+			return 3 * sizeof(float);
+		case (1 << A_POSITION) | (1 << A_NORMAL):
+			return 6 * sizeof(float);
+		case (1 << A_POSITION) | (1 << A_UV):
+			return 5 * sizeof(float);
+		case (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV):
+			return 8 * sizeof(float);
+		case (1 << A_POSITION) | (1 << A_UV) | (1 << A_TANGENT) | 
+			(1 << A_BITANGENT):
+			return 11 * sizeof(float);
+		case (1 << A_POSITION) | (1 << A_NORMAL) | (1 <<  A_UV) | 
+			(1 << A_TANGENT) | (1 << A_BITANGENT):
+			return 14 * sizeof(float);
+		default :
+			THE_ASSERT(false, "Default case.");
+			return 0;
+	}
+}
+
+static void CreateMesh(THE_Mesh mesh)
+{
+	THE_InternalMesh *m = meshes + mesh;
+
+	glGenBuffers(1, &m->internal_buffers_id[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
+	glBufferData(GL_ARRAY_BUFFER, m->vtx_size, m->vtx, GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, (GLuint*)&m->internal_id);
+	glBindVertexArray(m->internal_id);
+	//glGenBuffers(2, m->internal_buffers_id);
+	glGenBuffers(1, &m->internal_buffers_id[1]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(uint32_t),
+		(const void*)m->idx, GL_STATIC_DRAW);
+
+	GLsizei offset = 0;
+	GLsizei s = GetAttribStride(m->attr_flags);
+	GLuint a = 0; /* Attribute index */
+	for (GLint i = 0; i < VERTEX_ATTRIBUTE_COUNT; ++i) {
+		if (!(m->attr_flags & (1 << i)))
+			continue;
+
+		GLint sz = GetAttribSize(i);
+		glEnableVertexAttribArray(a);
+		glVertexAttribPointer(a, sz, GL_FLOAT, GL_FALSE, s, (const void*)&offset);
+		glVertexAttribDivisor(a, 0);
+		++a;
+		offset += sz * sizeof(float);
+	}
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 static void CreateTexture(THE_Texture tex, bool release_from_ram)
 {
 	THE_TextureConfig config;
@@ -402,22 +476,10 @@ static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
 		tex_units[i] = textures[data.tex[i]].texture_unit;
 	}
 
-	// TODO: Quitar estos IF
-	if (m->data_loc[group].data >= 0)
-	{
-		glUniform4fv(m->data_loc[group].data, data.dcount / 4, data.data);
-	}
-
-	if (m->data_loc[group].tex >= 0)
-	{
-		glUniform1iv(m->data_loc[group].tex, data.cube_start, tex_units);
-	}
-
-	if (m->data_loc[group].cubemap >= 0)
-	{
-		glUniform1iv(m->data_loc[group].cubemap, data.tcount - data.cube_start,
-			tex_units + data.cube_start);
-	}
+	glUniform4fv(m->data_loc[group].data, data.dcount / 4, data.data);
+	glUniform1iv(m->data_loc[group].tex, data.cube_start, tex_units);
+	glUniform1iv(m->data_loc[group].cubemap, data.tcount - data.cube_start,
+		tex_units + data.cube_start);
 }
 
 void THE_UseShaderExecute(THE_CommandData *data)
@@ -427,7 +489,7 @@ void THE_UseShaderExecute(THE_CommandData *data)
 		CreateShader(m);
 	}
 	glUseProgram(m->program_id);
-	SetMaterialData(data->usemat.mat, data->usemat.data, 0);
+	SetMaterialData(data->usemat.mat, m->common_data, 0);
 }
 
 void THE_ClearExecute(THE_CommandData *data)
@@ -459,224 +521,57 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	skymatdata.tcount = 1;
 	skymatdata.cube_start = 0;
 
-	THE_ASSERT(CUBE_MESH.vertex != THE_UNINIT,
+	THE_ASSERT(meshes[CUBE_MESH].elements, "Uninit mesh");
+	/*THE_ASSERT(CUBE_MESH.vertex != THE_UNINIT,
 		"You are trying to draw with an uninitialized vertex buffer");
 
 	THE_ASSERT(CUBE_MESH.index != THE_UNINIT,
 		"You are trying to draw with an uninitialized index buffer");
 
 	THE_ASSERT(buffers[CUBE_MESH.vertex].cpu_version > 0, "Vertex buffer without data");
-	THE_ASSERT(buffers[CUBE_MESH.index].cpu_version > 0, "Index buffer without data");
+	THE_ASSERT(buffers[CUBE_MESH.index].cpu_version > 0, "Index buffer without data");*/
 
 	// Set the uniforms
 	THE_Shader mat = 1; // skybox
-	THE_InternalShader *m = shaders + mat;
 	THE_CommandData usenewmatdata;
 	usenewmatdata.usemat.data = skymatdata;
 	usenewmatdata.usemat.mat = mat;
+	shaders[mat].common_data = skymatdata;
 	THE_UseShaderExecute(&usenewmatdata);
 
-	// Create the OpenGL vertex buffer if it has not been created yet
-	if (buffers[CUBE_MESH.vertex].gpu_version == 0) {
-		glGenBuffers(1, &(buffers[CUBE_MESH.vertex].internal_id));
-		glBindBuffer(GL_ARRAY_BUFFER, buffers[CUBE_MESH.vertex].internal_id);
-		glBufferData(GL_ARRAY_BUFFER,
-			buffers[CUBE_MESH.vertex].count * sizeof(float),
-			(const void*)buffers[CUBE_MESH.vertex].vertices, GL_STATIC_DRAW);
-		buffers[CUBE_MESH.vertex].gpu_version = buffers[CUBE_MESH.vertex].cpu_version;
-	} else {
-		glBindBuffer(GL_ARRAY_BUFFER, buffers[CUBE_MESH.vertex].internal_id);
+	if (meshes[CUBE_MESH].internal_id == THE_UNINIT) {
+		CreateMesh(CUBE_MESH);
 	}
+	glBindVertexArray(meshes[CUBE_MESH].internal_id);
 
-	// Create the OpenGL index buffer if it has not been created yet
-	if (buffers[CUBE_MESH.index].gpu_version == 0) {
-		glGenBuffers(1, &(buffers[CUBE_MESH.index].internal_id));
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[CUBE_MESH.index].internal_id);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			buffers[CUBE_MESH.index].count * sizeof(uint32_t),
-			(const void*)buffers[CUBE_MESH.index].indices, GL_STATIC_DRAW);
-		buffers[CUBE_MESH.index].gpu_version = buffers[CUBE_MESH.index].cpu_version;
-	} else {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[CUBE_MESH.index].internal_id);
-	}
-
-	GLint attrib_pos = glGetAttribLocation(m->program_id, "a_position");
-	glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(attrib_pos);
-
-	uint32_t index_count = buffers[CUBE_MESH.index].count; // Implicit cast to unsigned
 
 	glDepthFunc(GL_LEQUAL);
-	glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, meshes[CUBE_MESH].elements, GL_UNSIGNED_INT, 0);
 	glDepthFunc(GL_LESS);
-
-	// TODO: Remove this
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void THE_DrawExecute(THE_CommandData *data)
 {
 	THE_ASSERT(data->draw.inst_count > 0, "Set inst count");
 	THE_Mesh mesh = data->draw.mesh;
-	THE_InternalShader *m = shaders + data->draw.newmat;
-	//THE_Material *mat = data->draw.mat;
+	THE_InternalMesh *im = meshes + mesh;
 
-	//int32_t vertex_handle = geo.vertex_buffer().handle();
-	//int32_t index_handle = geo.index_buffer().handle();
-
-	THE_ASSERT(mesh.vertex != THE_UNINIT,
-		"You are trying to draw with an uninitialized vertex buffer");
-
-	THE_ASSERT(mesh.index != THE_UNINIT,
-		"You are trying to draw with an uninitialized index buffer");
-
-	THE_ASSERT(buffers[mesh.vertex].cpu_version > 0, "Vertex buffer without data");
-	THE_ASSERT(buffers[mesh.index].cpu_version > 0, "Index buffer without data");
-	//THE_ASSERT(mat->type != THE_MT_NONE, "Material type not setted");
-
-	// Set the uniforms
-	//UseMaterial(mat);
-	SetMaterialData(data->draw.newmat, data->draw.matdata, 1);
-
-	// Create the OpenGL vertex buffer if it has not been created yet
-	if (buffers[mesh.vertex].gpu_version == 0) {
-		CreateBuffer(mesh.vertex);
-	} else {
-	    glBindBuffer(GL_ARRAY_BUFFER, buffers[mesh.vertex].internal_id);
+	THE_ASSERT(im->elements, "Attempt to draw an uninitialized mesh");
+	if (im->internal_id == THE_UNINIT) {
+		CreateMesh(mesh);
 	}
+	glBindVertexArray(im->internal_id);
+	glBindBuffer(GL_ARRAY_BUFFER, im->internal_buffers_id[0]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im->internal_buffers_id[1]);
 
-	// Create the OpenGL index buffer if it has not been created yet
-	if (buffers[mesh.index].gpu_version == 0) {
-		CreateBuffer(mesh.index);
-	} else {
-	    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-	        buffers[mesh.index].internal_id);
-	}
-
-	// TODO: Guardar info de attrib pos, stride y offset en el material en un vector y implementar esto con un bucle cojones
-	switch(buffers[mesh.vertex].type) {
-	case THE_BUFFER_VERTEX_3P_3N: {
-		// POSITION
-		GLint attrib_pos = glGetAttribLocation(m->program_id, "a_position");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// NORMAL
-		attrib_pos = glGetAttribLocation(m->program_id, "a_normal");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(float), (void*)(3 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-		break;
-	}
-
-	case THE_BUFFER_VERTEX_3P_2UV: {
-		// POSITION
-		GLint attrib_pos = glGetAttribLocation(m->program_id, "a_position");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			5 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// UV
-		attrib_pos = glGetAttribLocation(m->program_id, "a_uv");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
-			5 * sizeof(float), (void*)(3 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-		break;
-	}
-	case THE_BUFFER_VERTEX_3P_3N_2UV: {
-		// POSITION
-		GLint attrib_pos = glGetAttribLocation(m->program_id, "a_position");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			8 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// NORMAL
-		attrib_pos = glGetAttribLocation(m->program_id, "a_normal");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// UV
-		attrib_pos = glGetAttribLocation(m->program_id, "a_uv");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
-			8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-		break;
-	}
-
-	case THE_BUFFER_VERTEX_3P_3N_3T_3B_2UV: {
-		// POSITION
-		GLint attrib_pos = glGetAttribLocation(m->program_id, "a_position");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			14 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// NORMAL
-		attrib_pos = glGetAttribLocation(m->program_id, "a_normal");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			14 * sizeof(float), (void*)(3 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// TANGENT
-		attrib_pos = glGetAttribLocation(m->program_id, "a_tangent");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			14 * sizeof(float), (void*)(6 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-	
-		// BITANGENT
-		attrib_pos = glGetAttribLocation(m->program_id, "a_bitangent");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			14 * sizeof(float), (void*)(9 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-
-		// UV
-		attrib_pos = glGetAttribLocation(m->program_id, "a_uv");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
-			14 * sizeof(float), (void*)(12 * sizeof(float)));
-		glVertexAttribDivisor(attrib_pos, 0);
-		break;
-	}
-	default:
-		THE_SLOG_ERROR("Wrong vertex buffer for draw command.");
-		break;
-	}
-
-	// TODO: Implementar bien el instanced si lo quiero. Debe ir por shader.
-	if (data->draw.inst_count > 1U) {
-		THE_Buffer attr = data->draw.inst_attr;
-		THE_ASSERT(attr != THE_UNINIT, "Instance count must be greater than one.");
-		THE_ASSERT(buffers[attr].type == THE_BUFFER_VERTEX_3P,
-			"The instance attributes buffer has the wrong type.");
-
-		if (buffers[attr].gpu_version == 0) {
-			CreateBuffer(attr);
-		} else {
-			glBindBuffer(GL_ARRAY_BUFFER, buffers[attr].internal_id);
-		}
-
-		GLint attrib_pos = glGetAttribLocation(m->program_id, "a_offset");
-		glEnableVertexAttribArray(attrib_pos);
-		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
-			3 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(attrib_pos, 1);
-	}
-
-	uint32_t index_count = buffers[mesh.index].count; // Implicit cast to unsigned
-	glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, 0, data->draw.inst_count);
+	THE_CommandData shader_data = {
+		.usemat.data = data->draw.mat,
+		.usemat.mat = data->draw.shader
+	};
+	THE_UseShaderExecute(&shader_data);
+	SetMaterialData(data->draw.shader, data->draw.mat, 1);
+	glDrawElementsInstanced(GL_TRIANGLES, im->elements, GL_UNSIGNED_INT, 0,
+		data->draw.inst_count);
 }
 
 void THE_EquirectToCubeExecute(THE_CommandData *data)
@@ -721,13 +616,13 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, icu->internal_id, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
-		dcd.draw.newmat = 2; // eq to cube
-		dcd.draw.matdata = THE_MaterialDefault();
-		THE_MaterialSetFrameTexture(&(dcd.draw.matdata), &equirec, 1, -1);
-		THE_MaterialSetFrameData(&dcd.draw.matdata, (float*)&vp, 16);
+		dcd.draw.shader = 2; // eq to cube
+		dcd.draw.mat = THE_MaterialDefault();
+		THE_MaterialSetFrameTexture(&(dcd.draw.mat), &equirec, 1, -1);
+		THE_MaterialSetFrameData(&dcd.draw.mat, (float*)&vp, 16);
 		THE_CommandData cmdata;
-		cmdata.usemat.mat = dcd.draw.newmat;
-		cmdata.usemat.data = dcd.draw.matdata;
+		cmdata.usemat.mat = dcd.draw.shader;
+		cmdata.usemat.data = dcd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
@@ -753,13 +648,13 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 				    GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, ipref->internal_id, i);
 				glClear(GL_COLOR_BUFFER_BIT);
-				draw_cd.draw.newmat = 3; // prefilter env
-				draw_cd.draw.matdata = THE_MaterialDefault();
-                THE_MaterialSetFrameTexture(&draw_cd.draw.matdata, &o_cube, 1, 0);
-                THE_MaterialSetFrameData(&draw_cd.draw.matdata, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
+				draw_cd.draw.shader = 3; // prefilter env
+				draw_cd.draw.mat = THE_MaterialDefault();
+                THE_MaterialSetFrameTexture(&draw_cd.draw.mat, &o_cube, 1, 0);
+                THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
 				THE_CommandData cmdata;
-				cmdata.usemat.mat = draw_cd.draw.newmat;
-				cmdata.usemat.data = draw_cd.draw.matdata;
+				cmdata.usemat.mat = draw_cd.draw.shader;
+				cmdata.usemat.data = draw_cd.draw.mat;
 				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
@@ -769,6 +664,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	if (o_lut != THE_UNINIT) {
 		THE_InternalTexture *ilut = textures + o_lut;
 		if (ilut->cpu_version > ilut->gpu_version) {
+			printf("%d\n", glGetError());
 			CreateTexture(o_lut, false);
 		}
 		glViewport(0, 0, ilut->width, ilut->height);
@@ -777,17 +673,17 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_CommandData draw_cd;
 		draw_cd.draw.mesh = QUAD_MESH;
 		draw_cd.draw.inst_count = 1U;
-		draw_cd.draw.newmat = 4; // THE_MT_LUT_GEN;
-		draw_cd.draw.matdata = THE_MaterialDefault();
+		draw_cd.draw.shader = 4; // THE_MT_LUT_GEN;
+		draw_cd.draw.mat = THE_MaterialDefault();
 		THE_CommandData cmdata;
-		cmdata.usemat.mat = draw_cd.draw.newmat;
-		cmdata.usemat.data = draw_cd.draw.matdata;
+		cmdata.usemat.mat = draw_cd.draw.shader;
+		cmdata.usemat.data = draw_cd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}
 
-	glDeleteFramebuffers(1, &fb);
-	THE_ReleaseTexture(equirec);
+	//glDeleteFramebuffers(1, &fb);
+	//THE_ReleaseTexture(equirec);
 }
 
 void THE_RenderOptionsExecute(THE_CommandData *data)

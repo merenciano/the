@@ -1,5 +1,6 @@
 #include "the.h"
 #include <string.h>
+#include <stdlib.h>
 
 struct Materials {
 	THE_Shader fullscreen_img;
@@ -282,6 +283,17 @@ void Init(void)
 	irradiance->next = NULL;
 
 	THE_AddCommands(rendops);
+
+	THE_ShaderData *scene_data = THE_ShaderCommonData(g_mats.pbr);
+	*scene_data = THE_MaterialDefault();
+	scene_data->data = malloc(sizeof(THE_PbrSceneData));
+	scene_data->dcount = sizeof(THE_PbrSceneData) / sizeof(float);
+	scene_data->tex = malloc(3 * sizeof(THE_Texture));
+	scene_data->tcount = 3;
+	scene_data->cube_start = 1;
+	scene_data->tex[0] = THE_ResourceMapGetTexture(&resource_map, "LutMap");
+	scene_data->tex[1] = THE_ResourceMapGetTexture(&resource_map, "Irradian");
+	scene_data->tex[2] = THE_ResourceMapGetTexture(&resource_map, "Prefilte");
 }
 
 void Update(void)
@@ -291,10 +303,11 @@ void Update(void)
 	THE_CameraMovementSystem(&camera, THE_DeltaTime());
 
 	// Render commands
-	THE_PbrSceneData pbr_sd;
-	pbr_sd.view_projection = smat4_multiply(camera.proj_mat, camera.view_mat);
-	pbr_sd.camera_position = THE_CameraPosition(&camera);
-	pbr_sd.light_direction_intensity = sun_dir_intensity;
+	THE_ShaderData *scene_data = THE_ShaderCommonData(g_mats.pbr);
+	THE_PbrSceneData *pbr_sd = scene_data->data;
+	pbr_sd->view_projection = smat4_multiply(camera.proj_mat, camera.view_mat);
+	pbr_sd->camera_position = THE_CameraPosition(&camera);
+	pbr_sd->light_direction_intensity = sun_dir_intensity;
 
 	THE_Material full_screen_img = THE_MaterialDefault();
 	THE_Texture fbtex = THE_CameraOutputColorTexture(&camera); // TODO: Revisar si deberia hacerse en aqui algo tan low level del renderer (algo como link camera to tex?)
@@ -326,20 +339,12 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 	rops->next = clear;
 
-	THE_Texture scene_tex[3];
-	scene_tex[0] = THE_ResourceMapGetTexture(&resource_map, "LutMap");  //GM.resource_map()->textures.at("LutMap");
-	scene_tex[1] = THE_ResourceMapGetTexture(&resource_map, "Irradian"); //GM.resource_map()->textures.at("IrradianceEnv");
-	scene_tex[2] = THE_ResourceMapGetTexture(&resource_map, "Prefilte"); //GM.resource_map()->textures.at("PrefilterSpec");
 
-	THE_RenderCommand *usemat = THE_AllocateCommand();
-	THE_Material newmatdat = THE_MaterialDefault();
-	THE_MaterialSetFrameData(&newmatdat, (float*)&pbr_sd, sizeof(THE_PbrSceneData) / sizeof(float));
-	THE_MaterialSetFrameTexture(&newmatdat, scene_tex, 3, 1);
-	usemat->data.usemat.data = newmatdat;
-	usemat->data.usemat.mat = g_mats.pbr;
-	usemat->execute = THE_UseShaderExecute;
-	clear->next = usemat;
-	usemat->next = NULL;
+	THE_RenderCommand *use_pbr = THE_AllocateCommand();
+	use_pbr->data.usemat.mat = g_mats.pbr;
+	use_pbr->execute = THE_UseShaderExecute;
+	clear->next = use_pbr;
+	use_pbr->next = NULL;
 
 	THE_AddCommands(fbuff);
 
@@ -380,13 +385,14 @@ void Update(void)
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
 	usefullscreen->data.usemat.mat = g_mats.fullscreen_img;
 	usefullscreen->data.usemat.data = full_screen_img;
+	*THE_ShaderCommonData(g_mats.fullscreen_img) = full_screen_img;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.newmat = g_mats.fullscreen_img;
-	draw->data.draw.matdata = full_screen_img;
+	draw->data.draw.shader = g_mats.fullscreen_img;
+	draw->data.draw.mat = full_screen_img;
 	draw->data.draw.inst_count = 1;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;

@@ -12,7 +12,7 @@ static THE_Chrono frame_timer;
 
 void THE_InitManager(THE_Config *cnfg)
 {
-	size_t total_mem = MAX_BUFFERS * sizeof(THE_InternalBuffer) + MAX_TEXTURES * sizeof(THE_InternalTexture);
+	size_t total_mem = THE_MAX_BUFFERS * sizeof(THE_InternalBuffer) + THE_MAX_TEXTURES * sizeof(THE_InternalTexture) + THE_MAX_MESHES * sizeof(THE_InternalMesh) + THE_MAX_FRAMEBUFFERS * sizeof(THE_InternalFramebuffer);
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(void*); // 2 because current and next
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(THE_CommandData);
 	total_mem += cnfg->alloc_capacity;

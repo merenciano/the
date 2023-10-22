@@ -28,7 +28,7 @@ void Init(void)
 
 	e = THE_EntityCreate();
 	e->transform = smat4_translation(smat4_identity(), svec3(2.0f, 0.0f, 0.0f));
-	e->mesh = SPHERE_MESH;
+	e->mesh = CUBE_MESH;
 	e->mat = hellomat;
 	e->mat_data = THE_MaterialDefault();
 }

@@ -10,6 +10,7 @@
 #define THE_FRAME_POOL_SIZE 1048576
 #define THE_MAX_TEXTURES 63
 #define THE_MAX_BUFFERS 127
+#define THE_MAX_MESHES 32
 #define THE_MAX_FRAMEBUFFERS 8
 
 typedef struct {
@@ -51,8 +52,9 @@ void THE_ReleaseTexture(THE_Texture tex);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
 bool IsValidTexture(THE_Texture tex);
 
+THE_ShaderData *THE_ShaderCommonData(THE_Shader);
+
 // Mesh
-THE_Mesh THE_GetNewMesh(void);
 THE_Mesh THE_CreateCubeMesh(void);
 THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments);
 THE_Mesh THE_CreateQuadMesh(void);

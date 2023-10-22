@@ -27,15 +27,11 @@ typedef enum {
 	THE_TEX_PREFILTER_ENVIRONMENT,
 } THE_TexType;
 
+typedef int32_t THE_Mesh;
 typedef int32_t THE_Texture;
 typedef int32_t THE_Buffer;
 typedef int32_t THE_Framebuffer;
 typedef int32_t THE_Shader;
-
-typedef struct {
-	THE_Buffer vertex;
-	THE_Buffer index;
-} THE_Mesh;
 
 typedef struct {
 	float *data;

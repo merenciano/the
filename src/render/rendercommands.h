@@ -22,8 +22,8 @@ typedef struct {
 
 typedef struct {
 	THE_Mesh mesh;
-	THE_Shader newmat;
-	THE_Material matdata;
+	THE_Shader shader;
+	THE_Material mat;
 	THE_Buffer inst_attr;
 	uint32_t inst_count;
 } THE_DrawCommandData;
@@ -63,7 +63,7 @@ typedef struct {
 typedef struct {
 	THE_Shader mat;
 	THE_Material data;
-} THE_UseMaterialData;
+} THE_UseShaderData;
 
 typedef union {
 	THE_ClearCommandData clear;
