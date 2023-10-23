@@ -41,6 +41,7 @@ struct vec3 THE_CameraForward(THE_Camera *cam)
 
 THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
 {
+	THE_ASSERT(framebuffers[cam->fb].color_tex != THE_UNINIT, "Uninit fb tex");
 	return framebuffers[cam->fb].color_tex;
 }
 

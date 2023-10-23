@@ -1,15 +1,28 @@
 #include "chrono.h"
-#include "definitions.h"
+#include "thefinitions.h"
+
+#include <complex.h>
+#include <stdint.h>
+#include <assert.h>
+#include <stdlib.h>
 #include <time.h>
+
+typedef struct timespec tmspc;
+
+struct THE_Chronometer {
+	struct timespec start;
+	struct timespec end;
+};
 
 /*
 	Returns the duration of the crono, if THE_ChronoEnd has been called for the chrono
 	it returns end-start. If end has not been called it returns the current duration.
 */
-static timespec Duration(THE_Chrono *chrono)
+static tmspc Duration(THE_Chrono *chrono)
 {
-	timespec ret;
-	timespec tmp;
+	tmspc ret;
+	tmspc tmp;
+
 	if (chrono->end.tv_nsec == 0) {
 		clock_gettime(2, &tmp);
 	} else {
@@ -18,6 +31,16 @@ static timespec Duration(THE_Chrono *chrono)
 	ret.tv_sec = tmp.tv_sec - chrono->start.tv_sec;
 	ret.tv_nsec = tmp.tv_nsec - chrono->start.tv_nsec;
 	return ret;
+}
+
+THE_Chrono *THE_GetChrono()
+{
+	// Ale de momento uno y a mamar.
+	static THE_Chrono c = {
+		.start = {0},
+		.end = {0}
+	};
+	return &c;
 }
 
 void THE_ChronoStart(THE_Chrono *chrono)
@@ -40,7 +63,7 @@ float THE_ChronoDurationSec(THE_Chrono *c)
 
 float THE_ChronoDurationMS(THE_Chrono *c)
 {
-	timespec time = Duration(c);
-	s64 nsec = time.tv_nsec + time.tv_sec * 1000000000;
+	tmspc time = Duration(c);
+	int64_t nsec = time.tv_nsec + time.tv_sec * 1000000000;
 	return (float)nsec / 1000000.0f;
 }

@@ -1,14 +1,9 @@
 #ifndef THE_CORE_CHRONO_H
 #define THE_CORE_CHRONO_H
 
-#include <time.h>
-typedef struct timespec timespec;
+typedef struct THE_Chronometer THE_Chrono;
 
-typedef struct THE_Chrono {
-	timespec start;
-	timespec end;
-} THE_Chrono;
-
+THE_Chrono *THE_GetChrono();
 void THE_ChronoStart(THE_Chrono *chrono);
 void THE_ChronoEnd(THE_Chrono *chrono);
 

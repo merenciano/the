@@ -1,4 +1,6 @@
 #include "resource-map.h"
+
+#include "core/thefinitions.h"
 #include "render/renderer.h"
 
 void THE_ResourceMapAddMeshFromPath(THE_ResourceMap *rm, const char *name, const char *path)

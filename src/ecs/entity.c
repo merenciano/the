@@ -1,6 +1,10 @@
 #include "entity.h"
-#include "core/definitions.h"
+#include "core/thefinitions.h"
 #include "render/rendercommands.h"
+
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 static THE_Entity entities[256];
 static int32_t entities_last;

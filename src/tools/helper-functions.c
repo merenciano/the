@@ -1,3 +1,4 @@
+#if 0
 #include "helper-functions.h"
 #include "tools/resource-map.h"
 #include "core/manager.h"
@@ -43,3 +44,4 @@ void THE_SetSunIntensity(float intensity)
 {
 	sun_dir_intensity.w = intensity;
 }
+#endif

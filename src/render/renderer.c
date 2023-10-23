@@ -5,6 +5,8 @@
 #include "core/io.h"
 #include "core/mem.h"
 
+#include <mathc.h>
+
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MALLOC(sz)           THE_Alloc(sz)
@@ -27,17 +29,13 @@ THE_Mesh CUBE_MESH;
 THE_Mesh QUAD_MESH;
 
 THE_RenderQueue render_queue;
-THE_Camera camera;
-struct vec4 sun_dir_intensity;
+struct THE_Camera camera;
+struct vec4 sunlight;
 
 typedef struct THE_AvailableNode {
 	struct THE_AvailableNode *next;
 	int32_t value;
 } THE_AvailableNode;
-
-static THE_AvailableNode *available_buffer;
-static THE_AvailableNode *available_tex;
-static THE_AvailableNode *available_fb;
 
 static THE_RenderCommand *curr_pool;
 static THE_RenderCommand *curr_pool_last;
@@ -59,12 +57,6 @@ static THE_Mesh AddMesh()
 	return mesh_count++;
 }
 
-static THE_Buffer AddBuffer()
-{
-	THE_ASSERT(buffer_count < THE_MAX_BUFFERS, "Max buffers reached");
-	return buffer_count++;
-}
-
 static THE_Texture AddTexture()
 {
 	THE_ASSERT(texture_count < THE_MAX_TEXTURES, "Max textures reached");
@@ -77,6 +69,12 @@ static THE_Framebuffer AddFramebuffer()
 	return framebuffer_count++;
 }
 
+static THE_Shader AddShader()
+{
+	THE_ASSERT(shader_count < THE_MAX_SHADERS, "Max shaders reached");
+	return shader_count++;
+}
+
 void THE_InitRender()
 {
 	curr_pool = THE_PersistentAlloc(THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand), 0);
@@ -84,20 +82,13 @@ void THE_InitRender()
 	curr_pool_last = curr_pool;
 	next_pool_last = next_pool;
 
-	buffers = THE_PersistentAlloc(sizeof(THE_InternalBuffer) * THE_MAX_BUFFERS, 0);
 	meshes = THE_PersistentAlloc(sizeof(THE_InternalMesh) * THE_MAX_MESHES, 0);
 	textures = THE_PersistentAlloc(sizeof(THE_InternalTexture) * THE_MAX_TEXTURES, 0);
 	framebuffers = THE_PersistentAlloc(sizeof(THE_InternalFramebuffer) * THE_MAX_FRAMEBUFFERS, 0);
-	buffer_count = 0;
+	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64, 0);
 	mesh_count = 0;
 	texture_count = 0;
 	framebuffer_count = 0;
-
-	available_buffer = NULL;
-	available_tex = NULL;
-	available_fb = NULL;
-
-	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64, 0);
 	shader_count = 0;
 
 	/* 
@@ -112,9 +103,8 @@ void THE_InitRender()
 	frame_pool_last = frame_pool[0];
 	frame_switch = 0;
 
-
 	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight(), 0);
-	sun_dir_intensity = svec4(1.0f, -1.0f, 0.0f, 1.0f);
+	sunlight = svec4(1.0f, -1.0f, 0.0f, 1.0f);
 
 	SPHERE_MESH = THE_CreateSphereMesh(32, 32);
 	CUBE_MESH = THE_CreateCubeMesh();
@@ -181,7 +171,7 @@ THE_RenderCommand *THE_AllocateCommand()
 	return next_pool_last++;
 }
 
-void *THE_AllocateFrameResource(size_t size)
+void *THE_AllocateFrameResource(uint32_t size)
 {
 	THE_ASSERT(((frame_pool_last + size) - frame_pool[frame_switch]) < THE_FRAME_POOL_SIZE / 2,
 		"Not enough memory in the frame pool");
@@ -195,114 +185,16 @@ int32_t THE_IsInsideFramePool(void *address)
 	return address > (void*)*frame_pool && address < (void*)*frame_pool + THE_FRAME_POOL_SIZE;
 }
 
-size_t THE_RenderQueueUsed()
+uint32_t THE_RenderQueueUsed()
 {
 	return curr_pool_last - curr_pool;
 }
 
-// BUFFER FUNCTIONS
-bool IsValidBuffer(THE_Buffer buff)
-{
-	for (THE_AvailableNode *node = available_buffer; node != NULL; node = node->next) {
-		if (node->value == buff) {
-			return false;
-		}
-	}
-	return buff < buffer_count;
-}
-
-THE_Buffer THE_CreateBuffer()
-{
-	THE_Buffer ret;
-	if (available_buffer != NULL) {
-		THE_AvailableNode *node = available_buffer;
-		available_buffer = available_buffer->next;
-		ret = node->value;
-		THE_Free(node);
-	} else {
-		ret = AddBuffer();
-	}
-
-	buffers[ret].vertices = NULL;
-	buffers[ret].count = 0;
-	buffers[ret].cpu_version = 0;
-	buffers[ret].gpu_version = 0;
-	buffers[ret].type = THE_BUFFER_NONE;
-	buffers[ret].internal_id = THE_UNINIT;
-	return ret;
-}
-
-void THE_SetBufferData(THE_Buffer buff, void *data, uint32_t count, THE_BufferType t)
-{
-	THE_ASSERT(IsValidBuffer(buff), "Invalid buffer");
-	THE_ASSERT(t != THE_BUFFER_NONE , "Invalid buffer type");
-	THE_ASSERT(data != NULL, "Data already points to something");
-	THE_ASSERT(buffers[buff].vertices == NULL, "There is data to be freed before setting new one");
-	buffers[buff].type = t;
-	buffers[buff].count = count;
-	if (t == THE_BUFFER_INDEX) {
-		buffers[buff].indices = (u32*)data;
-	} else {
-		buffers[buff].vertices = (float*)data;
-	}
-	buffers[buff].cpu_version++;
-}
-
-THE_BufferType THE_GetBufferType(THE_Buffer buff)
-{
-	THE_ASSERT(IsValidBuffer(buff), "Invalid buffer");
-	return buffers[buff].type;
-}
-
-void THE_ReleaseBuffer(THE_Buffer buff)
-{
-	THE_ASSERT(IsValidBuffer(buff), "Invalid buffer");
-	// TODO System that seeks MARKED FOR DELETE resources and deletes them in GPU
-	// and adds the index to avaiable resource list
-	buffers[buff].cpu_version = THE_MARKED_FOR_DELETE;
-	THE_FreeBufferData(buff);
-	buffers[buff].type = THE_BUFFER_NONE;
-}
-
-void THE_FreeBufferData(THE_Buffer buff)
-{
-	THE_ASSERT(IsValidBuffer(buff), "Invalid buffer");
-	THE_Free(buffers[buff].vertices);
-	buffers[buff].vertices = NULL;
-	buffers[buff].count = 0;
-}
-
-// TEXTURE FUNCTIONS
-static THE_Texture GetAvailableTexture()
-{
-	THE_Texture ret;
-	if (available_tex != NULL) {
-		THE_AvailableNode *node = available_tex;
-		available_tex = available_tex->next;
-		ret = node->value;
-		THE_Free(node);
-	} else {
-		ret = AddTexture();
-	}
-
-	return ret;
-}
-
-bool IsValidTexture(THE_Texture tex)
-{
-	for (THE_AvailableNode *node = available_tex; node != NULL; node = node->next) {
-		if (node->value == tex) {
-			return false;
-		}
-	}
-	return tex < texture_count && tex >= 0;
-}
-
-THE_Texture THE_CreateTexture(const char *path, THE_TexType t)
+THE_Texture THE_CreateTexture(const char *path, enum THE_TexType t)
 {
 	THE_ASSERT(*path != '\0', "For empty textures use THE_CreateEmptyTexture");
 
-	THE_Texture ret = GetAvailableTexture();
+	THE_Texture ret = AddTexture();
 	strcpy(textures[ret].path, path);
 	textures[ret].pix = NULL;
 	textures[ret].internal_id = THE_UNINIT;
@@ -316,11 +208,11 @@ THE_Texture THE_CreateTexture(const char *path, THE_TexType t)
 	return ret;
 }
 
-THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t)
+THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 {
 	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
 
-	THE_Texture ret = GetAvailableTexture();
+	THE_Texture ret = AddTexture();
 	*(textures[ret].path) = '\0';
 	textures[ret].pix = NULL;
 	textures[ret].internal_id = THE_UNINIT;
@@ -337,7 +229,6 @@ THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t)
 void THE_LoadTexture(THE_Texture tex, const char *path)
 {
 	THE_ASSERT(*path != '\0', "Invalid path");
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 
 	int32_t width, height, nchannels = 0;
 	stbi_set_flip_vertically_on_load(1);
@@ -375,27 +266,22 @@ void THE_LoadTexture(THE_Texture tex, const char *path)
 	textures[tex].height = height;
 }
 
-void THE_ReleaseTexture(THE_Texture tex)
-{
-	if (tex < 0) {
-		return;
-	}
-
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
-	// TODO System that seeks MARKED FOR DELETE resources and deletes them in GPU
-	// and adds the index to avaiable resource list
-	textures[tex].cpu_version = THE_MARKED_FOR_DELETE;
-	THE_FreeTextureData(tex);
-	textures[tex].type = THE_TEX_NONE;
-}
-
 void THE_FreeTextureData(THE_Texture tex)
 {
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 	if (textures[tex].pix) {
 		stbi_image_free(textures[tex].pix);
 		textures[tex].pix = NULL;
 	}
+}
+
+THE_Shader THE_CreateShader(const char *shader)
+{
+	THE_Shader ret = AddShader();
+	shaders[ret].shader_name = shader;
+	shaders[ret].program_id = THE_UNINIT;
+	shaders[ret].common_data = THE_MaterialDefault();
+	memset(shaders[ret].data_loc, -1, sizeof(shaders[ret].data_loc)); // TODO: Quitar, no fa farta
+	return ret;
 }
 
 THE_Mesh THE_CreateCubeMesh()
@@ -443,15 +329,14 @@ THE_Mesh THE_CreateCubeMesh()
 	};
 
 	THE_Mesh ret = AddMesh();
-	meshes[ret].internal_id = THE_UNINIT;
-	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
-	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
 	meshes[ret].attr_flags = 
 		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
-	meshes[ret].vtx = malloc(sizeof(VERTICES));
-	memcpy(meshes[ret].vtx, VERTICES, sizeof(VERTICES));
-	meshes[ret].idx = malloc(sizeof(INDICES));
-	memcpy(meshes[ret].idx, INDICES, sizeof(INDICES));
+	//meshes[ret].vtx = malloc(sizeof(VERTICES));
+	//memcpy(meshes[ret].vtx, VERTICES, sizeof(VERTICES));
+	//meshes[ret].idx = malloc(sizeof(INDICES));
+	//memcpy(meshes[ret].idx, INDICES, sizeof(INDICES));
+	meshes[ret].vtx = &VERTICES[0];
+	meshes[ret].idx = &INDICES[0];
 	meshes[ret].vtx_size = sizeof(VERTICES);
 	meshes[ret].elements = sizeof(INDICES) / sizeof(*INDICES);
 
@@ -505,6 +390,10 @@ THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
 	v[6 + 8] = 0.5f;
 	v[7 + 8] = 1.0f;
 
+	v+=16;
+
+	printf("%ld, %ld\n", v - meshes[ret].vtx, vtx_size / sizeof(float));
+
 	uint32_t *i = meshes[ret].idx;
 	for (int y = 0; y < y_segments - 1; ++y) {
 		for (int x = 0; x < x_segments; ++x) {
@@ -535,14 +424,14 @@ THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
 
 THE_Mesh THE_CreateQuadMesh()
 {
-	static float VERTICES[] = {
+	static const float VERTICES[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  0.0f,
 		1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  0.0f,
 		1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  1.0f,
 		-1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  1.0f,
 	};
 
-	static uint32_t INDICES[] = {0, 1, 2, 0, 2, 3};
+	static const uint32_t INDICES[] = {0, 1, 2, 0, 2, 3};
 
 	THE_Mesh ret = AddMesh();
 	meshes[ret].internal_id = THE_UNINIT;
@@ -700,49 +589,11 @@ THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path)
 	return ret;
 }
 
-void THE_ReleaseMesh(THE_Mesh mesh)
-{
-	//TODO: THE_ReleaseBuffer(mesh.vertex);
-	//TODO: THE_ReleaseBuffer(mesh.index);
-}
-
-void THE_FreeMeshData(THE_Mesh mesh)
-{
-	// TODO: THE_Free(meshes[mesh].vtx);
-	// TODO: THE_Free(meshes[mesh].idx);
-}
-
-// FRAMEBUFFER
-static THE_Framebuffer GetAvailableFramebuffer()
-{
-	THE_Framebuffer ret;
-	if (available_fb != NULL) {
-		THE_AvailableNode *node = available_fb;
-		available_fb = available_fb->next;
-		ret = node->value;
-		THE_Free(node);
-	} else {
-		ret = AddFramebuffer();
-	}
-
-	return ret;
-}
-
-bool IsValidFramebuffer(THE_Framebuffer fb)
-{
-	for (THE_AvailableNode *node = available_fb; node != NULL; node = node->next) {
-		if (node->value == fb) {
-			return false;
-		}
-	}
-	return fb < framebuffer_count && fb >= 0;
-}
-
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth)
 {
 	THE_ASSERT(width > 0 && height > 0, "Invalid dimensions");
 	THE_ASSERT(color || depth, "Textureless framebuffers not permitted");
-	THE_Framebuffer ret = GetAvailableFramebuffer();
+	THE_Framebuffer ret = AddFramebuffer();
 
 	if (color) {
 		framebuffers[ret].color_tex = THE_CreateEmptyTexture(width, height, THE_TEX_RGBA_F16);
@@ -763,16 +614,6 @@ THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color,
 	framebuffers[ret].height = height;
 
 	return ret;
-}
-
-void THE_ReleaseFramebuffer(THE_Framebuffer fb)
-{
-	THE_ASSERT(IsValidFramebuffer(fb), "Invalid framebuffer");
-	// TODO System that seeks MARKED FOR DELETE resources and deletes them in GPU
-	// and adds the index to avaiable resource list
-	framebuffers[fb].cpu_version = THE_MARKED_FOR_DELETE;
-	THE_ReleaseTexture(framebuffers[fb].color_tex);
-	THE_ReleaseTexture(framebuffers[fb].depth_tex);
 }
 
 void THE_MaterialSetModel(THE_Material *mat, float *data)
@@ -836,104 +677,6 @@ void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, 
 	memcpy(mat->tex, tex, count * sizeof *mat->tex);
 }
 
-// InternalResources Private functions
-//.....................................
-
-#include "glad/glad.h"
-
-static THE_ErrorCode LoadFile(const char *path, char **buffer)
-{
-	int32_t length;
-	FILE* fp = fopen(path, "r");
-
-	if (!fp) {
-		THE_LOG_ERROR("File %s couldn't be opened.", path);
-		return THE_EC_FILE;
-	}
-
-	fseek(fp, 0, SEEK_END);
-	length = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	*buffer = THE_Alloc(length + 1);
-
-	if (!*buffer) {
-		THE_LOG_ERROR("Allocation failed reading file %s.", path);
-		fclose(fp);
-		return THE_EC_ALLOC;
-	}
-
-	memset(*buffer, '\0', length + 1);
-	fread(*buffer, 1, length, fp);
-	// TODO: Check wtf is happening here because
-	// the fucking VisualStudio is throwing exception
-	// here. When fixed remember to delete the memset call
-	//*buffer[length] = '\0';
-	fclose(fp);
-
-	return THE_EC_SUCCESS;
-}
-
-u32 InitInternalMaterial(const char* shader_name)
-{
-	char *vert, *frag;
-	char vert_path[256], frag_path[256];
-	memset(frag_path, '\0', 256);
-	strcpy(frag_path, "assets/shaders/");
-	strcat(frag_path, shader_name);
-
-	strcpy(vert_path, frag_path);
-	strcat(vert_path, "-vert.glsl");
-	strcat(frag_path, "-frag.glsl");
-	LoadFile(vert_path, &vert);
-	LoadFile(frag_path, &frag);
-
-	GLint err;
-	GLchar output_log[512];
-	//  Create and compile vertex shader and print if compilation errors
-	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vert_shader, 1, (const char* const*)&vert, NULL);
-	glCompileShader(vert_shader);
-	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &err);
-	if (!err) {
-		glGetShaderInfoLog(vert_shader, 512, NULL, output_log);
-		THE_LOG_ERROR("%s vertex shader compilation failed:\n%s\n", shader_name, output_log);
-	}
-	//  Create and compile fragment shader and print if compilation errors
-	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(frag_shader, 1, (const char* const*)&frag, NULL);
-	glCompileShader(frag_shader);
-	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &err);
-	if (!err)
-	{
-		glGetShaderInfoLog(frag_shader, 512, NULL, output_log);
-		THE_LOG_ERROR("%s fragment shader compilation failed:\n%s\n", shader_name, output_log);
-	}
-	//  Create the program with both shaders
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vert_shader);
-	glAttachShader(program, frag_shader);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &err);
-	if (!err)
-	{
-		glGetProgramInfoLog(program, 512, NULL, output_log);
-		THE_LOG_ERROR("%s program error:\n%s\n", shader_name, output_log);
-	}
-
-	THE_Free(vert);
-	THE_Free(frag);
-
-	return program;
-}
-
-THE_Shader THE_CreateShader(const char *shader)
-{
-	THE_Shader ret = shader_count++;
-	shaders[ret].shader_name = shader;
-	shaders[ret].program_id = THE_UNINIT;
-	memset(shaders[ret].data_loc, -1, sizeof(shaders[ret].data_loc)); // TODO: Quitar, no fa farta
-	return ret;
-}
 
 THE_Material THE_MaterialDefault(void)
 {

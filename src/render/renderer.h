@@ -1,70 +1,80 @@
 #ifndef THE_RENDER_RENDERER_H
 #define THE_RENDER_RENDERER_H
 
-#include "core/definitions.h"
-#include "renderertypes.h"
-#include "material.h"
-#include "rendercommands.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 #define THE_RENDER_QUEUE_CAPACITY 12000
 #define THE_FRAME_POOL_SIZE 1048576
 #define THE_MAX_TEXTURES 63
-#define THE_MAX_BUFFERS 127
 #define THE_MAX_MESHES 32
 #define THE_MAX_FRAMEBUFFERS 8
+#define THE_MAX_SHADERS 32
+
+enum THE_TexType {
+	THE_TEX_NONE = 0,
+	THE_TEX_R,
+	THE_TEX_RGB,
+	THE_TEX_SRGB,
+	THE_TEX_DEPTH,
+	THE_TEX_SKYBOX,
+	THE_TEX_RGB_F16,
+	THE_TEX_RGBA_F16,
+	THE_TEX_LUT,
+	THE_TEX_ENVIRONMENT,
+	THE_TEX_PREFILTER_ENVIRONMENT,
+};
+
+typedef int32_t THE_Mesh;
+typedef int32_t THE_Texture;
+typedef int32_t THE_Framebuffer;
+typedef int32_t THE_Shader;
 
 typedef struct {
-	THE_RenderCommand *curr;
-	THE_RenderCommand *curr_last;
-	THE_RenderCommand *next;
-	THE_RenderCommand *next_last;
-} THE_RenderQueue;
+	float *data;
+	THE_Texture *tex;
+	int32_t dcount;
+	int32_t tcount;
+	int32_t cube_start;
+} THE_ShaderData;
+
+typedef THE_ShaderData THE_Material;
+
 
 extern THE_Mesh SPHERE_MESH;
 extern THE_Mesh CUBE_MESH;
 extern THE_Mesh QUAD_MESH;
-extern THE_RenderQueue render_queue;
-extern THE_Camera camera;
-extern struct vec4 sun_dir_intensity;
+
+extern struct THE_Camera camera;
+extern struct vec4 sunlight;
 
 void THE_InitRender(void);
-void THE_AddCommands(THE_RenderCommand *rc);
 void THE_RenderFrame(void);
 void THE_SubmitFrame(void);
-THE_RenderCommand *THE_AllocateCommand(void);
-void *THE_AllocateFrameResource(size_t size);
+void *THE_AllocateFrameResource(uint32_t size);
 int32_t THE_IsInsideFramePool(void *address);
-size_t THE_RenderQueueUsed(void);
 
-// Buffer
-THE_Buffer THE_CreateBuffer(void);
-void THE_SetBufferData(THE_Buffer buff, void *data, uint32_t count, THE_BufferType t);
-THE_BufferType THE_GetBufferType(THE_Buffer buff);
-void THE_ReleaseBuffer(THE_Buffer buff); // Marks for deletion
-void THE_FreeBufferData(THE_Buffer buff); // Frees the RAM data (not the VRAM)
-bool IsValidBuffer(THE_Buffer buff);
-
-// Texture
-THE_Texture THE_CreateTexture(const char *path, THE_TexType t);
-THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, THE_TexType t);
+THE_Texture THE_CreateTexture(const char *path, enum THE_TexType t);
+THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t);
 void THE_LoadTexture(THE_Texture tex, const char *path);
-void THE_ReleaseTexture(THE_Texture tex);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
-bool IsValidTexture(THE_Texture tex);
 
-THE_ShaderData *THE_ShaderCommonData(THE_Shader);
-
-// Mesh
 THE_Mesh THE_CreateCubeMesh(void);
 THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments);
 THE_Mesh THE_CreateQuadMesh(void);
 THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path); // TODO tinyObjLoader C verison
-void THE_ReleaseMesh(THE_Mesh mesh);
-void THE_FreeMeshData(THE_Mesh mesh); // Frees the data from Ram (not the VRAM)
 
-// Framebuffer
+THE_Shader THE_CreateShader(const char *shader);
+THE_ShaderData *THE_ShaderCommonData(THE_Shader);
+
+THE_Material THE_MaterialDefault(void);
+void THE_MaterialSetModel(THE_Material *mat, float *data); // This funcion copies a mat4 in the first 64 bytes of the already allocated data.
+void THE_MaterialSetData(THE_Material *mat, float *data, int32_t count); // General allocator. It will not free itself
+void THE_MaterialSetFrameData(THE_Material *mat, float *data, int32_t count); // Like above but with frame allocator
+void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // General allocator. It will not free itself
+void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // Like above but with frame allocator
+
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth);
-void THE_ReleaseFramebuffer(THE_Framebuffer fb);
 
 #endif
 

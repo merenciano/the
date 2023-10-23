@@ -1,3 +1,4 @@
+#if 0
 #include "imgui-tools.h"
 
 #include "core/manager.h"
@@ -441,3 +442,5 @@ bool THE_UIToolsWantMouse()
 {
 	return io->WantCaptureMouse;
 }
+
+#endif

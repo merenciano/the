@@ -1,19 +1,24 @@
-#ifndef __THE_RENDER_CAMERA_H__
-#define __THE_RENDER_CAMERA_H__
+#ifndef THE_RENDER_CAMERA_H
+#define THE_RENDER_CAMERA_H
 
-#include "renderer.h"
+#include <stdint.h>
 
-extern void THE_CameraInit(THE_Camera* cam, float fov, float far, u32 width, u32 height, u8 is_light);
-extern struct vec3 THE_CameraPosition(THE_Camera *cam);
-extern struct vec3 THE_CameraForward(THE_Camera *cam);
-extern THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam);
+struct THE_Camera {
+	float view_mat[16];
+	float proj_mat[16];
+	float far_value;
+	float fov;
+};
+
+void THE_CameraInit(struct THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height, uint8_t is_light);
+struct vec3 THE_CameraPosition(struct THE_Camera *cam);
+struct vec3 THE_CameraForward(struct THE_Camera *cam);
 
 /* Matrix without the translate values.
  * Result from projection * vec4(vec3(view));
  * Used for the skybox
  */
-extern struct mat4 THE_CameraStaticViewProjection(THE_Camera *cam);
-
-extern void THE_CameraMovementSystem(THE_Camera *cam, float deltatime);
+struct mat4 THE_CameraStaticViewProjection(struct THE_Camera *cam);
+void THE_CameraMovementSystem(struct THE_Camera *cam, float deltatime);
 
 #endif

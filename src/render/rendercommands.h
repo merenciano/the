@@ -1,7 +1,7 @@
 #ifndef THE_RENDER_COMMANDS_H
 #define THE_RENDER_COMMANDS_H
 
-#include "material.h"
+#include "renderer.h"
 
 #define THE_BLEND_FUNC_BIT     1
 #define THE_ENABLE_BLEND_BIT   1 << 1
@@ -24,7 +24,7 @@ typedef struct {
 	THE_Mesh mesh;
 	THE_Shader shader;
 	THE_Material mat;
-	THE_Buffer inst_attr;
+	int *inst_attr;
 	uint32_t inst_count;
 } THE_DrawCommandData;
 
@@ -35,7 +35,7 @@ typedef struct {
 	THE_Texture out_lut;
 } THE_EquirectToCubeData;
 
-typedef enum {
+enum THE_RenderOptions {
 	THE_BLENDFUNC_ONE,
 	THE_BLENDFUNC_SRC_ALPHA,
 	THE_BLENDFUNC_ONE_MINUS_SRC_ALPHA,
@@ -44,13 +44,13 @@ typedef enum {
 	THE_CULLFACE_FRONT,
 	THE_CULLFACE_BACK,
 	THE_CULLFACE_FRONT_AND_BACK,
-} THE_RenderOptions;
+};
 
 typedef struct {
 	uint32_t changed_mask;
-	THE_RenderOptions sfactor;
-	THE_RenderOptions dfactor;
-	THE_RenderOptions cull_face;
+	enum THE_RenderOptions sfactor;
+	enum THE_RenderOptions dfactor;
+	enum THE_RenderOptions cull_face;
 	int8_t depth_test;
 	int8_t write_depth;
 	int8_t blend;
@@ -61,8 +61,8 @@ typedef struct {
 } THE_UseFramebufferData;
 
 typedef struct {
-	THE_Shader mat;
-	THE_Material data;
+	THE_Shader shader;
+	THE_Material material;
 } THE_UseShaderData;
 
 typedef union {
@@ -72,14 +72,28 @@ typedef union {
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
 	THE_UseFramebufferData usefb;
-	THE_UseShaderData usemat;
+	THE_UseShaderData use_shader;
 } THE_CommandData;
 
-typedef struct THE_RenderCommand {
+struct THE_RenderCommand {
 	void (*execute)(THE_CommandData *data);
 	struct THE_RenderCommand *next;
 	THE_CommandData data;
-} THE_RenderCommand;
+};
+
+typedef struct THE_RenderCommand THE_RenderCommand;
+
+void THE_AddCommands(THE_RenderCommand *rc);
+THE_RenderCommand *THE_AllocateCommand(void);
+
+typedef struct {
+	THE_RenderCommand *curr;
+	THE_RenderCommand *curr_last;
+	THE_RenderCommand *next;
+	THE_RenderCommand *next_last;
+} THE_RenderQueue;
+
+uint32_t THE_RenderQueueUsed(void);
 
 extern void THE_ClearExecute(THE_CommandData *data);
 extern void THE_SkyboxExecute(THE_CommandData *data);

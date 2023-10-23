@@ -85,7 +85,7 @@ void Init(void)
 	pbr.roughness = 0.5f;
 	pbr.normal_map_intensity = 1.0f;
 
-	sun_dir_intensity = svec4(0.0f, -1.0f, -0.1f, 1.0f);
+	sunlight = svec4(0.0f, -1.0f, -0.1f, 1.0f);
 
 	// CelticGold
 	{
@@ -298,13 +298,12 @@ void Init(void)
 
 void Update(void)
 {
-	//THE_ScriptingExecute("assets/scripts/update.lua");
 	THE_InputUpdate();
 	THE_CameraMovementSystem(&camera, THE_DeltaTime());
 
 	// Render commands
 	THE_ShaderData *scene_data = THE_ShaderCommonData(g_mats.pbr);
-	THE_PbrSceneData *pbr_sd = scene_data->data;
+	THE_PbrSceneData *pbr_sd = (THE_PbrSceneData*)scene_data->data;
 	pbr_sd->view_projection = smat4_multiply(camera.proj_mat, camera.view_mat);
 	pbr_sd->camera_position = THE_CameraPosition(&camera);
 	pbr_sd->light_direction_intensity = sun_dir_intensity;
@@ -341,7 +340,7 @@ void Update(void)
 
 
 	THE_RenderCommand *use_pbr = THE_AllocateCommand();
-	use_pbr->data.usemat.mat = g_mats.pbr;
+	use_pbr->data.use_shader.shader = g_mats.pbr;
 	use_pbr->execute = THE_UseShaderExecute;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -383,8 +382,8 @@ void Update(void)
 	rops2->next = clear;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.usemat.mat = g_mats.fullscreen_img;
-	usefullscreen->data.usemat.data = full_screen_img;
+	usefullscreen->data.use_shader.shader = g_mats.fullscreen_img;
+	usefullscreen->data.use_shader.material = full_screen_img;
 	*THE_ShaderCommonData(g_mats.fullscreen_img) = full_screen_img;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;

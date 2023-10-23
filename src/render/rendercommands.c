@@ -1,4 +1,6 @@
 #include "rendercommands.h"
+
+#include "thefinitions.h"
 #include "renderer.h" // TODO Move frame allocator to rendercommands and remove this include 
 #include "internalresources.h"
 #include "camera.h"
@@ -27,31 +29,6 @@ typedef struct {
 	GLenum filter;
 	s32 channels;
 } THE_TextureConfig;
-
-static void CreateBuffer(THE_Buffer buffer)
-{
-	THE_InternalBuffer *b = buffers + buffer;
-	THE_ASSERT(b->cpu_version > 0, "This buffer hasn't got any data yet");
-	THE_ASSERT(b->internal_id == (u32)THE_UNINIT, "Initialized buffer");
-
-	glGenBuffers(1, &b->internal_id);
-
-	if (b->type == THE_BUFFER_INDEX) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->internal_id);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, b->count * sizeof(u32),
-			(const void*)b->indices, GL_STATIC_DRAW);
-	} else if (b->type != THE_BUFFER_NONE) {
-		glBindBuffer(GL_ARRAY_BUFFER, b->internal_id);
-		glBufferData(GL_ARRAY_BUFFER, b->count * sizeof(float),
-			(const void*)b->vertices, GL_STATIC_DRAW);
-	}
-
-	b->gpu_version = b->cpu_version;
-
-	// Delete ram data now that has been copied into the vram
-	// TODO: Uncomment this... Im just testing
-	//THE_FreeBufferData(data->createbuff.buffer);
-}
 
 static GLint GetAttribSize(THE_VertexAttributes attr)
 {
@@ -100,8 +77,8 @@ static void CreateMesh(THE_Mesh mesh)
 	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
 	glBufferData(GL_ARRAY_BUFFER, m->vtx_size, m->vtx, GL_STATIC_DRAW);
 
-	glGenVertexArrays(1, (GLuint*)&m->internal_id);
-	glBindVertexArray(m->internal_id);
+	//glGenVertexArrays(1, (GLuint*)&m->internal_id);
+	//glBindVertexArray(m->internal_id);
 	//glGenBuffers(2, m->internal_buffers_id);
 	glGenBuffers(1, &m->internal_buffers_id[1]);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
@@ -122,9 +99,9 @@ static void CreateMesh(THE_Mesh mesh)
 		++a;
 		offset += sz * sizeof(float);
 	}
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	//glBindVertexArray(0);
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 static void CreateTexture(THE_Texture tex, bool release_from_ram)
@@ -132,7 +109,6 @@ static void CreateTexture(THE_Texture tex, bool release_from_ram)
 	THE_TextureConfig config;
 	THE_InternalTexture *t = textures + tex;
 
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 	THE_ASSERT(t->cpu_version == 1, "Texture created before?");
 	THE_ASSERT(tex < 62, "Max texture units"); // Tex unit is id + 1
 	THE_ASSERT(t->internal_id == THE_UNINIT, "Texture already created on GPU");
@@ -269,7 +245,6 @@ static void CreateCubemap(THE_Texture tex)
 	THE_CubeConfig config;
 	THE_InternalTexture *t = textures + tex;
 
-	THE_ASSERT(IsValidTexture(tex), "Invalid texture");
 	THE_ASSERT(t->cpu_version > t->gpu_version, "Texture not created on CPU or already created on GPU");
 	THE_ASSERT(tex < 62, "Start thinking about the max textures");
 	THE_ASSERT(t->internal_id == THE_UNINIT, "Texture already created in the gpu");
@@ -380,18 +355,18 @@ static THE_ErrorCode LoadFile(const char *path, char *buffer, size_t buffsize)
 	return THE_EC_SUCCESS;
 }
 
-static THE_ErrorCode CreateShader(THE_InternalShader *mat)
+static THE_ErrorCode CreateShader(THE_InternalShader *shader)
 {
 	#define SHADER_BUFFSIZE 4096
-	THE_ASSERT(mat->program_id == THE_UNINIT, "The material must be uninitialized.");
-	THE_ASSERT(mat->shader_name, "Empty shader name");
+	THE_ASSERT(shader->program_id == THE_UNINIT, "The material must be uninitialized.");
+	THE_ASSERT(shader->shader_name, "Empty shader name");
 
 	char vert[SHADER_BUFFSIZE] = {'\0'};
 	char frag[SHADER_BUFFSIZE] = {'\0'};
 	char vert_path[256] = {'\0'};
 	char frag_path[256] = {'\0'};
 	strcpy(frag_path, "assets/shaders/");
-	strcat(frag_path, mat->shader_name);
+	strcat(frag_path, shader->shader_name);
 	strcpy(vert_path, frag_path);
 	strcat(vert_path, "-vert.glsl");
 	strcat(frag_path, "-frag.glsl");
@@ -417,7 +392,7 @@ static THE_ErrorCode CreateShader(THE_InternalShader *mat)
 	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &err);
 	if (!err) {
 		glGetShaderInfoLog(vert_shader, 512, NULL, output_log);
-		THE_LOG_ERROR("%s vertex shader compilation failed:\n%s\n", mat->shader_name, output_log);
+		THE_LOG_ERROR("%s vertex shader compilation failed:\n%s\n", shader->shader_name, output_log);
 		return THE_EC_FAIL;
 	}
 	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -427,7 +402,7 @@ static THE_ErrorCode CreateShader(THE_InternalShader *mat)
 	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &err);
 	if (!err) {
 		glGetShaderInfoLog(frag_shader, 512, NULL, output_log);
-		THE_LOG_ERROR("%s fragment shader compilation failed:\n%s\n", mat->shader_name, output_log);
+		THE_LOG_ERROR("%s fragment shader compilation failed:\n%s\n", shader->shader_name, output_log);
 		return THE_EC_FAIL;
 	}
 	GLuint program = glCreateProgram();
@@ -435,22 +410,21 @@ static THE_ErrorCode CreateShader(THE_InternalShader *mat)
 	glAttachShader(program, frag_shader);
 	glLinkProgram(program);
 	glGetProgramiv(program, GL_LINK_STATUS, &err);
-	if (!err)
-	{
+	if (!err) {
 		glGetProgramInfoLog(program, 512, NULL, output_log);
-		THE_LOG_ERROR("%s program error:\n%s\n", mat->shader_name, output_log);
+		THE_LOG_ERROR("%s program error:\n%s\n", shader->shader_name, output_log);
 		return THE_EC_FAIL;
 	}
 
-	mat->program_id = program;
+	shader->program_id = program;
 	// TODO: crear defines para uniforms de scena y enitdad y usarlos como indice.
 	// TODO: Cambiar el nombre de los uniforms de scene quitando scene.
-	mat->data_loc[0].data = glGetUniformLocation(mat->program_id, "u_scene_data");
-	mat->data_loc[0].tex = glGetUniformLocation(mat->program_id, "u_scene_tex");
-	mat->data_loc[0].cubemap = glGetUniformLocation(mat->program_id, "u_scene_cube");
-	mat->data_loc[1].data = glGetUniformLocation(mat->program_id, "u_entity_data");
-	mat->data_loc[1].tex = glGetUniformLocation(mat->program_id, "u_entity_tex");
-	mat->data_loc[1].cubemap = glGetUniformLocation(mat->program_id, "u_entity_cube");
+	shader->data_loc[0].data = glGetUniformLocation(shader->program_id, "u_scene_data");
+	shader->data_loc[0].tex = glGetUniformLocation(shader->program_id, "u_scene_tex");
+	shader->data_loc[0].cubemap = glGetUniformLocation(shader->program_id, "u_scene_cube");
+	shader->data_loc[1].data = glGetUniformLocation(shader->program_id, "u_entity_data");
+	shader->data_loc[1].tex = glGetUniformLocation(shader->program_id, "u_entity_tex");
+	shader->data_loc[1].cubemap = glGetUniformLocation(shader->program_id, "u_entity_cube");
 
 	return THE_EC_SUCCESS;
 }
@@ -458,6 +432,8 @@ static THE_ErrorCode CreateShader(THE_InternalShader *mat)
 static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
 {
 	THE_InternalShader *m = shaders + mat;
+
+	THE_ASSERT(m->program_id, "Shader uninit.");
 
 	THE_ASSERT(data.tcount < 16, "So many textures, increase array size");
 	// TODO: Tex units igual que el handle de textura (saltarse la textura 0 si hace falta)
@@ -484,12 +460,12 @@ static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
 
 void THE_UseShaderExecute(THE_CommandData *data)
 {
-	THE_InternalShader *m = shaders + data->usemat.mat;
+	THE_InternalShader *m = shaders + data->use_shader.shader;
 	if (m->program_id == THE_UNINIT) {
 		CreateShader(m);
 	}
 	glUseProgram(m->program_id);
-	SetMaterialData(data->usemat.mat, m->common_data, 0);
+	SetMaterialData(data->use_shader.shader, m->common_data, 0);
 }
 
 void THE_ClearExecute(THE_CommandData *data)
@@ -534,8 +510,8 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	// Set the uniforms
 	THE_Shader mat = 1; // skybox
 	THE_CommandData usenewmatdata;
-	usenewmatdata.usemat.data = skymatdata;
-	usenewmatdata.usemat.mat = mat;
+	usenewmatdata.use_shader.material = skymatdata;
+	usenewmatdata.use_shader.shader = mat;
 	shaders[mat].common_data = skymatdata;
 	THE_UseShaderExecute(&usenewmatdata);
 
@@ -555,20 +531,46 @@ void THE_DrawExecute(THE_CommandData *data)
 	THE_ASSERT(data->draw.inst_count > 0, "Set inst count");
 	THE_Mesh mesh = data->draw.mesh;
 	THE_InternalMesh *im = meshes + mesh;
+	THE_InternalShader *s = shaders + data->draw.shader;
+	THE_ASSERT(s->program_id, "Uninit shader");
 
 	THE_ASSERT(im->elements, "Attempt to draw an uninitialized mesh");
 	if (im->internal_id == THE_UNINIT) {
 		CreateMesh(mesh);
 	}
-	glBindVertexArray(im->internal_id);
+	//glBindVertexArray(im->internal_id);
+
 	glBindBuffer(GL_ARRAY_BUFFER, im->internal_buffers_id[0]);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im->internal_buffers_id[1]);
+	/*glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribDivisor(0, 0);*/
 
-	THE_CommandData shader_data = {
+	GLint attrib_pos = glGetAttribLocation(s->program_id, "a_position");
+	glEnableVertexAttribArray(attrib_pos);
+	glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
+		8 * sizeof(float), (void*)0);
+	glVertexAttribDivisor(attrib_pos, 0);
+
+	// NORMAL
+	attrib_pos = glGetAttribLocation(s->program_id, "a_normal"); 
+	glEnableVertexAttribArray(attrib_pos);
+	glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
+		8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribDivisor(attrib_pos, 0);
+
+	// UV
+	attrib_pos = glGetAttribLocation(s->program_id, "a_uv");
+	glEnableVertexAttribArray(attrib_pos);
+	glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
+		8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glVertexAttribDivisor(attrib_pos, 0);
+
+	/*THE_CommandData shader_data = {
 		.usemat.data = data->draw.mat,
 		.usemat.mat = data->draw.shader
 	};
-	THE_UseShaderExecute(&shader_data);
+	THE_UseShaderExecute(&shader_data);*/
 	SetMaterialData(data->draw.shader, data->draw.mat, 1);
 	glDrawElementsInstanced(GL_TRIANGLES, im->elements, GL_UNSIGNED_INT, 0,
 		data->draw.inst_count);
@@ -621,8 +623,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_MaterialSetFrameTexture(&(dcd.draw.mat), &equirec, 1, -1);
 		THE_MaterialSetFrameData(&dcd.draw.mat, (float*)&vp, 16);
 		THE_CommandData cmdata;
-		cmdata.usemat.mat = dcd.draw.shader;
-		cmdata.usemat.data = dcd.draw.mat;
+		cmdata.use_shader.shader = dcd.draw.shader;
+		cmdata.use_shader.material = dcd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
@@ -653,8 +655,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
                 THE_MaterialSetFrameTexture(&draw_cd.draw.mat, &o_cube, 1, 0);
                 THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
 				THE_CommandData cmdata;
-				cmdata.usemat.mat = draw_cd.draw.shader;
-				cmdata.usemat.data = draw_cd.draw.mat;
+				cmdata.use_shader.shader = draw_cd.draw.shader;
+				cmdata.use_shader.material = draw_cd.draw.mat;
 				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
@@ -676,8 +678,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		draw_cd.draw.shader = 4; // THE_MT_LUT_GEN;
 		draw_cd.draw.mat = THE_MaterialDefault();
 		THE_CommandData cmdata;
-		cmdata.usemat.mat = draw_cd.draw.shader;
-		cmdata.usemat.data = draw_cd.draw.mat;
+		cmdata.use_shader.shader = draw_cd.draw.shader;
+		cmdata.use_shader.material = draw_cd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}

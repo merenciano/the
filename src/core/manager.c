@@ -1,10 +1,11 @@
 #include "manager.h"
+
+#include "core/config.h"
 #include "chrono.h"
 #include "io.h"
 #include "mem.h"
 #include "render/renderer.h"
 #include "render/internalresources.h"
-#include "tools/lua-scripting.h"
 
 THE_ResourceMap resource_map; // TODO: Resourcemap fuera de manager
 static float delta_time;
@@ -12,7 +13,7 @@ static THE_Chrono frame_timer;
 
 void THE_InitManager(THE_Config *cnfg)
 {
-	size_t total_mem = THE_MAX_BUFFERS * sizeof(THE_InternalBuffer) + THE_MAX_TEXTURES * sizeof(THE_InternalTexture) + THE_MAX_MESHES * sizeof(THE_InternalMesh) + THE_MAX_FRAMEBUFFERS * sizeof(THE_InternalFramebuffer);
+	size_t total_mem = THE_MAX_TEXTURES * sizeof(THE_InternalTexture) + THE_MAX_MESHES * sizeof(THE_InternalMesh) + THE_MAX_FRAMEBUFFERS * sizeof(THE_InternalFramebuffer) + THE_MAX_SHADERS * sizeof(THE_InternalShader);
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(void*); // 2 because current and next
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(THE_CommandData);
 	total_mem += cnfg->alloc_capacity;
@@ -37,8 +38,6 @@ void THE_NextFrame()
 	THE_ChronoEnd(&frame_timer);
 	delta_time = THE_ChronoDurationSec(&frame_timer);
 	THE_ChronoStart(&frame_timer);
-
-	THE_ScriptingSetGlobal("g_deltatime", delta_time);
 }
 
 void THE_StartFrameTimer()
