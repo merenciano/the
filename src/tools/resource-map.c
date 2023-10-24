@@ -3,6 +3,8 @@
 #include "core/thefinitions.h"
 #include "render/renderer.h"
 
+#include <assert.h>
+
 void THE_ResourceMapAddMeshFromPath(THE_ResourceMap *rm, const char *name, const char *path)
 {
 	THE_Mesh mesh = THE_CreateMeshFromFile_OBJ(path);
@@ -21,14 +23,14 @@ THE_Mesh THE_ResourceMapGetMesh(THE_ResourceMap *rm, const char *name)
 	return *(THE_Mesh*)result;
 }
 
-void THE_ResourceMapAddTextureFromPath(THE_ResourceMap *rm, const char *name, const char *path, THE_TexType type)
+void THE_ResourceMapAddTextureFromPath(THE_ResourceMap *rm, const char *name, const char *path, enum THE_TexType type)
 {
 	THE_ASSERT(path, "For the creation of empty textures call with size params");
 	THE_Texture tex = THE_CreateTexture(path, type);
 	THE_HMapInsert(rm->textures, name, &tex);
 }
 
-void THE_ResourceMapAddTexture(THE_ResourceMap *rm, const char *name, u32 width, u32 height, THE_TexType type)
+void THE_ResourceMapAddTexture(THE_ResourceMap *rm, const char *name, uint32_t width, uint32_t height, enum THE_TexType type)
 {
 	THE_ASSERT(width > 0 && height > 0, "0,0 size texture is no texture");
 	THE_Texture tex = THE_CreateEmptyTexture(width, height, type);

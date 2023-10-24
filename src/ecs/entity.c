@@ -1,5 +1,6 @@
 #include "entity.h"
 #include "core/thefinitions.h"
+#include "mathc.h"
 #include "render/rendercommands.h"
 
 #include <assert.h>
@@ -11,6 +12,7 @@ static int32_t entities_last;
 
 THE_Entity *THE_EntityCreate()
 {
+	mat4_identity(entities[entities_last].transform);
 	return entities + entities_last++;
 }
 

@@ -15,9 +15,9 @@ struct THE_Chronometer {
 };
 
 /*
-	Returns the duration of the crono, if THE_ChronoEnd has been called for the chrono
-	it returns end-start. If end has not been called it returns the current duration.
-*/
+ * Returns the duration of the crono, if THE_ChronoEnd has been called for the chrono
+ * it returns end-start. If end has not been called it returns the current duration.
+ */
 static tmspc Duration(THE_Chrono *chrono)
 {
 	tmspc ret;

@@ -51,14 +51,10 @@ typedef struct {
 	enum THE_RenderOptions sfactor;
 	enum THE_RenderOptions dfactor;
 	enum THE_RenderOptions cull_face;
-	int8_t depth_test;
-	int8_t write_depth;
-	int8_t blend;
+	bool depth_test;
+	bool write_depth;
+	bool blend;
 } THE_RenderOptionsData;
-
-typedef struct {
-	THE_Framebuffer fb;
-} THE_UseFramebufferData;
 
 typedef struct {
 	THE_Shader shader;
@@ -71,7 +67,7 @@ typedef union {
 	THE_DrawCommandData draw;
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
-	THE_UseFramebufferData usefb;
+	THE_Framebuffer usefb;
 	THE_UseShaderData use_shader;
 } THE_CommandData;
 

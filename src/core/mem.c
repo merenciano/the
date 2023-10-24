@@ -31,7 +31,7 @@ void *THE_Alloc(size_t size)
 	return malloc(size);
 }
 
-void *THE_Calloc(uint32_t elem_count, size_t elem_size)
+void *THE_Calloc(size_t elem_count, size_t elem_size)
 {
 	return calloc(elem_count, elem_size);
 }

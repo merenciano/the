@@ -1,3 +1,6 @@
+#ifndef THE_THEFINITIONS_H
+#define THE_THEFINITIONS_H
+
 #define THE_ASSERT(X, TEXT) assert(X)
 #define THE_LOG_ERROR(FMT, ...) printf("ERROR @ %s(%u): \n\t" FMT "\n", __FILE__, __LINE__, __VA_ARGS__)
 #define THE_SLOG_ERROR(FMT) printf("ERROR @ %s(%u): \n\t" FMT "\n", __FILE__, __LINE__)
@@ -28,3 +31,5 @@ enum THE_ErrorCode {
 };
 
 typedef void (*THE_Callback)(void);
+
+#endif 

@@ -1,17 +1,16 @@
 #include "manager.h"
 
-#include "core/config.h"
+#include "config.h"
 #include "chrono.h"
 #include "io.h"
 #include "mem.h"
 #include "render/renderer.h"
 #include "render/internalresources.h"
+#include "render/rendercommands.h"
 
-THE_ResourceMap resource_map; // TODO: Resourcemap fuera de manager
 static float delta_time;
-static THE_Chrono frame_timer;
 
-void THE_InitManager(THE_Config *cnfg)
+void THE_InitManager(struct THE_Config *cnfg)
 {
 	size_t total_mem = THE_MAX_TEXTURES * sizeof(THE_InternalTexture) + THE_MAX_MESHES * sizeof(THE_InternalMesh) + THE_MAX_FRAMEBUFFERS * sizeof(THE_InternalFramebuffer) + THE_MAX_SHADERS * sizeof(THE_InternalShader);
 	total_mem += cnfg->render_queue_capacity * 2 * sizeof(void*); // 2 because current and next
@@ -19,13 +18,7 @@ void THE_InitManager(THE_Config *cnfg)
 	total_mem += cnfg->alloc_capacity;
 	THE_MemInit(total_mem);
 	THE_IOInit(WINDOW_TITLE, cnfg->window_width, cnfg->window_height, cnfg->vsync);
-	resource_map = *(THE_ResourceMap*)THE_Alloc(sizeof(THE_ResourceMap));
-	resource_map.meshes = THE_HMapCreate(8, sizeof(THE_Mesh));
-	resource_map.textures = THE_HMapCreate(64, sizeof(THE_Texture));
 	THE_InitRender();
-	THE_ResourceMapAddMesh(&resource_map, "Cube", CUBE_MESH);
-	THE_ResourceMapAddMesh(&resource_map, "Sphere", SPHERE_MESH);
-	THE_ResourceMapAddMesh(&resource_map, "Quad", QUAD_MESH);
 	delta_time = 0.16f;
 }
 
@@ -35,14 +28,14 @@ void THE_NextFrame()
 	THE_IOPollEvents();
 	THE_SubmitFrame();
 
-	THE_ChronoEnd(&frame_timer);
-	delta_time = THE_ChronoDurationSec(&frame_timer);
-	THE_ChronoStart(&frame_timer);
+	THE_ChronoEnd(THE_GetChrono());
+	delta_time = THE_ChronoDurationSec(THE_GetChrono());
+	THE_ChronoStart(THE_GetChrono());
 }
 
 void THE_StartFrameTimer()
 {
-	THE_ChronoStart(&frame_timer);
+	THE_ChronoStart(THE_GetChrono());
 }
 
 float THE_DeltaTime()

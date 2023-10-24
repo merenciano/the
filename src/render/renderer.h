@@ -46,7 +46,6 @@ extern THE_Mesh CUBE_MESH;
 extern THE_Mesh QUAD_MESH;
 
 extern struct THE_Camera camera;
-extern struct vec4 sunlight;
 
 void THE_InitRender(void);
 void THE_RenderFrame(void);
@@ -75,6 +74,7 @@ void THE_MaterialSetTexture(THE_Material *mat, THE_Texture *tex, int32_t count, 
 void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t count, int32_t cube_start); // Like above but with frame allocator
 
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth);
+THE_Texture THE_GetFrameColor(THE_Framebuffer fb);
 
 #endif
 

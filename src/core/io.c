@@ -169,7 +169,7 @@ void THE_InputUpdate()
 	prev = curr;
 	curr.scroll = 0.0f;
 	curr.input_bitmap = 0;
-	for (s32 i = 0; i < THE_MOUSE_LEFT; ++i) {
+	for (int32_t i = 0; i < THE_MOUSE_LEFT; ++i) {
 		curr.input_bitmap |= ((bool)glfwGetKey(internal_window, Internal_ToGLFW_Map[i]) << i);
 	}
 	curr.input_bitmap |= ((bool)glfwGetMouseButton(internal_window, Internal_ToGLFW_Map[THE_MOUSE_LEFT]) << THE_MOUSE_LEFT);

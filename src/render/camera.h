@@ -2,6 +2,7 @@
 #define THE_RENDER_CAMERA_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct THE_Camera {
 	float view_mat[16];
@@ -10,15 +11,19 @@ struct THE_Camera {
 	float fov;
 };
 
-void THE_CameraInit(struct THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height, uint8_t is_light);
-struct vec3 THE_CameraPosition(struct THE_Camera *cam);
-struct vec3 THE_CameraForward(struct THE_Camera *cam);
+void THE_CameraInit(struct THE_Camera *cam, float fov,
+	float far, uint32_t width, uint32_t height, bool is_light);
+
+/* Temp return values! float[3] */
+float *THE_CameraPosition(struct THE_Camera *cam);
+float *THE_CameraForward(struct THE_Camera *cam);
 
 /* Matrix without the translate values.
  * Result from projection * vec4(vec3(view));
- * Used for the skybox
+ * Used for the skybox.
+ * Temp return values!! (float[16])
  */
-struct mat4 THE_CameraStaticViewProjection(struct THE_Camera *cam);
+float *THE_CameraStaticViewProjection(struct THE_Camera *cam);
 void THE_CameraMovementSystem(struct THE_Camera *cam, float deltatime);
 
 #endif

@@ -8,4 +8,3 @@ void THE_StartFrameTimer(void);
 float THE_DeltaTime(void);
 
 #endif
-

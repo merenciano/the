@@ -30,7 +30,6 @@ THE_Mesh QUAD_MESH;
 
 THE_RenderQueue render_queue;
 struct THE_Camera camera;
-struct vec4 sunlight;
 
 typedef struct THE_AvailableNode {
 	struct THE_AvailableNode *next;
@@ -104,7 +103,6 @@ void THE_InitRender()
 	frame_switch = 0;
 
 	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight(), 0);
-	sunlight = svec4(1.0f, -1.0f, 0.0f, 1.0f);
 
 	SPHERE_MESH = THE_CreateSphereMesh(32, 32);
 	CUBE_MESH = THE_CreateCubeMesh();
@@ -616,6 +614,11 @@ THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color,
 	return ret;
 }
 
+THE_Texture THE_GetFrameColor(THE_Framebuffer fb)
+{
+	return framebuffers[fb].color_tex;
+}
+
 void THE_MaterialSetModel(THE_Material *mat, float *data)
 {
 	THE_ASSERT(data, "Invalid data parameter");
@@ -623,16 +626,13 @@ void THE_MaterialSetModel(THE_Material *mat, float *data)
 	memcpy(mat->data, data, 64);
 }
 
-void THE_MaterialSetFrameData(THE_Material *mat, float *data, s32 count)
+void THE_MaterialSetFrameData(THE_Material *mat, float *data, int32_t count)
 {
 	THE_ASSERT(!mat->data || THE_IsInsideFramePool(mat->data),
 		"There are some non-temporary data in this material that must be freed");
 
 	// Align to fvec4
-	s32 offset = count & 3;
-	if (offset) {
-		count += 4 - offset;
-	}
+	count += (4 - (count & 3)) & 3;
 
 	mat->data = THE_AllocateFrameResource(count * sizeof(float));
 	mat->dcount = count;
@@ -644,7 +644,7 @@ THE_ShaderData *THE_ShaderCommonData(THE_Shader shader)
 	return &(shaders + shader)->common_data;
 }
 
-void THE_MaterialSetData(THE_Material *mat, float *data, s32 count)
+void THE_MaterialSetData(THE_Material *mat, float *data, int32_t count)
 {
 	// Align to fvec4
 	int32_t offset = count & 3;

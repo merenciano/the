@@ -3,52 +3,59 @@
 #include "core/manager.h"
 #include "internalresources.h"
 
+#include <mathc.h>
+
+typedef struct THE_Camera THE_Camera;
+
 static const float SENSIBILITY = 1.0f / 1000.0f;
 static const float SPEED = 10.0f;
 static const float SCROLL_SENSIBILITY = 1.0f;
 static const struct vec3 UP = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
 
-void THE_CameraInit(THE_Camera *cam, float fov, float far, u32 width, u32 height, u8 is_light)
+void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height, bool is_light)
 {
 	cam->fov = fov;
 	cam->far_value = far;
-	cam->view_mat = smat4_identity();
-	cam->proj_mat = smat4_perspective_fov(to_radians(fov), (float)width, (float)height, 0.01f, far);
-	cam->fb = THE_CreateFramebuffer(width, height, !is_light, true);
+	mat4_identity(cam->view_mat);
+	mat4_perspective_fov(cam->proj_mat, to_radians(fov), (float)width, (float)height, 0.01f, far);
 }
 
-struct mat4 THE_CameraStaticViewProjection(THE_Camera *cam)
+float *THE_CameraStaticViewProjection(THE_Camera *cam)
 {
-	struct mat4 static_view = smat4(
-		cam->view_mat.m11, cam->view_mat.m12, cam->view_mat.m13, 0.0f,
-		cam->view_mat.m21, cam->view_mat.m22, cam->view_mat.m23, 0.0f,
-		cam->view_mat.m31, cam->view_mat.m32, cam->view_mat.m33, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f );
-
-	return smat4_multiply(cam->proj_mat, static_view);
+	float sv[16];
+	mat4_assign(sv, cam->view_mat);
+	sv[3] = 0.0f;
+	sv[7] = 0.0f;
+	sv[11] = 0.0f;
+	sv[12] = 0.0f;
+	sv[13] = 0.0f;
+	sv[14] = 0.0f;
+	sv[15] = 0.0f;
+	return mat4_multiply(sv ,cam->proj_mat, sv);
 }
 
-struct vec3 THE_CameraPosition(THE_Camera *cam)
+float *THE_CameraPosition(THE_Camera *cam)
 {
-	struct mat4 inv = smat4_inverse(cam->view_mat);
-	return svec3(inv.m14, inv.m24, inv.m34);
+	float inv[16];
+	mat4_inverse(inv, cam->view_mat);
+	return inv + 12;
 }
 
-struct vec3 THE_CameraForward(THE_Camera *cam)
+float *THE_CameraForward(THE_Camera *cam)
 {
-	return svec3(cam->view_mat.m31, cam->view_mat.m32, cam->view_mat.m33);
-}
-
-THE_Texture THE_CameraOutputColorTexture(THE_Camera *cam)
-{
-	THE_ASSERT(framebuffers[cam->fb].color_tex != THE_UNINIT, "Uninit fb tex");
-	return framebuffers[cam->fb].color_tex;
+	float fwd[3] = {
+		cam->view_mat[2],
+		cam->view_mat[6],
+		cam->view_mat[10]
+	};
+	return fwd;
 }
 
 void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 {
 	struct vec3 eye = THE_CameraPosition(cam);
-	struct vec3 fwd = svec3_negative(svec3_normalize(THE_CameraForward(cam)));
+	float fwd[3];
+	vec3_negative(fwd, vec3_normalize(fwd, THE_CameraForward(cam)));
 	static float mouse_down_pos[2] = { 0.0, 0.0 };
 	static float fov = 70.0f;
 	float speed = SPEED * deltatime;
