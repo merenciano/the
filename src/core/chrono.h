@@ -3,7 +3,7 @@
 
 typedef struct THE_Chronometer THE_Chrono;
 
-THE_Chrono *THE_GetChrono();
+THE_Chrono *THE_GetChrono(void);
 void THE_ChronoStart(THE_Chrono *chrono);
 void THE_ChronoEnd(THE_Chrono *chrono);
 

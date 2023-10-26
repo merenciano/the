@@ -33,11 +33,6 @@ void THE_NextFrame()
 	THE_ChronoStart(THE_GetChrono());
 }
 
-void THE_StartFrameTimer()
-{
-	THE_ChronoStart(THE_GetChrono());
-}
-
 float THE_DeltaTime()
 {
 	return delta_time;

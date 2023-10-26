@@ -14,16 +14,14 @@ struct THE_Camera {
 void THE_CameraInit(struct THE_Camera *cam, float fov,
 	float far, uint32_t width, uint32_t height);
 
-/* Temp return values! float[3] */
-float *THE_CameraPosition(struct THE_Camera *cam);
-float *THE_CameraForward(struct THE_Camera *cam);
+float *THE_CameraPosition(float *out_v3, struct THE_Camera *cam);
+float *THE_CameraForward(float *out_v3, struct THE_Camera *cam);
 
 /* Matrix without the translate values.
  * Result from projection * vec4(vec3(view));
  * Used for the skybox.
- * Temp return values!! (float[16])
  */
-float *THE_CameraStaticViewProjection(struct THE_Camera *cam);
+float *THE_CameraStaticViewProjection(float *out_m4, struct THE_Camera *cam);
 void THE_CameraMovementSystem(struct THE_Camera *cam, float deltatime);
 
 #endif

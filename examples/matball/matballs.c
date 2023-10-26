@@ -265,7 +265,7 @@ void Init(void)
 		pbr.normal_map_intensity = 0.5f;
 		position[0] = 6.0f;
 		THE_Entity *e = THE_EntityCreate();
-		mat4_translation(e->transform, e->transform, &position);
+		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
 		e->mat_data = THE_MaterialDefault();
@@ -325,11 +325,10 @@ void Update(void)
 	THE_CameraMovementSystem(&camera, THE_DeltaTime());
 
 	// Render commands
-	struct THE_PbrSceneData *scene_data = THE_ShaderCommonData(g_mats.pbr)->data;
+	struct THE_PbrSceneData *scene_data = (struct THE_PbrSceneData*)THE_ShaderCommonData(g_mats.pbr)->data;
 	mat4_multiply(scene_data->view_projection, camera.proj_mat, camera.view_mat);
-	mat4_assign(scene_data->camera_position, THE_CameraPosition(&camera));
+	THE_CameraPosition(scene_data->camera_position, &camera);
 	vec4_assign(scene_data->sunlight, g_sunlight);
-
 
 	THE_RenderCommand* fbuff = THE_AllocateCommand();
 	fbuff->data.usefb = g_fb;
@@ -359,7 +358,7 @@ void Update(void)
 
 
 	THE_RenderCommand *use_pbr = THE_AllocateCommand();
-	use_pbr->data.use_shader.shader = g_mats.pbr;
+	use_pbr->data.use_shader = g_mats.pbr;
 	use_pbr->execute = THE_UseShaderExecute;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -405,8 +404,7 @@ void Update(void)
 	THE_MaterialSetFrameTexture(&fullscreen_mat, &fbtex, 1, -1);
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.use_shader.shader = g_mats.fullscreen_img;
-	usefullscreen->data.use_shader.material = fullscreen_mat;
+	usefullscreen->data.use_shader = g_mats.fullscreen_img;
 	*THE_ShaderCommonData(g_mats.fullscreen_img) = fullscreen_mat;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;
@@ -442,7 +440,6 @@ int main(int argc, char **argv)
 	};
 	
 	THE_Init(&cnfg);
-	THE_StartFrameTimer();
 	while (!THE_WindowShouldClose()) {
 		THE_Logic();
 		THE_Render();

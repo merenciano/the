@@ -56,19 +56,14 @@ typedef struct {
 	bool blend;
 } THE_RenderOptionsData;
 
-typedef struct {
-	THE_Shader shader;
-	THE_Material material;
-} THE_UseShaderData;
-
 typedef union {
 	THE_ClearCommandData clear;
 	THE_SkyboxCommandData skybox;
 	THE_DrawCommandData draw;
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
+	THE_Shader use_shader;
 	THE_Framebuffer usefb;
-	THE_UseShaderData use_shader;
 } THE_CommandData;
 
 struct THE_RenderCommand {

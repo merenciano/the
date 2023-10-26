@@ -72,25 +72,51 @@ static GLsizei GetAttribStride(int32_t attr_flags)
 	}
 }
 
-static void CreateMesh(THE_Mesh mesh)
+static void CreateMesh(THE_Mesh mesh, THE_Shader shader)
 {
 	THE_InternalMesh *m = meshes + mesh;
+	THE_InternalShader *s = shaders + shader;
+
+	glGenVertexArrays(1, (GLuint*)&m->internal_id);
+	glBindVertexArray(m->internal_id);
+	//glGenBuffers(2, m->internal_buffers_id);
 
 	glGenBuffers(1, &m->internal_buffers_id[0]);
 	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
 	glBufferData(GL_ARRAY_BUFFER, m->vtx_size, m->vtx, GL_STATIC_DRAW);
 
-	//glGenVertexArrays(1, (GLuint*)&m->internal_id);
-	//glBindVertexArray(m->internal_id);
-	//glGenBuffers(2, m->internal_buffers_id);
+	GLint attrib_pos = glGetAttribLocation(s->program_id, "a_position");
+	if (attrib_pos >= 0) {
+		glEnableVertexAttribArray(attrib_pos);
+		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
+			8 * sizeof(float), (void*)0);
+		glVertexAttribDivisor(attrib_pos, 0);
+	}
+
+	attrib_pos = glGetAttribLocation(s->program_id, "a_normal"); 
+	if (attrib_pos >= 0) {
+		glEnableVertexAttribArray(attrib_pos);
+		glVertexAttribPointer(attrib_pos, 3, GL_FLOAT, GL_FALSE,
+			8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glVertexAttribDivisor(attrib_pos, 0);
+	}
+
+	attrib_pos = glGetAttribLocation(s->program_id, "a_uv");
+	if (attrib_pos >= 0) {
+		glEnableVertexAttribArray(attrib_pos);
+		glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
+			8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glVertexAttribDivisor(attrib_pos, 0);
+	}
+
 	glGenBuffers(1, &m->internal_buffers_id[1]);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(uint32_t),
 		(const void*)m->idx, GL_STATIC_DRAW);
 
-	GLsizei offset = 0;
+	/*GLsizei offset = 0;
 	GLsizei s = GetAttribStride(m->attr_flags);
-	GLuint a = 0; /* Attribute index */
+	GLuint a = 0; // Attribute index
 	for (GLint i = 0; i < VERTEX_ATTRIBUTE_COUNT; ++i) {
 		if (!(m->attr_flags & (1 << i)))
 			continue;
@@ -101,10 +127,10 @@ static void CreateMesh(THE_Mesh mesh)
 		glVertexAttribDivisor(a, 0);
 		++a;
 		offset += sz * sizeof(float);
-	}
-	//glBindVertexArray(0);
-	//glBindBuffer(GL_ARRAY_BUFFER, 0);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}*/
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 static void CreateTexture(THE_Texture tex, bool release_from_ram)
@@ -463,12 +489,12 @@ static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
 
 void THE_UseShaderExecute(THE_CommandData *data)
 {
-	THE_InternalShader *m = shaders + data->use_shader.shader;
+	THE_InternalShader *m = shaders + data->use_shader;
 	if (m->program_id == THE_UNINIT) {
 		CreateShader(m);
 	}
 	glUseProgram(m->program_id);
-	SetMaterialData(data->use_shader.shader, m->common_data, 0);
+	SetMaterialData(data->use_shader, m->common_data, 0);
 }
 
 void THE_ClearExecute(THE_CommandData *data)
@@ -492,7 +518,7 @@ void THE_SkyboxExecute(THE_CommandData *data)
 {
 	THE_Material skymatdata = THE_MaterialDefault();
 	skymatdata.data = THE_AllocateFrameResource(16 * sizeof(float));
-	mat4_assign(skymatdata.data, THE_CameraStaticViewProjection(&camera));
+	THE_CameraStaticViewProjection(skymatdata.data, &camera);
 	skymatdata.dcount = 16;
 	skymatdata.tex = THE_AllocateFrameResource(sizeof(THE_Texture));
 	*(skymatdata.tex) = data->skybox.cubemap;
@@ -512,13 +538,12 @@ void THE_SkyboxExecute(THE_CommandData *data)
 	// Set the uniforms
 	THE_Shader mat = 1; // skybox
 	THE_CommandData usenewmatdata;
-	usenewmatdata.use_shader.material = skymatdata;
-	usenewmatdata.use_shader.shader = mat;
+	usenewmatdata.use_shader = mat;
 	shaders[mat].common_data = skymatdata;
 	THE_UseShaderExecute(&usenewmatdata);
 
 	if (meshes[CUBE_MESH].internal_id == THE_UNINIT) {
-		CreateMesh(CUBE_MESH);
+		CreateMesh(CUBE_MESH, mat);
 	}
 	glBindVertexArray(meshes[CUBE_MESH].internal_id);
 
@@ -538,15 +563,12 @@ void THE_DrawExecute(THE_CommandData *data)
 
 	THE_ASSERT(im->elements, "Attempt to draw an uninitialized mesh");
 	if (im->internal_id == THE_UNINIT) {
-		CreateMesh(mesh);
+		CreateMesh(mesh, data->draw.shader);
 	}
-	//glBindVertexArray(im->internal_id);
-
+	glBindVertexArray(im->internal_id);
+	/*
 	glBindBuffer(GL_ARRAY_BUFFER, im->internal_buffers_id[0]);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im->internal_buffers_id[1]);
-	/*glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glVertexAttribDivisor(0, 0);*/
 
 	GLint attrib_pos = glGetAttribLocation(s->program_id, "a_position");
 	glEnableVertexAttribArray(attrib_pos);
@@ -567,15 +589,12 @@ void THE_DrawExecute(THE_CommandData *data)
 	glVertexAttribPointer(attrib_pos, 2, GL_FLOAT, GL_FALSE,
 		8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glVertexAttribDivisor(attrib_pos, 0);
+	*/
 
-	/*THE_CommandData shader_data = {
-		.usemat.data = data->draw.mat,
-		.usemat.mat = data->draw.shader
-	};
-	THE_UseShaderExecute(&shader_data);*/
 	SetMaterialData(data->draw.shader, data->draw.mat, 1);
-	glDrawElementsInstanced(GL_TRIANGLES, im->elements, GL_UNSIGNED_INT, 0,
-		data->draw.inst_count);
+	glDrawElements(GL_TRIANGLES, im->elements, GL_UNSIGNED_INT, 0);
+
+	glBindVertexArray(0);
 }
 
 void THE_EquirectToCubeExecute(THE_CommandData *data)
@@ -630,8 +649,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_MaterialSetFrameTexture(&(dcd.draw.mat), &equirec, 1, -1);
 		THE_MaterialSetFrameData(&dcd.draw.mat, vp, 16);
 		THE_CommandData cmdata;
-		cmdata.use_shader.shader = dcd.draw.shader;
-		cmdata.use_shader.material = dcd.draw.mat;
+		cmdata.use_shader = dcd.draw.shader;
+		//cmdata.use_shader.material = dcd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
@@ -663,8 +682,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
                 THE_MaterialSetFrameTexture(&draw_cd.draw.mat, &o_cube, 1, 0);
                 THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(struct THE_PrefilterEnvData) / 4);
 				THE_CommandData cmdata;
-				cmdata.use_shader.shader = draw_cd.draw.shader;
-				cmdata.use_shader.material = draw_cd.draw.mat;
+				cmdata.use_shader = draw_cd.draw.shader;
+				//cmdata.use_shader.material = draw_cd.draw.mat;
 				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
@@ -685,8 +704,8 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		draw_cd.draw.shader = 4; // THE_MT_LUT_GEN;
 		draw_cd.draw.mat = THE_MaterialDefault();
 		THE_CommandData cmdata;
-		cmdata.use_shader.shader = draw_cd.draw.shader;
-		cmdata.use_shader.material = draw_cd.draw.mat;
+		cmdata.use_shader = draw_cd.draw.shader;
+		//cmdata.use_shader.material = draw_cd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}

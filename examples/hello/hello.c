@@ -24,12 +24,14 @@ THE_Framebuffer g_fb;
 
 void Init(void)
 {
-	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), false, true);
+	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
 	hellomat = THE_CreateShader("hello");
 	fs_img = THE_CreateShader("fullscreen-img");
+	THE_Texture fb_color = THE_GetFrameColor(g_fb);
+	THE_MaterialSetTexture(THE_ShaderCommonData(fs_img), &fb_color, 1, -1);
 
 	data.data.fields.color[0] = 1.0f;
-	data.data.fields.color[1] = 0.0f;
+	data.data.fields.color[1] = 1.0f;
 	data.data.fields.color[2] = 0.0f;
 	data.data.fields.color[3] = 1.0f;
 
@@ -39,6 +41,7 @@ void Init(void)
 	e->mesh = CUBE_MESH;
 	e->mat = hellomat;
 	e->mat_data = THE_MaterialDefault();
+	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
 }
 
 void Update(void)
@@ -54,23 +57,22 @@ void Update(void)
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
 	fbuff->next = rops;
-	rops->data.renderops.blend = 1;
+	rops->data.renderops.blend = true;
 	rops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
 	rops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
-	rops->data.renderops.depth_test = 1;
-	rops->data.renderops.write_depth = 1;
+	rops->data.renderops.depth_test = true;
+	rops->data.renderops.write_depth = true;
 	rops->data.renderops.cull_face = THE_CULLFACE_BACK;
 	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
 	rops->execute = THE_RenderOptionsExecute;
 
-	mat4_multiply(data.data.fields.vp, camera.proj_mat, camera.view_mat);
-	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
+	mat4_multiply(((HelloMatData*)e->mat_data.data)->data.fields.vp, camera.proj_mat, camera.view_mat);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
 	rops->next = clear;
-	clear->data.clear.bcolor = 1;
-	clear->data.clear.bdepth = 1;
-	clear->data.clear.bstencil = 0;
+	clear->data.clear.bcolor = true;
+	clear->data.clear.bdepth = true;
+	clear->data.clear.bstencil = false;
 	clear->data.clear.color[0] = 0.2f;
 	clear->data.clear.color[1] = 0.2f;
 	clear->data.clear.color[2] = 0.2f;
@@ -78,8 +80,7 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.use_shader.material = THE_MaterialDefault();
-	usemat->data.use_shader.shader = hellomat;
+	usemat->data.use_shader = hellomat;
 	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
@@ -94,33 +95,30 @@ void Update(void)
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
 	fbuff2->next = rops2;
-	rops2->data.renderops.depth_test = 0;
+	rops2->data.renderops.depth_test = false;
 	rops2->data.renderops.changed_mask = THE_DEPTH_TEST_BIT;
 	rops2->execute = THE_RenderOptionsExecute;
 
 	THE_RenderCommand *clear2 = THE_AllocateCommand();
-	clear2->data.clear.bcolor = 1;
-	clear2->data.clear.bdepth = 0;
-	clear2->data.clear.bstencil = 0;
-	clear2->data.clear.color[0] = 1.0f;
-	clear2->data.clear.color[1] = 0.0f;
-	clear2->data.clear.color[2] = 0.0f;
+	clear2->data.clear.bcolor = true;
+	clear2->data.clear.bdepth = true;
+	clear2->data.clear.bstencil = false;
+	clear2->data.clear.color[0] = 0.0f;
+	clear2->data.clear.color[1] = 1.0f;
+	clear2->data.clear.color[2] = 1.0f;
 	clear2->data.clear.color[3] = 1.0f;
 	clear2->execute = THE_ClearExecute;
 	rops2->next = clear2;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.use_shader.shader = fs_img;
-	usefullscreen->data.use_shader.material = THE_MaterialDefault();
-	THE_Texture fbtex = THE_GetFrameColor(g_fb);
-	THE_MaterialSetFrameTexture(&usefullscreen->data.use_shader.material, &fbtex, 1, -1);
+	usefullscreen->data.use_shader = fs_img;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear2->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
 	draw->data.draw.shader = fs_img;
-	draw->data.draw.mat = usefullscreen->data.use_shader.material;
+	draw->data.draw.mat = THE_MaterialDefault();
 	draw->data.draw.inst_count = 1;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
@@ -148,7 +146,6 @@ int main(int argc, char **argv)
 	};
 	
 	THE_Init(&cnfg);
-	THE_StartFrameTimer();
 	while (!THE_WindowShouldClose()) {
 		THE_Logic();
 		THE_Render();

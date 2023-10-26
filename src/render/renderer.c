@@ -278,7 +278,6 @@ THE_Shader THE_CreateShader(const char *shader)
 	shaders[ret].shader_name = shader;
 	shaders[ret].program_id = THE_UNINIT;
 	shaders[ret].common_data = THE_MaterialDefault();
-	memset(shaders[ret].data_loc, -1, sizeof(shaders[ret].data_loc)); // TODO: Quitar, no fa farta
 	return ret;
 }
 
@@ -685,7 +684,7 @@ THE_Material THE_MaterialDefault(void)
 		.dcount = 0,
 		.tex = NULL,
 		.tcount = 0,
-		.cube_start = -1
+		.cube_start = 0
 	};
 	return ret;
 }

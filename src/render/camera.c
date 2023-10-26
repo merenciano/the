@@ -8,7 +8,7 @@ typedef struct THE_Camera THE_Camera;
 static const float SENSIBILITY = 1.0f / 1000.0f;
 static const float SPEED = 10.0f;
 static const float SCROLL_SENSIBILITY = 1.0f;
-static const float UP[3] = {0.0f, 1.0f, 0.0f};
+static float UP[3] = {0.0f, 1.0f, 0.0f};
 
 void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height)
 {
@@ -18,43 +18,44 @@ void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint3
 	mat4_perspective_fov(cam->proj_mat, to_radians(fov), (float)width, (float)height, 0.01f, far);
 }
 
-float *THE_CameraStaticViewProjection(THE_Camera *cam)
+float *THE_CameraStaticViewProjection(float *out_m4, THE_Camera *cam)
 {
-	float sv[16];
-	mat4_assign(sv, cam->view_mat);
-	sv[3] = 0.0f;
-	sv[7] = 0.0f;
-	sv[11] = 0.0f;
-	sv[12] = 0.0f;
-	sv[13] = 0.0f;
-	sv[14] = 0.0f;
-	sv[15] = 0.0f;
-	return mat4_multiply(sv ,cam->proj_mat, sv);
+	mat4_assign(out_m4, cam->view_mat);
+	out_m4[3] = 0.0f;
+	out_m4[7] = 0.0f;
+	out_m4[11] = 0.0f;
+	out_m4[12] = 0.0f;
+	out_m4[13] = 0.0f;
+	out_m4[14] = 0.0f;
+	out_m4[15] = 0.0f;
+	return mat4_multiply(out_m4 ,cam->proj_mat, out_m4);
 }
 
-float *THE_CameraPosition(THE_Camera *cam)
+float *THE_CameraPosition(float *out_v3, THE_Camera *cam)
 {
 	float inv[16];
 	mat4_inverse(inv, cam->view_mat);
-	return inv + 12;
+	out_v3[0] = inv[12];
+	out_v3[1] = inv[13];
+	out_v3[2] = inv[14];
+	return out_v3;
 }
 
-float *THE_CameraForward(THE_Camera *cam)
+float *THE_CameraForward(float *out_v3, THE_Camera *cam)
 {
-	float fwd[3] = {
-		cam->view_mat[2],
-		cam->view_mat[6],
-		cam->view_mat[10]
-	};
-	return fwd;
+	out_v3[0] = cam->view_mat[2];
+	out_v3[1] = cam->view_mat[6];
+	out_v3[2] = cam->view_mat[10];
+	return out_v3;
 }
 
 void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 {
 	float eye[3];
-	vec3_assign(eye, THE_CameraPosition(cam));
+	THE_CameraPosition(eye, cam);
 	float fwd[3];
-	vec3_negative(fwd, vec3_normalize(fwd, THE_CameraForward(cam)));
+	THE_CameraForward(fwd, cam);
+	vec3_negative(fwd, vec3_normalize(fwd, fwd));
 	static float mouse_down_pos[2] = { 0.0f, 0.0f };
 	float speed = SPEED * deltatime;
 
