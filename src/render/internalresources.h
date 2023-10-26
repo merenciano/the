@@ -6,14 +6,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-enum {
+enum THE_VertexAttributes {
 	A_POSITION = 0,
 	A_NORMAL,
 	A_TANGENT,
 	A_BITANGENT,
 	A_UV,
 	VERTEX_ATTRIBUTE_COUNT
-} THE_VertexAttributes;
+};
 
 typedef struct {
 	const float *vtx;
@@ -68,7 +68,5 @@ extern size_t mesh_count;
 extern size_t texture_count;
 extern size_t framebuffer_count;
 extern size_t shader_count;
-
-bool IsValidFramebuffer(THE_Framebuffer fb);
 
 #endif

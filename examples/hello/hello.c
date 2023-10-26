@@ -3,12 +3,14 @@
 #include "the.h"
 #include <string.h>
 
+#include <mathc.h>
+
 typedef struct {
 	union {
 		float buffer[16+16+4];
 		struct {
 			float model[16];
-			struct mat4 vp;
+			float vp[16];
 			float color[4];
 		} fields;
 	} data;
@@ -18,9 +20,11 @@ static HelloMatData data;
 static THE_Shader hellomat;
 static THE_Shader fs_img;
 THE_Entity *e;
+THE_Framebuffer g_fb;
 
 void Init(void)
 {
+	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), false, true);
 	hellomat = THE_CreateShader("hello");
 	fs_img = THE_CreateShader("fullscreen-img");
 
@@ -30,7 +34,8 @@ void Init(void)
 	data.data.fields.color[3] = 1.0f;
 
 	e = THE_EntityCreate();
-	e->transform = smat4_translation(smat4_identity(), svec3(0.0f, 0.0f, -4.0f));
+	float pos[3] = {0.0f, 0.0f, -4.0f};
+	mat4_translation(e->transform, mat4_identity(e->transform), pos);
 	e->mesh = CUBE_MESH;
 	e->mat = hellomat;
 	e->mat_data = THE_MaterialDefault();
@@ -44,7 +49,7 @@ void Update(void)
 	// Render commands
 
 	THE_RenderCommand *fbuff = THE_AllocateCommand();
-	fbuff->data.usefb.fb = camera.fb;
+	fbuff->data.usefb = g_fb;
 	fbuff->execute = THE_UseFramebufferExecute;
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
@@ -58,7 +63,7 @@ void Update(void)
 	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
 	rops->execute = THE_RenderOptionsExecute;
 
-	data.data.fields.vp = smat4_multiply(camera.proj_mat, camera.view_mat);
+	mat4_multiply(data.data.fields.vp, camera.proj_mat, camera.view_mat);
 	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
@@ -84,7 +89,7 @@ void Update(void)
 	THE_RenderEntities(THE_GetEntities(), THE_EntitiesSize());
 
 	THE_RenderCommand *fbuff2 = THE_AllocateCommand();
-	fbuff2->data.usefb.fb = THE_DEFAULT;
+	fbuff2->data.usefb = THE_DEFAULT;
 	fbuff2->execute = THE_UseFramebufferExecute;
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
@@ -107,7 +112,7 @@ void Update(void)
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
 	usefullscreen->data.use_shader.shader = fs_img;
 	usefullscreen->data.use_shader.material = THE_MaterialDefault();
-	THE_Texture fbtex = THE_CameraOutputColorTexture(&camera);
+	THE_Texture fbtex = THE_GetFrameColor(g_fb);
 	THE_MaterialSetFrameTexture(&usefullscreen->data.use_shader.material, &fbtex, 1, -1);
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear2->next = usefullscreen;
@@ -131,7 +136,7 @@ void Close(void)
 
 int main(int argc, char **argv)
 {
-	THE_Config cnfg = {
+	struct THE_Config cnfg = {
 		.init_func = Init,
 		.logic_func = Update,
 		.close_func = Close,

@@ -102,7 +102,7 @@ void THE_InitRender()
 	frame_pool_last = frame_pool[0];
 	frame_switch = 0;
 
-	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight(), 0);
+	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight());
 
 	SPHERE_MESH = THE_CreateSphereMesh(32, 32);
 	CUBE_MESH = THE_CreateCubeMesh();

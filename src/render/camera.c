@@ -1,7 +1,5 @@
 #include "camera.h"
 #include "core/io.h"
-#include "core/manager.h"
-#include "internalresources.h"
 
 #include <mathc.h>
 
@@ -10,9 +8,9 @@ typedef struct THE_Camera THE_Camera;
 static const float SENSIBILITY = 1.0f / 1000.0f;
 static const float SPEED = 10.0f;
 static const float SCROLL_SENSIBILITY = 1.0f;
-static const struct vec3 UP = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
+static const float UP[3] = {0.0f, 1.0f, 0.0f};
 
-void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height, bool is_light)
+void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height)
 {
 	cam->fov = fov;
 	cam->far_value = far;
@@ -53,11 +51,11 @@ float *THE_CameraForward(THE_Camera *cam)
 
 void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 {
-	struct vec3 eye = THE_CameraPosition(cam);
+	float eye[3];
+	vec3_assign(eye, THE_CameraPosition(cam));
 	float fwd[3];
 	vec3_negative(fwd, vec3_normalize(fwd, THE_CameraForward(cam)));
-	static float mouse_down_pos[2] = { 0.0, 0.0 };
-	static float fov = 70.0f;
+	static float mouse_down_pos[2] = { 0.0f, 0.0f };
 	float speed = SPEED * deltatime;
 
 	// Rotation
@@ -66,6 +64,7 @@ void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 		mouse_down_pos[1] = THE_InputGetMouseY();
 	}
 
+	float tmp_vec[3];
 	if (THE_InputIsButtonPressed(THE_MOUSE_RIGHT))
 	{
 		float mouse_offset[2] = {
@@ -76,8 +75,8 @@ void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 		mouse_offset[0] *= SENSIBILITY;
 		mouse_offset[1] *= SENSIBILITY;
 
-		fwd = svec3_add(fwd, svec3_multiply_f(svec3_cross(UP, fwd), -mouse_offset[0]));
-		fwd = svec3_add(fwd, svec3_multiply_f(UP, mouse_offset[1]));
+		vec3_add(fwd, fwd, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd), -mouse_offset[0]));
+		vec3_add(fwd, fwd, vec3_multiply_f(tmp_vec, UP, mouse_offset[1]));
 
 		mouse_down_pos[0] = THE_InputGetMouseX();
 		mouse_down_pos[1] = THE_InputGetMouseY();
@@ -86,41 +85,41 @@ void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 	// Position
 	if (THE_InputIsButtonPressed(THE_KEY_UP))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(fwd, speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, fwd, speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_DOWN))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(fwd, -speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, fwd, -speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_LEFT))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(svec3_cross(UP, fwd), speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd), speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_RIGHT))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(svec3_cross(UP, fwd), -speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd), -speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_1))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(UP, speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, UP, speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_4))
 	{
-		eye = svec3_add(eye, svec3_multiply_f(UP, -speed));
+		vec3_add(eye, eye, vec3_multiply_f(tmp_vec, UP, -speed));
 	}
 
-	cam->view_mat = smat4_look_at(eye, svec3_add(eye, fwd), UP);
+	mat4_look_at(cam->view_mat, eye, vec3_add(tmp_vec, eye, fwd), UP);
 
 	// Zoom
 	if (THE_InputGetScroll() != 0.0f)
 	{
-		fov -= THE_InputGetScroll() * SCROLL_SENSIBILITY;
-		fov = clampf(fov, 1.0f, 120.0f);
-		cam->proj_mat = smat4_perspective(to_radians(fov), (float)THE_WindowGetWidth() / (float)THE_WindowGetHeight(), 0.1f, camera.far_value);
+		cam->fov -= THE_InputGetScroll() * SCROLL_SENSIBILITY;
+		cam->fov = clampf(cam->fov, 1.0f, 120.0f);
+		mat4_perspective(cam->proj_mat, to_radians(cam->fov), (float)THE_WindowGetWidth() / (float)THE_WindowGetHeight(), 0.1f, cam->far_value);
 	}
 }

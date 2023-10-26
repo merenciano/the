@@ -12,7 +12,7 @@ struct THE_Camera {
 };
 
 void THE_CameraInit(struct THE_Camera *cam, float fov,
-	float far, uint32_t width, uint32_t height, bool is_light);
+	float far, uint32_t width, uint32_t height);
 
 /* Temp return values! float[3] */
 float *THE_CameraPosition(struct THE_Camera *cam);

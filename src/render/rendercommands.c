@@ -1,11 +1,14 @@
 #include "rendercommands.h"
 
-#include "thefinitions.h"
+#include "core/thefinitions.h"
 #include "renderer.h" // TODO Move frame allocator to rendercommands and remove this include 
 #include "internalresources.h"
 #include "camera.h"
+#include "material.h"
+#include <mathc.h>
 
 #include <string.h>
+#include <assert.h>
 
 #define THE_OPENGL // Hardcoded define until another render backend is implemented.
 #ifdef THE_OPENGL
@@ -27,10 +30,10 @@ typedef struct {
 	GLenum type;
 	GLenum wrap;
 	GLenum filter;
-	s32 channels;
+	int32_t channels;
 } THE_TextureConfig;
 
-static GLint GetAttribSize(THE_VertexAttributes attr)
+static GLint GetAttribSize(enum THE_VertexAttributes attr)
 {
 	switch(attr) {
 		case A_POSITION:
@@ -304,8 +307,8 @@ static void CreateCubemap(THE_Texture tex)
 	
 		int width, height, nchannels;
 		stbi_set_flip_vertically_on_load(0);
-		for (u32 i = 0; i < 6; ++i) {
-			u8 *img_data = stbi_load(faces[i], &width, &height, &nchannels, 0);
+		for (int i = 0; i < 6; ++i) {
+			uint8_t *img_data = stbi_load(faces[i], &width, &height, &nchannels, 0);
 			THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
 				config.internal_format, width, height, 0,
@@ -317,7 +320,7 @@ static void CreateCubemap(THE_Texture tex)
 	} else {
 		THE_ASSERT(t->width > 0 && t->height > 0,
 			"The texture have to have size for the empty environment");
-		for (u32 i = 0; i < 6; ++i) {
+		for (int i = 0; i < 6; ++i) {
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
 				config.internal_format, t->width,
 				t->height, 0, config.format, config.type, 0);
@@ -335,7 +338,7 @@ static void CreateCubemap(THE_Texture tex)
 	t->gpu_version = t->cpu_version;
 }
 
-static THE_ErrorCode LoadFile(const char *path, char *buffer, size_t buffsize)
+static enum THE_ErrorCode LoadFile(const char *path, char *buffer, size_t buffsize)
 {
 	FILE* fp = fopen(path, "r");
 
@@ -355,7 +358,7 @@ static THE_ErrorCode LoadFile(const char *path, char *buffer, size_t buffsize)
 	return THE_EC_SUCCESS;
 }
 
-static THE_ErrorCode CreateShader(THE_InternalShader *shader)
+static enum THE_ErrorCode CreateShader(THE_InternalShader *shader)
 {
 	#define SHADER_BUFFSIZE 4096
 	THE_ASSERT(shader->program_id == THE_UNINIT, "The material must be uninitialized.");
@@ -487,10 +490,9 @@ void THE_ClearExecute(THE_CommandData *data)
 
 void THE_SkyboxExecute(THE_CommandData *data)
 {
-	struct mat4 static_vp = THE_CameraStaticViewProjection(&camera);
 	THE_Material skymatdata = THE_MaterialDefault();
 	skymatdata.data = THE_AllocateFrameResource(16 * sizeof(float));
-	mat4_assign(skymatdata.data, (float*)&static_vp);
+	mat4_assign(skymatdata.data, THE_CameraStaticViewProjection(&camera));
 	skymatdata.dcount = 16;
 	skymatdata.tex = THE_AllocateFrameResource(sizeof(THE_Texture));
 	*(skymatdata.tex) = data->skybox.cubemap;
@@ -588,7 +590,10 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		CreateCubemap(o_cube);
 	}
 
-	struct mat4 proj = smat4_perspective(to_radians(90.0f), 1.0f, 0.1f, 10.0f);
+	//struct mat4 proj = smat4_perspective(to_radians(90.0f), 1.0f, 0.1f, 10.0f);
+	float proj[16] = {0.0f};
+	mat4_perspective(proj, to_radians(90.0f), 1.0f, 0.1f, 10.0f);
+
 	struct mat4 views[] = {
 		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(1.0f, 0.0f, 0.0f), svec3(0.0f, -1.0f, 0.0f)),
 		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(-1.0f, 0.0f, 0.0f), svec3(0.0f, -1.0f, 0.0f)),
@@ -613,15 +618,17 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	THE_CommandData dcd;
 	dcd.draw.inst_count = 1U;
 	dcd.draw.mesh = CUBE_MESH;
-	for (s32 i = 0; i < 6; ++i) {
-		struct mat4 vp = smat4_multiply(proj, views[i]);
+	for (int i = 0; i < 6; ++i) {
+		float *view = (float*)&views[i];
+		float vp[16];
+		mat4_multiply(vp, proj, view);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, icu->internal_id, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		dcd.draw.shader = 2; // eq to cube
 		dcd.draw.mat = THE_MaterialDefault();
 		THE_MaterialSetFrameTexture(&(dcd.draw.mat), &equirec, 1, -1);
-		THE_MaterialSetFrameData(&dcd.draw.mat, (float*)&vp, 16);
+		THE_MaterialSetFrameData(&dcd.draw.mat, vp, 16);
 		THE_CommandData cmdata;
 		cmdata.use_shader.shader = dcd.draw.shader;
 		cmdata.use_shader.material = dcd.draw.mat;
@@ -635,7 +642,7 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 			CreateCubemap(o_pref);
 		}
 
-		THE_PrefilterEnvData pref_data;
+		struct THE_PrefilterEnvData pref_data;
 		for (int i = 0; i < 5; ++i) {
 			// mip size
 			int32_t s = (float)ipref->width * powf(0.5f, (float)i);
@@ -646,14 +653,15 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 			draw_cd.draw.inst_count = 1U;
 			draw_cd.draw.mesh = CUBE_MESH;
 			for (int j = 0; j < 6; ++j) {
-                pref_data.vp = smat4_multiply(proj, views[j]);
+				float *view = (float*)&views[j];
+                mat4_multiply(pref_data.vp, proj, view);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 				    GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, ipref->internal_id, i);
 				glClear(GL_COLOR_BUFFER_BIT);
 				draw_cd.draw.shader = 3; // prefilter env
 				draw_cd.draw.mat = THE_MaterialDefault();
                 THE_MaterialSetFrameTexture(&draw_cd.draw.mat, &o_cube, 1, 0);
-                THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(THE_PrefilterEnvData) / 4);
+                THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(struct THE_PrefilterEnvData) / 4);
 				THE_CommandData cmdata;
 				cmdata.use_shader.shader = draw_cd.draw.shader;
 				cmdata.use_shader.material = draw_cd.draw.mat;
@@ -666,7 +674,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	if (o_lut != THE_UNINIT) {
 		THE_InternalTexture *ilut = textures + o_lut;
 		if (ilut->cpu_version > ilut->gpu_version) {
-			printf("%d\n", glGetError());
 			CreateTexture(o_lut, false);
 		}
 		glViewport(0, 0, ilut->width, ilut->height);
@@ -790,17 +797,17 @@ void THE_RenderOptionsExecute(THE_CommandData *data)
 
 void THE_UseFramebufferExecute(THE_CommandData *data)
 {
-	if (data->usefb.fb == THE_DEFAULT) {
+	if (data->usefb == THE_DEFAULT) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		return;
 	}
 
-	THE_InternalFramebuffer *ifb = framebuffers + data->usefb.fb;
+	THE_InternalFramebuffer *ifb = framebuffers + data->usefb;
 	GLsizei width;
 	GLsizei height;
 
 	if (ifb->gpu_version == 0) {
-		THE_ASSERT(data->usefb.fb >= 0 && ifb->cpu_version > 0, "Framebuffer not created");
+		THE_ASSERT(data->usefb >= 0 && ifb->cpu_version > 0, "Framebuffer not created");
 		glGenFramebuffers(1, (GLuint*)&(ifb->internal_id));
 		if (ifb->color_tex >= 0) {
 			CreateTexture(ifb->color_tex, false);

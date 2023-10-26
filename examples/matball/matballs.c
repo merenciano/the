@@ -2,7 +2,6 @@
 #include "the.h"
 #include <string.h>
 #include <stdlib.h>
-#include <wctype.h>
 
 #include <mathc.h>
 
