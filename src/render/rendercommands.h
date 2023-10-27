@@ -8,6 +8,7 @@
 #define THE_WRITE_DEPTH_BIT    1 << 2
 #define THE_DEPTH_TEST_BIT     1 << 3
 #define THE_CULL_FACE_BIT      1 << 4
+#define THE_DEPTH_FUNC_BIT     1 << 5
 
 typedef struct {
 	float color[4];
@@ -44,6 +45,8 @@ enum THE_RenderOptions {
 	THE_CULLFACE_FRONT,
 	THE_CULLFACE_BACK,
 	THE_CULLFACE_FRONT_AND_BACK,
+	THE_DEPTHFUNC_LEQUAL,
+	THE_DEPTHFUNC_LESS,
 };
 
 typedef struct {
@@ -51,6 +54,7 @@ typedef struct {
 	enum THE_RenderOptions sfactor;
 	enum THE_RenderOptions dfactor;
 	enum THE_RenderOptions cull_face;
+	enum THE_RenderOptions depth_func;
 	bool depth_test;
 	bool write_depth;
 	bool blend;

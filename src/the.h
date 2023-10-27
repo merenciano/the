@@ -3,6 +3,7 @@
 #include "core/execution.h"
 #include "core/chrono.h"
 #include "core/config.h"
+#include "core/mem.h"
 
 #include "ecs/entity.h"
 

@@ -1,4 +1,5 @@
 #include "core/io.h"
+#include "render/renderer.h"
 #include "the.h"
 #include <string.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ static float g_sunlight[4] = {0.0f, -1.0f, -0.1f, 1.0f};
 
 void Init(void)
 {
-	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), false, true);
+	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
 	g_resources.meshes = THE_HMapCreate(8, sizeof(THE_Mesh));
 	g_resources.textures = THE_HMapCreate(64, sizeof(THE_Texture));
 
@@ -32,6 +33,9 @@ void Init(void)
 	g_mats.prefilter_env = THE_CreateShader("prefilter-env");
 	g_mats.lut_gen = THE_CreateShader("lut-gen");
 	g_mats.pbr = THE_CreateShader("pbr");
+
+	THE_Texture fb_color = THE_GetFrameColor(g_fb);
+	THE_MaterialSetTexture(THE_ShaderCommonData(g_mats.fullscreen_img), &fb_color, 1, -1);
 
 	THE_ResourceMap *rm = &g_resources;
 
@@ -399,21 +403,15 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 	rops2->next = clear;
 
-	THE_Material fullscreen_mat = THE_MaterialDefault();
-	THE_Texture fbtex = THE_GetFrameColor(g_fb);
-	THE_MaterialSetFrameTexture(&fullscreen_mat, &fbtex, 1, -1);
-
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
 	usefullscreen->data.use_shader = g_mats.fullscreen_img;
-	*THE_ShaderCommonData(g_mats.fullscreen_img) = fullscreen_mat;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
 	draw->data.draw.shader = g_mats.fullscreen_img;
-	draw->data.draw.mat = fullscreen_mat;
-	draw->data.draw.inst_count = 1;
+	draw->data.draw.mat = THE_MaterialDefault();
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
 	draw->next = NULL;

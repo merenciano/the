@@ -11,9 +11,9 @@ void *THE_Realloc(void *ptr, size_t size);
 void THE_Free(void *ptr);
 
 void THE_MemInit(size_t size);
-void THE_MemFreeAll();
-float THE_MemUsedMB();
-size_t THE_MemUsedBytes();
-size_t THE_MemCapacity();
+void THE_MemFreeAll(void);
+float THE_MemUsedMB(void);
+size_t THE_MemUsedBytes(void);
+size_t THE_MemCapacity(void);
 
 #endif

@@ -1,5 +1,5 @@
-#include "render/material.h"
-#include "render/renderer.h"
+#include "render/camera.h"
+#include "render/rendercommands.h"
 #include "the.h"
 #include <string.h>
 
@@ -19,16 +19,26 @@ typedef struct {
 static HelloMatData data;
 static THE_Shader hellomat;
 static THE_Shader fs_img;
+static THE_Shader skybox;
 THE_Entity *e;
 THE_Framebuffer g_fb;
+THE_Texture skycube;
 
 void Init(void)
 {
 	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
 	hellomat = THE_CreateShader("hello");
 	fs_img = THE_CreateShader("fullscreen-img");
+	skybox = THE_CreateShader("skybox");
 	THE_Texture fb_color = THE_GetFrameColor(g_fb);
 	THE_MaterialSetTexture(THE_ShaderCommonData(fs_img), &fb_color, 1, -1);
+
+	skycube = THE_CreateTexture("./assets/tex/Xcave.png", THE_TEX_SKYBOX);
+	THE_MaterialSetTexture(THE_ShaderCommonData(skybox), &skycube, 1, 0);
+	THE_ShaderCommonData(skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
+	THE_ShaderCommonData(skybox)->dcount = 16;
+
+
 
 	data.data.fields.color[0] = 1.0f;
 	data.data.fields.color[1] = 1.0f;
@@ -38,7 +48,7 @@ void Init(void)
 	e = THE_EntityCreate();
 	float pos[3] = {0.0f, 0.0f, -4.0f};
 	mat4_translation(e->transform, mat4_identity(e->transform), pos);
-	e->mesh = CUBE_MESH;
+	e->mesh = THE_CreateMeshFromFile_OBJ("../matball/assets/obj/matball-n.obj");
 	e->mat = hellomat;
 	e->mat_data = THE_MaterialDefault();
 	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
@@ -63,6 +73,7 @@ void Update(void)
 	rops->data.renderops.depth_test = true;
 	rops->data.renderops.write_depth = true;
 	rops->data.renderops.cull_face = THE_CULLFACE_BACK;
+	rops->data.renderops.depth_func = THE_DEPTHFUNC_LESS;
 	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
 	rops->execute = THE_RenderOptionsExecute;
 
@@ -89,9 +100,29 @@ void Update(void)
 
 	THE_RenderEntities(THE_GetEntities(), THE_EntitiesSize());
 
+	rops = THE_AllocateCommand();
+	rops->data.renderops.cull_face = THE_CULLFACE_DISABLED;
+	rops->data.renderops.depth_func = THE_DEPTHFUNC_LEQUAL;
+	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
+	rops->execute = THE_RenderOptionsExecute;
+	
+	THE_CameraStaticViewProjection(THE_ShaderCommonData(skybox)->data, &camera);
+	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
+	use_sky_shader->data.use_shader = skybox;
+	use_sky_shader->execute = THE_UseShaderExecute;
+	rops->next = use_sky_shader;
+
+	THE_RenderCommand *draw_sky = THE_AllocateCommand();
+	draw_sky->data.draw.mesh = CUBE_MESH;
+	draw_sky->data.draw.shader = skybox;
+	draw_sky->data.draw.mat = THE_MaterialDefault();
+	draw_sky->execute = THE_DrawExecute;
+	use_sky_shader->next = draw_sky;
+
 	THE_RenderCommand *fbuff2 = THE_AllocateCommand();
 	fbuff2->data.usefb = THE_DEFAULT;
 	fbuff2->execute = THE_UseFramebufferExecute;
+	draw_sky->next = fbuff2;
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
 	fbuff2->next = rops2;
@@ -101,7 +132,7 @@ void Update(void)
 
 	THE_RenderCommand *clear2 = THE_AllocateCommand();
 	clear2->data.clear.bcolor = true;
-	clear2->data.clear.bdepth = true;
+	clear2->data.clear.bdepth = false;
 	clear2->data.clear.bstencil = false;
 	clear2->data.clear.color[0] = 0.0f;
 	clear2->data.clear.color[1] = 1.0f;
@@ -124,7 +155,7 @@ void Update(void)
 	usefullscreen->next = draw;
 	draw->next = NULL;
 
-	THE_AddCommands(fbuff2);
+	THE_AddCommands(rops);
 }
 
 void Close(void)
