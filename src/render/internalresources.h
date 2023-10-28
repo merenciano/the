@@ -16,8 +16,8 @@ enum THE_VertexAttributes {
 };
 
 typedef struct {
-	const float *vtx;
-	const uint32_t *idx;
+	float *vtx;
+	uint32_t *idx;
 	size_t vtx_size;
 	size_t elements;
 	int32_t attr_flags;

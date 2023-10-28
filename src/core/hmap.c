@@ -82,7 +82,6 @@ void THE_HMapInsert(HMap *hm, const char *key, void *value)
 
 	HMapKey mk;
 	mk.hash = HMapHash(key);
-	printf("Key %s = %s : Hash: 0x%lX\n", key, mk.name, mk.hash);
 	uint32_t offset = mk.hash & (HMapGetCapacity(hm) - 1);
 
 	HMap *node;
@@ -92,11 +91,9 @@ void THE_HMapInsert(HMap *hm, const char *key, void *value)
 			printf("Key %s already here!\n", key);
 			return;
 		}
-		//printf("Collision\n");
 		offset = (offset + 1) & (HMapGetCapacity(hm) - 1);
 	}
 
-	//printf("Inserted\n");
 	node->key.hash = mk.hash;
 	memcpy(&(node->value), value, HMapGetValueSize(hm));
 	++HMapGetCount(hm);

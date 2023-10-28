@@ -1,4 +1,3 @@
-#include "core/manager.h"
 #include "core/io.h"
 #include "core/execution.h"
 #include "core/chrono.h"

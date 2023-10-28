@@ -49,7 +49,7 @@ extern struct THE_Camera camera;
 
 void THE_InitRender(void);
 void THE_RenderFrame(void);
-void THE_SubmitFrame(void);
+void THE_RenderEndFrame(void);
 void *THE_AllocateFrameResource(uint32_t size);
 int32_t THE_IsInsideFramePool(void *address);
 

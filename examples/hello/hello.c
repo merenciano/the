@@ -1,8 +1,5 @@
-#include "render/camera.h"
-#include "render/rendercommands.h"
 #include "the.h"
 #include <string.h>
-
 #include <mathc.h>
 
 typedef struct {
@@ -16,53 +13,56 @@ typedef struct {
 	} data;
 } HelloMatData;
 
-static HelloMatData data;
-static THE_Shader hellomat;
-static THE_Shader fs_img;
-static THE_Shader skybox;
-THE_Entity *e;
-THE_Framebuffer g_fb;
-THE_Texture skycube;
+typedef struct HelloCtx {
+	HelloMatData hello_mat;
+	THE_Shader hellomat;
+	THE_Shader fs_img;
+	THE_Shader skybox;
+	THE_Framebuffer fb;
+	THE_Texture skycube;
+	THE_Entity *e;
 
-void Init(void)
+} HelloCtx;
+
+void Init(void *context)
 {
-	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
-	hellomat = THE_CreateShader("hello");
-	fs_img = THE_CreateShader("fullscreen-img");
-	skybox = THE_CreateShader("skybox");
-	THE_Texture fb_color = THE_GetFrameColor(g_fb);
-	THE_MaterialSetTexture(THE_ShaderCommonData(fs_img), &fb_color, 1, -1);
+	HelloCtx *ctx = context;
+	ctx->fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
+	ctx->hellomat = THE_CreateShader("hello");
+	ctx->fs_img = THE_CreateShader("fullscreen-img");
+	ctx->skybox = THE_CreateShader("skybox");
+	THE_Texture fb_color = THE_GetFrameColor(ctx->fb);
+	THE_MaterialSetTexture(THE_ShaderCommonData(ctx->fs_img), &fb_color, 1, -1);
 
-	skycube = THE_CreateTexture("./assets/tex/Xcave.png", THE_TEX_SKYBOX);
-	THE_MaterialSetTexture(THE_ShaderCommonData(skybox), &skycube, 1, 0);
-	THE_ShaderCommonData(skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
-	THE_ShaderCommonData(skybox)->dcount = 16;
+	ctx->skycube = THE_CreateTexture("./assets/tex/Xcave.png", THE_TEX_SKYBOX);
+	THE_MaterialSetTexture(THE_ShaderCommonData(ctx->skybox), &ctx->skycube, 1, 0);
+	THE_ShaderCommonData(ctx->skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
+	THE_ShaderCommonData(ctx->skybox)->dcount = 16;
 
+	ctx->hello_mat.data.fields.color[0] = 1.0f;
+	ctx->hello_mat.data.fields.color[1] = 1.0f;
+	ctx->hello_mat.data.fields.color[2] = 0.0f;
+	ctx->hello_mat.data.fields.color[3] = 1.0f;
 
-
-	data.data.fields.color[0] = 1.0f;
-	data.data.fields.color[1] = 1.0f;
-	data.data.fields.color[2] = 0.0f;
-	data.data.fields.color[3] = 1.0f;
-
-	e = THE_EntityCreate();
+	ctx->e = THE_EntityCreate();
 	float pos[3] = {0.0f, 0.0f, -4.0f};
-	mat4_translation(e->transform, mat4_identity(e->transform), pos);
-	e->mesh = THE_CreateMeshFromFile_OBJ("../matball/assets/obj/matball-n.obj");
-	e->mat = hellomat;
-	e->mat_data = THE_MaterialDefault();
-	THE_MaterialSetData(&e->mat_data, data.data.buffer, sizeof(HelloMatData) / 4);
+	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
+	ctx->e->mesh = SPHERE_MESH;
+	ctx->e->mat = ctx->hellomat;
+	ctx->e->mat_data = THE_MaterialDefault();
+	THE_MaterialSetData(&ctx->e->mat_data, ctx->hello_mat.data.buffer, sizeof(HelloMatData) / 4);
 }
 
-void Update(void)
+bool Update(void *context)
 {
+	HelloCtx *ctx = context;
 	THE_InputUpdate();
-	THE_CameraMovementSystem(&camera, THE_DeltaTime());
+	THE_CameraMovementSystem(&camera, deltatime);
 
 	// Render commands
 
 	THE_RenderCommand *fbuff = THE_AllocateCommand();
-	fbuff->data.usefb = g_fb;
+	fbuff->data.usefb = ctx->fb;
 	fbuff->execute = THE_UseFramebufferExecute;
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
@@ -77,13 +77,13 @@ void Update(void)
 	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
 	rops->execute = THE_RenderOptionsExecute;
 
-	mat4_multiply(((HelloMatData*)e->mat_data.data)->data.fields.vp, camera.proj_mat, camera.view_mat);
+	mat4_multiply(((HelloMatData*)ctx->e->mat_data.data)->data.fields.vp, camera.proj_mat, camera.view_mat);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
 	rops->next = clear;
-	clear->data.clear.bcolor = true;
-	clear->data.clear.bdepth = true;
-	clear->data.clear.bstencil = false;
+	clear->data.clear.color_buffer = true;
+	clear->data.clear.depth_buffer = true;
+	clear->data.clear.stencil_buffer = false;
 	clear->data.clear.color[0] = 0.2f;
 	clear->data.clear.color[1] = 0.2f;
 	clear->data.clear.color[2] = 0.2f;
@@ -91,7 +91,7 @@ void Update(void)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.use_shader = hellomat;
+	usemat->data.use_shader = ctx->hellomat;
 	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
@@ -106,16 +106,15 @@ void Update(void)
 	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
 	rops->execute = THE_RenderOptionsExecute;
 	
-	THE_CameraStaticViewProjection(THE_ShaderCommonData(skybox)->data, &camera);
+	THE_CameraStaticViewProjection(THE_ShaderCommonData(ctx->skybox)->data, &camera);
 	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
-	use_sky_shader->data.use_shader = skybox;
+	use_sky_shader->data.use_shader = ctx->skybox;
 	use_sky_shader->execute = THE_UseShaderExecute;
 	rops->next = use_sky_shader;
 
 	THE_RenderCommand *draw_sky = THE_AllocateCommand();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.shader = skybox;
-	draw_sky->data.draw.mat = THE_MaterialDefault();
+	draw_sky->data.draw.shader = ctx->skybox;
 	draw_sky->execute = THE_DrawExecute;
 	use_sky_shader->next = draw_sky;
 
@@ -131,9 +130,9 @@ void Update(void)
 	rops2->execute = THE_RenderOptionsExecute;
 
 	THE_RenderCommand *clear2 = THE_AllocateCommand();
-	clear2->data.clear.bcolor = true;
-	clear2->data.clear.bdepth = false;
-	clear2->data.clear.bstencil = false;
+	clear2->data.clear.color_buffer = true;
+	clear2->data.clear.depth_buffer = false;
+	clear2->data.clear.stencil_buffer = false;
 	clear2->data.clear.color[0] = 0.0f;
 	clear2->data.clear.color[1] = 1.0f;
 	clear2->data.clear.color[2] = 1.0f;
@@ -142,47 +141,38 @@ void Update(void)
 	rops2->next = clear2;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.use_shader = fs_img;
+	usefullscreen->data.use_shader = ctx->fs_img;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear2->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.shader = fs_img;
-	draw->data.draw.mat = THE_MaterialDefault();
-	draw->data.draw.inst_count = 1;
+	draw->data.draw.shader = ctx->fs_img;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
 	draw->next = NULL;
 
 	THE_AddCommands(rops);
-}
 
-void Close(void)
-{
-
+	return true;
 }
 
 int main(int argc, char **argv)
 {
+	HelloCtx ctx;
 	struct THE_Config cnfg = {
 		.init_func = Init,
-		.logic_func = Update,
-		.close_func = Close,
-		.alloc_capacity = THE_GB(1),
-		.max_geometries = 128,
+		.update_func = Update,
+		.context = &ctx,
+		.heap_size = THE_GB(1U),
+		.window_title = "THE_Hello",
 		.window_width = 1280,
 		.window_height = 720,
 		.vsync = true
 	};
 	
-	THE_Init(&cnfg);
-	while (!THE_WindowShouldClose()) {
-		THE_Logic();
-		THE_Render();
-		THE_ShowFrame();
-	}
-	THE_Close();
+	THE_Start(&cnfg);
+	THE_End();
 
 	return 0;
 }

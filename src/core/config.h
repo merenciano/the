@@ -8,17 +8,16 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-extern const char *WINDOW_TITLE;
-extern const int32_t MAX_TEXTURES;
-extern const int32_t MAX_BUFFERS;
-
 struct THE_Config {
-	THE_Callback init_func;
-	THE_Callback logic_func;
-	THE_Callback close_func;
-	size_t alloc_capacity; // Memory chunk size for the buddy allocator (in bytes).
-	int32_t render_queue_capacity; // Maximum renderable entities in the scene. This is for engine allocation purposes.
-	int32_t max_geometries;
+	void (*init_func)(void *context);
+	bool (*update_func)(void *context);
+	void *context;
+
+	// Memory
+	size_t heap_size; // Memory chunk size for every alloc THE does.
+
+	// Window
+	const char *window_title;
 	int32_t window_width;
 	int32_t window_height;
 	bool vsync;

@@ -1,56 +1,57 @@
 #include "execution.h"
 #include "core/config.h"
-#include "core/manager.h"
+#include "core/mem.h"
 #include "core/chrono.h"
 #include "render/renderer.h"
+#include "core/io.h"
 
 #include <stdio.h>
 
 //#define MTR_ENABLED
 #include "minitrace.h"
 
-static THE_Callback LogicF;
-static THE_Callback CloseF;
+float deltatime;
 
-void THE_Init(struct THE_Config *cnfg)
+void THE_Start(struct THE_Config *config)
 {
 	mtr_init("the_trace.json");
 	MTR_META_PROCESS_NAME("The_Profiling");
 	MTR_META_THREAD_NAME("Main_Thread");
 	MTR_BEGIN("THE", "Init");
-	THE_InitManager(cnfg);
-	LogicF = cnfg->logic_func;
-	CloseF = cnfg->close_func;
-
-	cnfg->init_func();
+	THE_MemInit(config->heap_size);
+	THE_IOInit(config->window_title, config->window_width,
+		config->window_height, config->vsync);
+	THE_InitRender();
 	MTR_END("THE", "Init");
+
+	config->init_func(config->context);
+
+	THE_Chrono frame_chrono = THE_ChronoTime();
+	while (!THE_WindowShouldClose()) {
+		deltatime = THE_ChronoSeconds(
+			THE_ChronoElapsed(frame_chrono));
+		frame_chrono = THE_ChronoTime();
+		MTR_META_THREAD_NAME("Logic_Thread");
+		MTR_BEGIN("THE", "Logic");
+		if (!config->update_func(config->context)) {
+			break;
+		}
+		MTR_END("THE", "Logic");
+
+		MTR_BEGIN("THE", "Render");
+		THE_RenderFrame();
+		MTR_END("THE", "Render");
+
+		MTR_BEGIN("THE", "Swap_Buffers");
+		THE_WindowSwapBuffers();
+		THE_IOPollEvents();
+		THE_RenderEndFrame();
+		MTR_END("THE", "Swap_Buffers");
+	}
 }
 
-void THE_Logic()
+void THE_End(void)
 {
-	MTR_META_THREAD_NAME("Logic_Thread");
-	MTR_BEGIN("THE", "Logic");
-	LogicF();
-	MTR_END("THE", "Logic");
-}
-
-void THE_Render()
-{
-	MTR_BEGIN("THE", "Render");
-	THE_RenderFrame();
-	MTR_END("THE", "Render");
-}
-
-void THE_ShowFrame()
-{
-	MTR_BEGIN("THE", "Swap_Buffers");
-	THE_NextFrame();
-	MTR_END("THE", "Swap_Buffers");
-}
-
-void THE_Close()
-{
-	CloseF();
 	mtr_flush();
 	mtr_shutdown();
 }

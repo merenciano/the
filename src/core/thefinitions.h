@@ -15,6 +15,7 @@
 #define THE_INVALID -5003
 #define THE_INACTIVE -5004
 #define THE_DEFAULT -5005
+#define THE_IGNORE -5006
 
 #define THE_KB(X) ((X) * 1024)
 #define THE_MB(X) (THE_KB(X) * 1024)

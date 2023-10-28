@@ -5,6 +5,7 @@
 #include "core/io.h"
 #include "core/mem.h"
 
+#include <math.h>
 #include <mathc.h>
 
 #ifndef STB_IMAGE_IMPLEMENTATION
@@ -125,7 +126,7 @@ void THE_AddCommands(THE_RenderCommand *rc)
 	render_queue.next_last = c;
 }
 
-void THE_RenderFrame()
+void THE_RenderFrame(void)
 {
 	THE_RenderCommand* i = render_queue.curr;
 	if (!i) {
@@ -140,9 +141,10 @@ void THE_RenderFrame()
 	render_queue.curr = NULL;
 	render_queue.curr_last = NULL;
 	// TODO delete resources marked for release
+
 }
 
-void THE_SubmitFrame()
+void THE_RenderEndFrame(void)
 {
 	render_queue.curr = render_queue.next;
 	render_queue.curr_last = render_queue.next_last;
@@ -283,7 +285,7 @@ THE_Shader THE_CreateShader(const char *shader)
 
 THE_Mesh THE_CreateCubeMesh()
 {
-	static const float VERTICES[] = {
+	static float VERTICES[] = {
 		// positions          // normals           // uv 
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
@@ -316,7 +318,7 @@ THE_Mesh THE_CreateCubeMesh()
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
 	};
 
-	static const uint32_t INDICES[] = {
+	static uint32_t INDICES[] = {
 		0,  2,  1,  2,  0,  3,
 		4,  5,  6,  6,  7,  4,
 		8,  9, 10, 10, 11,  8,
@@ -328,10 +330,6 @@ THE_Mesh THE_CreateCubeMesh()
 	THE_Mesh ret = AddMesh();
 	meshes[ret].attr_flags = 
 		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
-	//meshes[ret].vtx = malloc(sizeof(VERTICES));
-	//memcpy(meshes[ret].vtx, VERTICES, sizeof(VERTICES));
-	//meshes[ret].idx = malloc(sizeof(INDICES));
-	//memcpy(meshes[ret].idx, INDICES, sizeof(INDICES));
 	meshes[ret].vtx = &VERTICES[0];
 	meshes[ret].idx = &INDICES[0];
 	meshes[ret].vtx_size = sizeof(VERTICES);
@@ -340,80 +338,53 @@ THE_Mesh THE_CreateCubeMesh()
 	return ret;
 }
 
-THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
+THE_Mesh THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
 {
-	THE_ASSERT(x_segments > 0 && y_segments > 0, "Invalid number of segments");
-	static const float PI = 3.14159265359f;
+	THE_ASSERT(x_segments > 2 && y_segments > 2,
+		"Invalid number of segments");
 
-	size_t vtx_size = (1 + x_segments * (y_segments - 1)) * 8 * sizeof(float);
-	size_t idx_size = x_segments * y_segments * 6 * sizeof(uint32_t);
+	const float x_step = 1.0f / (float)(x_segments - 1);
+	const float y_step = 1.0f / (float)(y_segments - 1);
 
 	THE_Mesh ret = AddMesh();
 	meshes[ret].internal_id = THE_UNINIT;
 	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
 	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
-	meshes[ret].vtx = THE_Alloc(vtx_size + idx_size);
-	meshes[ret].idx = (uint32_t*)meshes[ret].vtx + (vtx_size / sizeof(float));
-	meshes[ret].vtx_size = vtx_size;
-	meshes[ret].elements = idx_size / sizeof(uint32_t);
-	meshes[ret].attr_flags = 
+	meshes[ret].vtx_size = x_segments * y_segments * 8 * sizeof(float);
+	meshes[ret].elements = x_segments * y_segments * 6;
+	meshes[ret].vtx = THE_Alloc(meshes[ret].vtx_size);
+	meshes[ret].idx = THE_Alloc(meshes[ret].elements * sizeof(uint32_t));
+	meshes[ret].attr_flags =
 		(1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 
-	float x_step = (2.0f * PI) / (float)x_segments;
-	float y_step = PI / (float)y_segments;
-
 	float *v = meshes[ret].vtx;
-	for (int y = 1; y < y_segments; ++y) {
+	for (int y = 0; y < y_segments; ++y) {
 		for (int x = 0; x < x_segments; ++x) {
-			float x_segment = x * x_step;
-			float y_segment = y * y_step;
-			v[0] = cosf(x_segment) * sinf(y_segment);
-			v[1] = cosf(y_segment);
-			v[2] = sinf(x_segment) * sinf(y_segment);
-			v[3] = v[0];
-			v[4] = v[1];
-			v[5] = v[2];
-			v[6] = 0.5f + atan2(v[3], v[5]) / (2.0f * PI);
-			v[7] = 0.5f + v[4] * 0.5f;
+			float py = sinf(-M_PI_2 + M_PI * y * x_step);
+			float px = cosf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
+			float pz = sinf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
+			
+			*v++ = px;
+			*v++ = py;
+			*v++ = pz;
+			*v++ = px;
+			*v++ = py;
+			*v++ = pz;
+			*v++ = x * y_step;
+			*v++ = y * x_step;
 		}
-		v += x_segments * 8;
 	}
-	memset(v, 0, 16 * sizeof(float));
-	v[1] = -1.0f;
-	v[4] = -1.0f;
-	v[6] = 0.5f;
-	v[1 + 8] = 1.0f;
-	v[4 + 8] = 1.0f;
-	v[6 + 8] = 0.5f;
-	v[7 + 8] = 1.0f;
-
-	v+=16;
-
-	printf("%ld, %ld\n", v - meshes[ret].vtx, vtx_size / sizeof(float));
 
 	uint32_t *i = meshes[ret].idx;
-	for (int y = 0; y < y_segments - 1; ++y) {
+	for (int y = 0; y < y_segments; ++y) {
 		for (int x = 0; x < x_segments; ++x) {
-			i[0] = (y + 1) * x_segments + x;
-			i[1] = y * x_segments + x;
-			i[2] = y * x_segments + ((x + 1) % x_segments);
-			i[3] = (y + 1) * x_segments + x;
-			i[4] = y * x_segments + ((x + 1) % x_segments);
-			i[5] = (y + 1) * x_segments + ((x + 1) % x_segments);
-			i += 6;
+			*i++ = y * x_segments + x;
+			*i++ = y * x_segments + x + 1;
+			*i++ = (y + 1) * x_segments + x + 1;
+			*i++ = y * x_segments + x;
+			*i++ = (y + 1) * x_segments + x + 1;
+			*i++ = (y + 1) * x_segments + x;
 		}
-	}
-
-	for (int x = 0; x < x_segments; ++x) {
-		/* Last circumference and last vertex triangles. */
-		i[0] = x_segments * (y_segments - 1);
-		i[1] = (y_segments - 1) * x_segments + x;
-		i[2] = (y_segments - 1) * x_segments + ((x + 1) % x_segments);
-		/* First vertex and first circumference triangles. */
-		i[3] = x;
-		i[4] = x_segments * (y_segments - 1) + 1;
-		i[5] = (x + 1) % x_segments;
-		i += 6;
 	}
 
 	return ret;
@@ -421,14 +392,14 @@ THE_Mesh THE_CreateSphereMesh(int32_t x_segments, int32_t y_segments)
 
 THE_Mesh THE_CreateQuadMesh()
 {
-	static const float VERTICES[] = {
+	static float VERTICES[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  0.0f,
 		1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  0.0f,
 		1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f,  1.0f,
 		-1.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,  1.0f,
 	};
 
-	static const uint32_t INDICES[] = {0, 1, 2, 0, 2, 3};
+	static uint32_t INDICES[] = {0, 1, 2, 0, 2, 3};
 
 	THE_Mesh ret = AddMesh();
 	meshes[ret].internal_id = THE_UNINIT;

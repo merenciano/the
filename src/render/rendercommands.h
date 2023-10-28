@@ -3,23 +3,19 @@
 
 #include "renderer.h"
 
-#define THE_BLEND_FUNC_BIT     1
-#define THE_ENABLE_BLEND_BIT   1 << 1
-#define THE_WRITE_DEPTH_BIT    1 << 2
-#define THE_DEPTH_TEST_BIT     1 << 3
-#define THE_CULL_FACE_BIT      1 << 4
-#define THE_DEPTH_FUNC_BIT     1 << 5
+#define THE_BLEND_FUNC_BIT     1U
+#define THE_ENABLE_BLEND_BIT   1U << 1U
+#define THE_WRITE_DEPTH_BIT    1U << 2U
+#define THE_DEPTH_TEST_BIT     1U << 3U
+#define THE_CULL_FACE_BIT      1U << 4U
+#define THE_DEPTH_FUNC_BIT     1U << 5U
 
 typedef struct {
 	float color[4];
-	int8_t bcolor;
-	int8_t bdepth;
-	int8_t bstencil;
-} THE_ClearCommandData;
-
-typedef struct {
-	THE_Texture cubemap;
-} THE_SkyboxCommandData;
+	bool color_buffer;
+	bool depth_buffer;
+	bool stencil_buffer;
+} THE_ClearData;
 
 typedef struct {
 	THE_Mesh mesh;
@@ -61,8 +57,7 @@ typedef struct {
 } THE_RenderOptionsData;
 
 typedef union {
-	THE_ClearCommandData clear;
-	THE_SkyboxCommandData skybox;
+	THE_ClearData clear;
 	THE_DrawCommandData draw;
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
@@ -91,7 +86,6 @@ typedef struct {
 uint32_t THE_RenderQueueUsed(void);
 
 extern void THE_ClearExecute(THE_CommandData *data);
-extern void THE_SkyboxExecute(THE_CommandData *data);
 extern void THE_DrawExecute(THE_CommandData *data);
 extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);

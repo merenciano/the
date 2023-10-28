@@ -6,7 +6,7 @@
 typedef struct THE_Camera THE_Camera;
 
 static const float SENSIBILITY = 1.0f / 1000.0f;
-static const float SPEED = 10.0f;
+static const float SPEED = 100.0f;
 static const float SCROLL_SENSIBILITY = 1.0f;
 static float UP[3] = {0.0f, 1.0f, 0.0f};
 
@@ -14,7 +14,9 @@ void THE_CameraInit(THE_Camera *cam, float fov, float far, uint32_t width, uint3
 {
 	cam->fov = fov;
 	cam->far_value = far;
-	mat4_identity(cam->view_mat);
+	float pos[] = {0.0f, 2.0f, 2.0f};
+	float target[] = {0.0f, 0.0f, -1.0f};
+	mat4_look_at(cam->view_mat, pos, target, UP);
 	mat4_perspective_fov(cam->proj_mat, to_radians(fov), (float)width, (float)height, 0.01f, far);
 }
 
@@ -48,7 +50,6 @@ float *THE_CameraForward(float *out_v3, THE_Camera *cam)
 	out_v3[2] = cam->view_mat[10];
 	return out_v3;
 }
-
 void THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 {
 	float eye[3];

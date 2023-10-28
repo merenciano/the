@@ -465,13 +465,13 @@ void THE_UseShaderExecute(THE_CommandData *data)
 void THE_ClearExecute(THE_CommandData *data)
 {
 	uint32_t mask = 0;
-	if (data->clear.bcolor) {
+	if (data->clear.color_buffer) {
 		mask |= GL_COLOR_BUFFER_BIT;
 	}
-	if (data->clear.bdepth) {
+	if (data->clear.depth_buffer) {
 		mask |= GL_DEPTH_BUFFER_BIT;
 	}
-	if (data->clear.bstencil) {
+	if (data->clear.stencil_buffer) {
 		mask |= GL_STENCIL_BUFFER_BIT;
 	}
 	glClearColor(data->clear.color[0], data->clear.color[1],
@@ -479,61 +479,18 @@ void THE_ClearExecute(THE_CommandData *data)
 	glClear(mask);
 }
 
-void THE_SkyboxExecute(THE_CommandData *data)
-{
-	THE_Material skymatdata = THE_MaterialDefault();
-	skymatdata.data = THE_AllocateFrameResource(16 * sizeof(float));
-	THE_CameraStaticViewProjection(skymatdata.data, &camera);
-	skymatdata.dcount = 16;
-	skymatdata.tex = THE_AllocateFrameResource(sizeof(THE_Texture));
-	*(skymatdata.tex) = data->skybox.cubemap;
-	skymatdata.tcount = 1;
-	skymatdata.cube_start = 0;
-
-	THE_ASSERT(meshes[CUBE_MESH].elements, "Uninit mesh");
-	/*THE_ASSERT(CUBE_MESH.vertex != THE_UNINIT,
-		"You are trying to draw with an uninitialized vertex buffer");
-
-	THE_ASSERT(CUBE_MESH.index != THE_UNINIT,
-		"You are trying to draw with an uninitialized index buffer");
-
-	THE_ASSERT(buffers[CUBE_MESH.vertex].cpu_version > 0, "Vertex buffer without data");
-	THE_ASSERT(buffers[CUBE_MESH.index].cpu_version > 0, "Index buffer without data");*/
-
-	// Set the uniforms
-	THE_Shader mat = 1; // skybox
-	THE_CommandData usenewmatdata;
-	usenewmatdata.use_shader = mat;
-	shaders[mat].common_data = skymatdata;
-	THE_UseShaderExecute(&usenewmatdata);
-
-	if (meshes[CUBE_MESH].internal_id == THE_UNINIT) {
-		CreateMesh(CUBE_MESH, mat);
-	}
-	glBindVertexArray(meshes[CUBE_MESH].internal_id);
-
-
-	glDepthFunc(GL_LEQUAL);
-	glDrawElements(GL_TRIANGLES, meshes[CUBE_MESH].elements, GL_UNSIGNED_INT, 0);
-	glDepthFunc(GL_LESS);
-}
-
 void THE_DrawExecute(THE_CommandData *data)
 {
-	// TODO: material and shader optional
 	THE_Mesh mesh = data->draw.mesh;
-	THE_InternalMesh *im = meshes + mesh;
-	THE_InternalShader *s = shaders + data->draw.shader;
-	THE_ASSERT(s->program_id, "Uninit shader");
+	THE_ASSERT(meshes[mesh].elements, "Attempt to draw an uninitialized mesh");
 
-	THE_ASSERT(im->elements, "Attempt to draw an uninitialized mesh");
-	if (im->internal_id == THE_UNINIT) {
+	if (meshes[mesh].internal_id == THE_UNINIT) {
 		CreateMesh(mesh, data->draw.shader);
 	}
-	glBindVertexArray(im->internal_id);
-	SetMaterialData(data->draw.shader, data->draw.mat, 1);
-	glDrawElements(GL_TRIANGLES, im->elements, GL_UNSIGNED_INT, 0);
 
+	glBindVertexArray(meshes[mesh].internal_id);
+	SetMaterialData(data->draw.shader, data->draw.mat, 1);
+	glDrawElements(GL_TRIANGLES, meshes[mesh].elements, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
 
@@ -549,7 +506,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		CreateCubemap(o_cube);
 	}
 
-	//struct mat4 proj = smat4_perspective(to_radians(90.0f), 1.0f, 0.1f, 10.0f);
 	float proj[16] = {0.0f};
 	mat4_perspective(proj, to_radians(90.0f), 1.0f, 0.1f, 10.0f);
 
@@ -590,7 +546,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		THE_MaterialSetFrameData(&dcd.draw.mat, vp, 16);
 		THE_CommandData cmdata;
 		cmdata.use_shader = dcd.draw.shader;
-		//cmdata.use_shader.material = dcd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
@@ -623,7 +578,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 				THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(struct THE_PrefilterEnvData) / 4);
 				THE_CommandData cmdata;
 				cmdata.use_shader = draw_cd.draw.shader;
-				//cmdata.use_shader.material = draw_cd.draw.mat;
 				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
@@ -645,7 +599,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		draw_cd.draw.mat = THE_MaterialDefault();
 		THE_CommandData cmdata;
 		cmdata.use_shader = draw_cd.draw.shader;
-		//cmdata.use_shader.material = draw_cd.draw.mat;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}

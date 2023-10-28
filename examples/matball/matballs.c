@@ -1,9 +1,6 @@
-#include "core/io.h"
-#include "render/renderer.h"
 #include "the.h"
 #include <string.h>
 #include <stdlib.h>
-
 #include <mathc.h>
 
 struct Materials {
@@ -21,7 +18,7 @@ THE_Framebuffer g_fb;
 
 static float g_sunlight[4] = {0.0f, -1.0f, -0.1f, 1.0f};
 
-void Init(void)
+void Init(void *context)
 {
 	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
 	g_resources.meshes = THE_HMapCreate(8, sizeof(THE_Mesh));
@@ -102,7 +99,7 @@ void Init(void)
 	pbr.roughness = 0.5f;
 	pbr.normal_map_intensity = 1.0f;
 
-	float position[3] = {2.0f, 0.0f, 0.0f};
+	float position[3] = {-2.0f, 0.0f, 0.0f};
 
 	// CelticGold
 	{
@@ -126,7 +123,7 @@ void Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
 		THE_Entity *e = THE_EntityCreate();
-		position[0] = 4.0f;
+		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
 		e->mat = g_mats.pbr;
@@ -145,7 +142,7 @@ void Init(void)
 		pbr.tiling_x = 1.0f;
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.7f;
-		position[2] = 6.0f;
+		position[0] = 2.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -165,8 +162,8 @@ void Init(void)
 		pbr.tiling_x = 1.0f;
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.2f;
-		position[0] = 2.0f;
-		position[2] = 2.0f;
+		position[0] = -2.0f;
+		position[2] = -2.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -186,7 +183,7 @@ void Init(void)
 		pbr.tiling_x = 4.0f;
 		pbr.tiling_y = 4.0f;
 		pbr.normal_map_intensity = 1.0f;
-		position[0] = 4.0f;
+		position[0] = 0.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -206,7 +203,7 @@ void Init(void)
 		pbr.tiling_x = 1.0f;
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 1.0f;
-		position[0] = 6.0f;
+		position[0] = 2.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -226,8 +223,8 @@ void Init(void)
 		pbr.tiling_x = 8.0f;
 		pbr.tiling_y = 8.0f;
 		pbr.normal_map_intensity = 1.0f;
-		position[0] = 2.0f;
-		position[2] = 4.0f;
+		position[0] = -2.0f;
+		position[2] = -4.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -247,7 +244,7 @@ void Init(void)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 1.0f;
-		position[0] = 4.0f;
+		position[0] = 0.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -267,7 +264,7 @@ void Init(void)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
-		position[0] = 6.0f;
+		position[0] = 2.0f;
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
@@ -283,13 +280,13 @@ void Init(void)
 	}
 
 	THE_RenderCommand *rendops = THE_AllocateCommand();
-	rendops->data.renderops.depth_test = 1;
-	rendops->data.renderops.write_depth = 1;
+	rendops->data.renderops.depth_test = true;
+	rendops->data.renderops.write_depth = true;
 	rendops->data.renderops.cull_face = THE_CULLFACE_BACK;
-	rendops->data.renderops.blend = 1;
+	rendops->data.renderops.blend = true;
 	rendops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
 	rendops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
-	rendops->data.renderops.changed_mask = 0xFF; // Changed all
+	rendops->data.renderops.changed_mask = 0xFF & ~THE_DEPTH_FUNC_BIT;
 	rendops->execute = THE_RenderOptionsExecute;
 
 	THE_RenderCommand *sky = THE_AllocateCommand();
@@ -321,14 +318,19 @@ void Init(void)
 	scene_data->tex[0] = THE_ResourceMapGetTexture(rm, "LutMap");
 	scene_data->tex[1] = THE_ResourceMapGetTexture(rm, "Irradian");
 	scene_data->tex[2] = THE_ResourceMapGetTexture(rm, "Prefilte");
+
+	THE_Texture skytex = THE_ResourceMapGetTexture(rm, "Skybox");
+	THE_MaterialSetTexture(THE_ShaderCommonData(g_mats.skybox), &skytex, 1, 0);
+	THE_ShaderCommonData(g_mats.skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
+	THE_ShaderCommonData(g_mats.skybox)->dcount = 16;
 }
 
-void Update(void)
+bool Update(void *context)
 {
 	THE_InputUpdate();
-	THE_CameraMovementSystem(&camera, THE_DeltaTime());
+	THE_CameraMovementSystem(&camera, deltatime);
 
-	// Render commands
+	// PBR Material common data.
 	struct THE_PbrSceneData *scene_data = (struct THE_PbrSceneData*)THE_ShaderCommonData(g_mats.pbr)->data;
 	mat4_multiply(scene_data->view_projection, camera.proj_mat, camera.view_mat);
 	THE_CameraPosition(scene_data->camera_position, &camera);
@@ -342,6 +344,7 @@ void Update(void)
 	rops->data.renderops.blend = true;
 	rops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
 	rops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
+	rops->data.renderops.depth_func = THE_DEPTHFUNC_LESS;
 	rops->data.renderops.depth_test = true;
 	rops->data.renderops.write_depth = true;
 	rops->data.renderops.cull_face = THE_CULLFACE_BACK;
@@ -350,9 +353,9 @@ void Update(void)
 	fbuff->next = rops;
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
-	clear->data.clear.bcolor = 1;
-	clear->data.clear.bdepth = 1;
-	clear->data.clear.bstencil = 0;
+	clear->data.clear.color_buffer = true;
+	clear->data.clear.depth_buffer = true;
+	clear->data.clear.stencil_buffer = false;
 	clear->data.clear.color[0] = 0.2f;
 	clear->data.clear.color[1] = 0.2f;
 	clear->data.clear.color[2] = 0.2f;
@@ -373,18 +376,33 @@ void Update(void)
 
 	rops = THE_AllocateCommand();
 	rops->data.renderops.cull_face = THE_CULLFACE_DISABLED;
-	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT;
+	rops->data.renderops.depth_func = THE_DEPTHFUNC_LEQUAL;
+	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
 	rops->execute = THE_RenderOptionsExecute;
 
+	THE_CameraStaticViewProjection(THE_ShaderCommonData(g_mats.skybox)->data, &camera);
+	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
+	use_sky_shader->data.use_shader = g_mats.skybox;
+	use_sky_shader->execute = THE_UseShaderExecute;
+	rops->next = use_sky_shader;
+
+	THE_RenderCommand *draw_sky = THE_AllocateCommand();
+	draw_sky->data.draw.mesh = CUBE_MESH;
+	draw_sky->data.draw.shader = THE_IGNORE;
+	draw_sky->execute = THE_DrawExecute;
+	use_sky_shader->next = draw_sky;
+	
+	/*
 	THE_RenderCommand *sky = THE_AllocateCommand();
 	sky->data.skybox.cubemap = THE_ResourceMapGetTexture(&g_resources, "Skybox");
 	sky->execute = THE_SkyboxExecute;
 	rops->next = sky;
+	*/
 
 	fbuff = THE_AllocateCommand();
 	fbuff->data.usefb = THE_DEFAULT;
 	fbuff->execute = THE_UseFramebufferExecute;
-	sky->next = fbuff;
+	draw_sky->next = fbuff;
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
 	rops2->data.renderops.depth_test = false;
@@ -393,9 +411,9 @@ void Update(void)
 	fbuff->next = rops2;
 
 	clear = THE_AllocateCommand();
-	clear->data.clear.bcolor = true;
-	clear->data.clear.bdepth = false;
-	clear->data.clear.bstencil = false;
+	clear->data.clear.color_buffer = true;
+	clear->data.clear.depth_buffer = false;
+	clear->data.clear.stencil_buffer = false;
 	clear->data.clear.color[0] = 1.0f;
 	clear->data.clear.color[1] = 0.0f;
 	clear->data.clear.color[2] = 0.0f;
@@ -410,40 +428,31 @@ void Update(void)
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.shader = g_mats.fullscreen_img;
-	draw->data.draw.mat = THE_MaterialDefault();
+	draw->data.draw.shader = THE_IGNORE;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
 	draw->next = NULL;
 
 	THE_AddCommands(rops);
-}
 
-void Close(void)
-{
-
+	return true;
 }
 
 int main(int argc, char **argv)
 {
 	struct THE_Config cnfg = {
 		.init_func = Init,
-		.logic_func = Update,
-		.close_func = Close,
-		.alloc_capacity = THE_GB(1),
-		.max_geometries = 128,
+		.update_func = Update,
+		.heap_size = THE_GB(1),
+		.window_title = "THE Material Demo",
 		.window_width = 1280,
 		.window_height = 720,
 		.vsync = true
 	};
 	
-	THE_Init(&cnfg);
-	while (!THE_WindowShouldClose()) {
-		THE_Logic();
-		THE_Render();
-		THE_ShowFrame();
-	}
-	THE_Close();
+	THE_Start(&cnfg);
+
+	THE_End();
 
 	return 0;
 }
