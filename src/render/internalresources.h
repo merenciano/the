@@ -47,6 +47,11 @@ typedef struct {
 	THE_Texture depth_tex;
 } THE_InternalFramebuffer;
 
+enum THE_DataGroup {
+	THE_SHADER_COMMON_DATA = 0,
+	THE_SHADER_DATA = 1
+};
+
 typedef struct {
 	int32_t data;
 	int32_t tex;

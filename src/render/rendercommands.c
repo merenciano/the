@@ -3,8 +3,6 @@
 #include "core/thefinitions.h"
 #include "renderer.h" // TODO Move frame allocator to rendercommands and remove this include 
 #include "internalresources.h"
-#include "camera.h"
-#include "material.h"
 #include <mathc.h>
 
 #include <string.h>
@@ -411,55 +409,48 @@ static enum THE_ErrorCode CreateShader(THE_InternalShader *shader)
 	}
 
 	shader->program_id = program;
-	// TODO: crear defines para uniforms de scena y enitdad y usarlos como indice.
 	// TODO: Cambiar el nombre de los uniforms de scene quitando scene.
-	shader->data_loc[0].data = glGetUniformLocation(shader->program_id, "u_scene_data");
-	shader->data_loc[0].tex = glGetUniformLocation(shader->program_id, "u_scene_tex");
-	shader->data_loc[0].cubemap = glGetUniformLocation(shader->program_id, "u_scene_cube");
-	shader->data_loc[1].data = glGetUniformLocation(shader->program_id, "u_entity_data");
-	shader->data_loc[1].tex = glGetUniformLocation(shader->program_id, "u_entity_tex");
-	shader->data_loc[1].cubemap = glGetUniformLocation(shader->program_id, "u_entity_cube");
+	shader->data_loc[THE_SHADER_COMMON_DATA].data = glGetUniformLocation(shader->program_id, "u_scene_data");
+	shader->data_loc[THE_SHADER_COMMON_DATA].tex = glGetUniformLocation(shader->program_id, "u_scene_tex");
+	shader->data_loc[THE_SHADER_COMMON_DATA].cubemap = glGetUniformLocation(shader->program_id, "u_scene_cube");
+	shader->data_loc[THE_SHADER_DATA].data = glGetUniformLocation(shader->program_id, "u_entity_data");
+	shader->data_loc[THE_SHADER_DATA].tex = glGetUniformLocation(shader->program_id, "u_entity_tex");
+	shader->data_loc[THE_SHADER_DATA].cubemap = glGetUniformLocation(shader->program_id, "u_entity_cube");
 
 	return THE_EC_SUCCESS;
 }
 
-static void SetMaterialData(THE_Shader mat, THE_Material data, int32_t group)
+static void SetShaderData(THE_Mat m, enum THE_DataGroup group)
 {
-	THE_InternalShader *m = shaders + mat;
-
-	THE_ASSERT(m->program_id, "Shader uninit.");
-
-	THE_ASSERT(data.tcount < 16, "So many textures, increase array size");
+	THE_InternalShader *s = shaders + m.shader;
+	THE_ASSERT(s->program_id, "Shader uninit.");
+	THE_ASSERT(m.tex_count < 16, "So many textures, increase array size");
 	// TODO: Tex units igual que el handle de textura (saltarse la textura 0 si hace falta)
-	int32_t tex_units[16];
-	for (int i = 0; i < data.tcount; ++i)
-	{
-		if (data.tex[i] != THE_UNINIT)
-		{
-			THE_ASSERT(data.tex[i] != -1, "Texture not created");
-			THE_ASSERT(textures[data.tex[i]].cpu_version != -1, "Texture released");
-			if (textures[data.tex[i]].gpu_version == 0)
-			{
-				CreateTexture(data.tex[i], true);
-			}
+	int tex_units[16];
+	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
+		THE_Texture t = ((THE_Texture*)m.ptr)[m.data_count + i];
+		THE_ASSERT(t != THE_UNINIT, "Texture not created");
+		THE_ASSERT(textures[t].cpu_version != -1, "Texture released");
+		if (textures[t].gpu_version == 0) {
+			CreateTexture(t, true);
 		}
-		tex_units[i] = textures[data.tex[i]].texture_unit;
+		tex_units[i] = textures[t].texture_unit;
 	}
 
-	glUniform4fv(m->data_loc[group].data, data.dcount / 4, data.data);
-	glUniform1iv(m->data_loc[group].tex, data.cube_start, tex_units);
-	glUniform1iv(m->data_loc[group].cubemap, data.tcount - data.cube_start,
-		tex_units + data.cube_start);
+	glUniform4fv(s->data_loc[group].data, m.data_count / 4, m.ptr);
+	glUniform1iv(s->data_loc[group].tex, m.tex_count, tex_units);
+	glUniform1iv(s->data_loc[group].cubemap, m.cube_count,
+		tex_units + m.tex_count);
 }
 
 void THE_UseShaderExecute(THE_CommandData *data)
 {
-	THE_InternalShader *m = shaders + data->use_shader;
-	if (m->program_id == THE_UNINIT) {
-		CreateShader(m);
+	THE_InternalShader *s = shaders + data->mat.shader;
+	if (s->program_id == THE_UNINIT) {
+		CreateShader(s);
 	}
-	glUseProgram(m->program_id);
-	SetMaterialData(data->use_shader, m->common_data, 0);
+	glUseProgram(s->program_id);
+	SetShaderData(data->mat, THE_SHADER_COMMON_DATA);
 }
 
 void THE_ClearExecute(THE_CommandData *data)
@@ -485,11 +476,11 @@ void THE_DrawExecute(THE_CommandData *data)
 	THE_ASSERT(meshes[mesh].elements, "Attempt to draw an uninitialized mesh");
 
 	if (meshes[mesh].internal_id == THE_UNINIT) {
-		CreateMesh(mesh, data->draw.shader);
+		CreateMesh(mesh, data->draw.material.shader);
 	}
 
 	glBindVertexArray(meshes[mesh].internal_id);
-	SetMaterialData(data->draw.shader, data->draw.mat, 1);
+	SetShaderData(data->draw.material, THE_SHADER_DATA);
 	glDrawElements(GL_TRIANGLES, meshes[mesh].elements, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
@@ -531,7 +522,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 	THE_RenderOptionsExecute(&ro);
 
 	THE_CommandData dcd;
-	dcd.draw.inst_count = 1U;
 	dcd.draw.mesh = CUBE_MESH;
 	for (int i = 0; i < 6; ++i) {
 		float *view = (float*)&views[i];
@@ -540,12 +530,15 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, icu->internal_id, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
-		dcd.draw.shader = 2; // eq to cube
-		dcd.draw.mat = THE_MaterialDefault();
-		THE_MaterialSetFrameTexture(&(dcd.draw.mat), &equirec, 1, -1);
-		THE_MaterialSetFrameData(&dcd.draw.mat, vp, 16);
+		dcd.draw.material.shader = 2; // eq to cube
+		dcd.draw.material.data_count = 16;
+		dcd.draw.material.tex_count = 1;
+		dcd.draw.material.cube_count = 0;
+		float *data = THE_MatAllocFrame(&dcd.draw.material);
+		data = mat4_assign(data, vp);
+		((THE_Texture*)data)[dcd.draw.material.data_count] = equirec;
 		THE_CommandData cmdata;
-		cmdata.use_shader = dcd.draw.shader;
+		cmdata.mat = dcd.draw.material;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&dcd);
 	}
@@ -564,7 +557,6 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 			pref_data.roughness = i / 4.0f;  // mip / max mip levels - 1
 
 			THE_CommandData draw_cd;
-			draw_cd.draw.inst_count = 1U;
 			draw_cd.draw.mesh = CUBE_MESH;
 			for (int j = 0; j < 6; ++j) {
 				float *view = (float*)&views[j];
@@ -572,12 +564,16 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 				GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, ipref->internal_id, i);
 				glClear(GL_COLOR_BUFFER_BIT);
-				draw_cd.draw.shader = 3; // prefilter env
-				draw_cd.draw.mat = THE_MaterialDefault();
-				THE_MaterialSetFrameTexture(&draw_cd.draw.mat, &o_cube, 1, 0);
-				THE_MaterialSetFrameData(&draw_cd.draw.mat, (float*)&pref_data, sizeof(struct THE_PrefilterEnvData) / 4);
+				draw_cd.draw.material.shader = 3; // prefilter env
+				draw_cd.draw.material.data_count = sizeof(struct THE_PrefilterEnvData) / 4;
+				draw_cd.draw.material.tex_count = 0;
+				draw_cd.draw.material.cube_count = 1;
+				struct THE_PrefilterEnvData *d = THE_MatAllocFrame(&draw_cd.draw.material);
+				*d = pref_data;
+				((THE_Texture*)d)[draw_cd.draw.material.data_count] = o_cube;
+
 				THE_CommandData cmdata;
-				cmdata.use_shader = draw_cd.draw.shader;
+				cmdata.mat = draw_cd.draw.material;
 				THE_UseShaderExecute(&cmdata);
 				THE_DrawExecute(&draw_cd);
 			}
@@ -594,11 +590,10 @@ void THE_EquirectToCubeExecute(THE_CommandData *data)
 		glClear(GL_COLOR_BUFFER_BIT);
 		THE_CommandData draw_cd;
 		draw_cd.draw.mesh = QUAD_MESH;
-		draw_cd.draw.inst_count = 1U;
-		draw_cd.draw.shader = 4; // THE_MT_LUT_GEN;
-		draw_cd.draw.mat = THE_MaterialDefault();
+		draw_cd.draw.material = THE_MatDefault();
+		draw_cd.draw.material.shader = 4; // THE_MT_LUT_GEN;
 		THE_CommandData cmdata;
-		cmdata.use_shader = draw_cd.draw.shader;
+		cmdata.mat = draw_cd.draw.material;
 		THE_UseShaderExecute(&cmdata);
 		THE_DrawExecute(&draw_cd);
 	}

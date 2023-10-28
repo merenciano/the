@@ -5,25 +5,19 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define MEM_ALIGN 8
+#define MEM_ALIGN_MOD(ADDRESS) (ADDRESS & (MEM_ALIGN - 1))
+
 static uint8_t *mem;
-static uint8_t *offset;
+static size_t offset;
 static size_t capacity;
 
-void *THE_PersistentAlloc(size_t size, size_t align)
+void *THE_PersistentAlloc(size_t size)
 {
-	THE_ASSERT((size_t)(offset + size - mem) <= capacity, "Out of memory");
-	if ((size_t)(offset + size - mem) > capacity) {
-		THE_SLOG_ERROR("Persistent allocation failed, Out of memory!");
-		return NULL;
-	}
-
-	void *ret_mem = (void*)offset;
+	offset += MEM_ALIGN_MOD(MEM_ALIGN - MEM_ALIGN_MOD(offset));
 	offset += size;
-	if (align != 0 && (size_t)offset % align) //TODO: think about a fancier align method
-	{
-		offset += (align - ((size_t)offset % align));
-	}
-	return ret_mem; 
+	THE_ASSERT(offset <= capacity, "Allocator out of memory");
+	return mem + offset - size; 
 }
 
 void *THE_Alloc(size_t size)
@@ -48,13 +42,14 @@ void THE_Free(void *ptr)
 
 void THE_MemInit(size_t size)
 {
-	mem = (uint8_t*)malloc(size);
+	mem = malloc(size);
+	THE_ASSERT(!((size_t)mem % MEM_ALIGN), "WTF");
 	if (!mem) {
 		THE_SLOG_ERROR("Couldn't allocate THE memory.");
 		exit(1);
 	}
 
-	offset = mem;
+	offset = 0;
 	capacity = size;
 }
 
@@ -71,7 +66,7 @@ float THE_MemUsedMB()
 
 size_t THE_MemUsedBytes()
 {
-	return offset - mem;
+	return offset;
 }
 
 size_t THE_MemCapacity()

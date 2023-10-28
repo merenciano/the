@@ -7,8 +7,7 @@
 struct THE_Entity {
 	float transform[16];
 	THE_Mesh mesh;
-	THE_Shader mat;
-	THE_Material mat_data;
+	THE_Mat mat;
 };
 
 typedef struct THE_Entity THE_Entity;

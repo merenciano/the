@@ -1,9 +1,9 @@
 #include "execution.h"
-#include "core/config.h"
 #include "core/mem.h"
 #include "core/chrono.h"
 #include "render/renderer.h"
 #include "core/io.h"
+#include "scene/camera.h"
 
 #include <stdio.h>
 
@@ -22,6 +22,7 @@ void THE_Start(struct THE_Config *config)
 	THE_IOInit(config->window_title, config->window_width,
 		config->window_height, config->vsync);
 	THE_InitRender();
+	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight());
 	MTR_END("THE", "Init");
 
 	config->init_func(config->context);

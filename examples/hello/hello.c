@@ -3,14 +3,9 @@
 #include <mathc.h>
 
 typedef struct {
-	union {
-		float buffer[16+16+4];
-		struct {
-			float model[16];
-			float vp[16];
-			float color[4];
-		} fields;
-	} data;
+	float model[16];
+	float vp[16];
+	float color[4];
 } HelloMatData;
 
 typedef struct HelloCtx {
@@ -20,8 +15,9 @@ typedef struct HelloCtx {
 	THE_Shader skybox;
 	THE_Framebuffer fb;
 	THE_Texture skycube;
+	THE_Mat fs_mat;
+	THE_Mat skymat;
 	THE_Entity *e;
-
 } HelloCtx;
 
 void Init(void *context)
@@ -31,26 +27,37 @@ void Init(void *context)
 	ctx->hellomat = THE_CreateShader("hello");
 	ctx->fs_img = THE_CreateShader("fullscreen-img");
 	ctx->skybox = THE_CreateShader("skybox");
-	THE_Texture fb_color = THE_GetFrameColor(ctx->fb);
-	THE_MaterialSetTexture(THE_ShaderCommonData(ctx->fs_img), &fb_color, 1, -1);
+	ctx->fs_mat.data_count = 0;
+	ctx->fs_mat.tex_count = 1;
+	ctx->fs_mat.cube_count = 0;
+	THE_Texture *t = THE_MatAlloc(&ctx->fs_mat);
+	*t = THE_GetFrameColor(ctx->fb);
+	ctx->fs_mat.shader = ctx->fs_img;
 
 	ctx->skycube = THE_CreateTexture("./assets/tex/Xcave.png", THE_TEX_SKYBOX);
-	THE_MaterialSetTexture(THE_ShaderCommonData(ctx->skybox), &ctx->skycube, 1, 0);
-	THE_ShaderCommonData(ctx->skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
-	THE_ShaderCommonData(ctx->skybox)->dcount = 16;
 
-	ctx->hello_mat.data.fields.color[0] = 1.0f;
-	ctx->hello_mat.data.fields.color[1] = 1.0f;
-	ctx->hello_mat.data.fields.color[2] = 0.0f;
-	ctx->hello_mat.data.fields.color[3] = 1.0f;
+	ctx->skymat.data_count = 16;
+	ctx->skymat.tex_count = 0;
+	ctx->skymat.cube_count = 1;
+	ctx->skymat.shader = ctx->skybox;
+	THE_Texture *cube = THE_MatAlloc(&ctx->skymat);
+	cube[ctx->skymat.data_count] = ctx->skycube;
+
+	ctx->hello_mat.color[0] = 1.0f;
+	ctx->hello_mat.color[1] = 1.0f;
+	ctx->hello_mat.color[2] = 0.0f;
+	ctx->hello_mat.color[3] = 1.0f;
 
 	ctx->e = THE_EntityCreate();
 	float pos[3] = {0.0f, 0.0f, -4.0f};
 	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
 	ctx->e->mesh = SPHERE_MESH;
-	ctx->e->mat = ctx->hellomat;
-	ctx->e->mat_data = THE_MaterialDefault();
-	THE_MaterialSetData(&ctx->e->mat_data, ctx->hello_mat.data.buffer, sizeof(HelloMatData) / 4);
+	ctx->e->mat.data_count = sizeof(HelloMatData) / 4;
+	ctx->e->mat.tex_count = 0;
+	ctx->e->mat.cube_count = 0;
+	HelloMatData* mat_data = THE_MatAlloc(&ctx->e->mat);
+	ctx->e->mat.shader = ctx->hellomat;
+	*mat_data = ctx->hello_mat;
 }
 
 bool Update(void *context)
@@ -58,8 +65,6 @@ bool Update(void *context)
 	HelloCtx *ctx = context;
 	THE_InputUpdate();
 	THE_CameraMovementSystem(&camera, deltatime);
-
-	// Render commands
 
 	THE_RenderCommand *fbuff = THE_AllocateCommand();
 	fbuff->data.usefb = ctx->fb;
@@ -77,7 +82,7 @@ bool Update(void *context)
 	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
 	rops->execute = THE_RenderOptionsExecute;
 
-	mat4_multiply(((HelloMatData*)ctx->e->mat_data.data)->data.fields.vp, camera.proj_mat, camera.view_mat);
+	mat4_multiply(((HelloMatData*)ctx->e->mat.ptr)->vp, camera.proj_mat, camera.view_mat);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
 	rops->next = clear;
@@ -91,7 +96,8 @@ bool Update(void *context)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.use_shader = ctx->hellomat;
+	usemat->data.mat = THE_MatDefault();
+	usemat->data.mat.shader = ctx->hellomat;
 	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
 	usemat->next = NULL;
@@ -106,15 +112,16 @@ bool Update(void *context)
 	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
 	rops->execute = THE_RenderOptionsExecute;
 	
-	THE_CameraStaticViewProjection(THE_ShaderCommonData(ctx->skybox)->data, &camera);
+	THE_CameraStaticViewProjection(ctx->skymat.ptr, &camera);
 	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
-	use_sky_shader->data.use_shader = ctx->skybox;
+	use_sky_shader->data.mat = ctx->skymat;
 	use_sky_shader->execute = THE_UseShaderExecute;
 	rops->next = use_sky_shader;
 
 	THE_RenderCommand *draw_sky = THE_AllocateCommand();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.shader = ctx->skybox;
+	draw_sky->data.draw.material = THE_MatDefault();
+	draw_sky->data.draw.material.shader = ctx->skybox;
 	draw_sky->execute = THE_DrawExecute;
 	use_sky_shader->next = draw_sky;
 
@@ -141,13 +148,13 @@ bool Update(void *context)
 	rops2->next = clear2;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.use_shader = ctx->fs_img;
+	usefullscreen->data.mat = ctx->fs_mat;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear2->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.shader = ctx->fs_img;
+	draw->data.draw.material = ctx->fs_mat;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
 	draw->next = NULL;

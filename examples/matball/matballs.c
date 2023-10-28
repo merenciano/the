@@ -1,3 +1,4 @@
+#include "render/renderer.h"
 #include "the.h"
 #include <string.h>
 #include <stdlib.h>
@@ -16,6 +17,10 @@ struct Materials g_mats;
 static THE_ResourceMap g_resources;
 THE_Framebuffer g_fb;
 
+THE_Mat pbr_common;
+THE_Mat sky_common;
+THE_Mat fulls;
+
 static float g_sunlight[4] = {0.0f, -1.0f, -0.1f, 1.0f};
 
 void Init(void *context)
@@ -31,8 +36,12 @@ void Init(void *context)
 	g_mats.lut_gen = THE_CreateShader("lut-gen");
 	g_mats.pbr = THE_CreateShader("pbr");
 
-	THE_Texture fb_color = THE_GetFrameColor(g_fb);
-	THE_MaterialSetTexture(THE_ShaderCommonData(g_mats.fullscreen_img), &fb_color, 1, -1);
+	fulls.shader = g_mats.fullscreen_img;
+	fulls.data_count = 0;
+	fulls.tex_count = 1;
+	fulls.cube_count = 0;
+	THE_Texture *fst = THE_MatAlloc(&fulls);
+	*fst = THE_GetFrameColor(g_fb);
 
 	THE_ResourceMap *rm = &g_resources;
 
@@ -106,15 +115,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Gold_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Gold_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Gold_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Gold_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Shore
@@ -126,15 +137,17 @@ void Init(void *context)
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Shore_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Shore_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Shore_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Shore_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Peeling
@@ -146,15 +159,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Peel_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Peel_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Peel_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Peel_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Rusted
@@ -167,15 +182,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Rust_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Rust_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Rust_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Rust_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Tiles
@@ -187,15 +204,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Tiles_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Tiles_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Tiles_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Tiles_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Ship Panels
@@ -207,15 +226,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Future_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Future_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Future_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Future_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Cliff
@@ -228,15 +249,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Cliff_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Cliff_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Cliff_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Cliff_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Granite
@@ -248,15 +271,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Granit_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Granit_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Granit_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Granit_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	// Foam
@@ -268,15 +293,17 @@ void Init(void *context)
 		THE_Entity *e = THE_EntityCreate();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat = g_mats.pbr;
-		e->mat_data = THE_MaterialDefault();
-		THE_MaterialSetData(&e->mat_data, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
-		THE_Texture t[4];
+		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mat.tex_count = 4;
+		e->mat.cube_count = 0;
+		e->mat.shader = g_mats.pbr;
+		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
+		*d = pbr;
+		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Foam_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Foam_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Foam_R");
 		t[3] = THE_ResourceMapGetTexture(rm, "Foam_N");
-		THE_MaterialSetTexture(&e->mat_data, t, 4, -1);
 	}
 
 	THE_RenderCommand *rendops = THE_AllocateCommand();
@@ -308,21 +335,22 @@ void Init(void *context)
 
 	THE_AddCommands(rendops);
 
-	THE_ShaderData *scene_data = THE_ShaderCommonData(g_mats.pbr);
-	*scene_data = THE_MaterialDefault();
-	scene_data->data = malloc(sizeof(struct THE_PbrSceneData));
-	scene_data->dcount = sizeof(struct THE_PbrSceneData) / sizeof(float);
-	scene_data->tex = malloc(3 * sizeof(THE_Texture));
-	scene_data->tcount = 3;
-	scene_data->cube_start = 1;
-	scene_data->tex[0] = THE_ResourceMapGetTexture(rm, "LutMap");
-	scene_data->tex[1] = THE_ResourceMapGetTexture(rm, "Irradian");
-	scene_data->tex[2] = THE_ResourceMapGetTexture(rm, "Prefilte");
+	pbr_common.data_count = sizeof(struct THE_PbrSceneData) / sizeof(float);
+	pbr_common.tex_count = 1;
+	pbr_common.cube_count = 2;
+	pbr_common.shader = g_mats.pbr;
+	THE_Texture *pbr_scene_tex = THE_MatAlloc(&pbr_common);
+	pbr_scene_tex += pbr_common.data_count;
+	pbr_scene_tex[0] = THE_ResourceMapGetTexture(rm, "LutMap");
+	pbr_scene_tex[1] = THE_ResourceMapGetTexture(rm, "Irradian");
+	pbr_scene_tex[2] = THE_ResourceMapGetTexture(rm, "Prefilte");
 
-	THE_Texture skytex = THE_ResourceMapGetTexture(rm, "Skybox");
-	THE_MaterialSetTexture(THE_ShaderCommonData(g_mats.skybox), &skytex, 1, 0);
-	THE_ShaderCommonData(g_mats.skybox)->data = THE_PersistentAlloc(16 * sizeof(float), 0);
-	THE_ShaderCommonData(g_mats.skybox)->dcount = 16;
+	sky_common.data_count = 16;
+	sky_common.tex_count = 0;
+	sky_common.cube_count = 1;
+	sky_common.shader = g_mats.skybox;
+	THE_Texture *skytex = THE_MatAlloc(&sky_common);
+	skytex[sky_common.data_count] = THE_ResourceMapGetTexture(rm, "Skybox");
 }
 
 bool Update(void *context)
@@ -331,10 +359,10 @@ bool Update(void *context)
 	THE_CameraMovementSystem(&camera, deltatime);
 
 	// PBR Material common data.
-	struct THE_PbrSceneData *scene_data = (struct THE_PbrSceneData*)THE_ShaderCommonData(g_mats.pbr)->data;
-	mat4_multiply(scene_data->view_projection, camera.proj_mat, camera.view_mat);
-	THE_CameraPosition(scene_data->camera_position, &camera);
-	vec4_assign(scene_data->sunlight, g_sunlight);
+	struct THE_PbrSceneData *common_pbr = pbr_common.ptr;
+	mat4_multiply(common_pbr->view_projection, camera.proj_mat, camera.view_mat);
+	THE_CameraPosition(common_pbr->camera_position, &camera);
+	vec4_assign(common_pbr->sunlight, g_sunlight);
 
 	THE_RenderCommand* fbuff = THE_AllocateCommand();
 	fbuff->data.usefb = g_fb;
@@ -363,9 +391,8 @@ bool Update(void *context)
 	clear->execute = THE_ClearExecute;
 	rops->next = clear;
 
-
 	THE_RenderCommand *use_pbr = THE_AllocateCommand();
-	use_pbr->data.use_shader = g_mats.pbr;
+	use_pbr->data.mat = pbr_common;
 	use_pbr->execute = THE_UseShaderExecute;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -380,15 +407,15 @@ bool Update(void *context)
 	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
 	rops->execute = THE_RenderOptionsExecute;
 
-	THE_CameraStaticViewProjection(THE_ShaderCommonData(g_mats.skybox)->data, &camera);
+	THE_CameraStaticViewProjection(sky_common.ptr, &camera);
 	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
-	use_sky_shader->data.use_shader = g_mats.skybox;
+	use_sky_shader->data.mat = sky_common;
 	use_sky_shader->execute = THE_UseShaderExecute;
 	rops->next = use_sky_shader;
 
 	THE_RenderCommand *draw_sky = THE_AllocateCommand();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.shader = THE_IGNORE;
+	draw_sky->data.draw.material = sky_common;
 	draw_sky->execute = THE_DrawExecute;
 	use_sky_shader->next = draw_sky;
 	
@@ -422,13 +449,13 @@ bool Update(void *context)
 	rops2->next = clear;
 
 	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
-	usefullscreen->data.use_shader = g_mats.fullscreen_img;
+	usefullscreen->data.mat = fulls;
 	usefullscreen->execute = THE_UseShaderExecute;
 	clear->next = usefullscreen;
 
 	THE_RenderCommand *draw = THE_AllocateCommand();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.shader = THE_IGNORE;
+	draw->data.draw.material = fulls;
 	draw->execute = THE_DrawExecute;
 	usefullscreen->next = draw;
 	draw->next = NULL;

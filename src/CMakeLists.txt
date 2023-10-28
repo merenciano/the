@@ -2,8 +2,6 @@ target_sources(${THE_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/the.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/config.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/config.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/thefinitions.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.c
@@ -13,17 +11,16 @@ target_sources(${THE_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.c
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.h
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/camera.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/camera.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/material.h
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.c
 	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.h
 	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.c
 	)

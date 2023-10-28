@@ -1,7 +1,6 @@
 #include "renderer.h"
 #include "rendercommands.h"
 #include "internalresources.h"
-#include "camera.h"
 #include "core/io.h"
 #include "core/mem.h"
 
@@ -30,7 +29,6 @@ THE_Mesh CUBE_MESH;
 THE_Mesh QUAD_MESH;
 
 THE_RenderQueue render_queue;
-struct THE_Camera camera;
 
 typedef struct THE_AvailableNode {
 	struct THE_AvailableNode *next;
@@ -77,15 +75,15 @@ static THE_Shader AddShader()
 
 void THE_InitRender()
 {
-	curr_pool = THE_PersistentAlloc(THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand), 0);
-	next_pool = THE_PersistentAlloc(THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand), 0);
+	curr_pool = THE_PersistentAlloc(THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand));
+	next_pool = THE_PersistentAlloc(THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand));
 	curr_pool_last = curr_pool;
 	next_pool_last = next_pool;
 
-	meshes = THE_PersistentAlloc(sizeof(THE_InternalMesh) * THE_MAX_MESHES, 0);
-	textures = THE_PersistentAlloc(sizeof(THE_InternalTexture) * THE_MAX_TEXTURES, 0);
-	framebuffers = THE_PersistentAlloc(sizeof(THE_InternalFramebuffer) * THE_MAX_FRAMEBUFFERS, 0);
-	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64, 0);
+	meshes = THE_PersistentAlloc(sizeof(THE_InternalMesh) * THE_MAX_MESHES);
+	textures = THE_PersistentAlloc(sizeof(THE_InternalTexture) * THE_MAX_TEXTURES);
+	framebuffers = THE_PersistentAlloc(sizeof(THE_InternalFramebuffer) * THE_MAX_FRAMEBUFFERS);
+	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64);
 	mesh_count = 0;
 	texture_count = 0;
 	framebuffer_count = 0;
@@ -98,12 +96,10 @@ void THE_InitRender()
 	that way we can alternate freeing only one half each frame so it is synced with
 	the render queues
 	*/
-	frame_pool[0] = THE_PersistentAlloc(THE_FRAME_POOL_SIZE, 0);
+	frame_pool[0] = THE_PersistentAlloc(THE_FRAME_POOL_SIZE);
 	frame_pool[1] = frame_pool[0] + THE_FRAME_POOL_SIZE / 2;
 	frame_pool_last = frame_pool[0];
 	frame_switch = 0;
-
-	THE_CameraInit(&camera, 70.0f, 300.0f, THE_WindowGetWidth(), THE_WindowGetHeight());
 
 	SPHERE_MESH = THE_CreateSphereMesh(32, 32);
 	CUBE_MESH = THE_CreateCubeMesh();
@@ -658,4 +654,30 @@ THE_Material THE_MaterialDefault(void)
 		.cube_start = 0
 	};
 	return ret;
+}
+
+THE_Mat THE_MatDefault(void)
+{
+	THE_Mat ret = {
+		.ptr = NULL,
+		.data_count = 0,
+		.tex_count = 0,
+		.cube_count = 0,
+		.shader = THE_INVALID
+	};
+	return ret;
+}
+
+void *THE_MatAlloc(THE_Mat *m)
+{
+	int elements = m->data_count + m->tex_count + m->cube_count;
+	m->ptr = THE_Alloc(elements * sizeof(float));
+	return m->ptr;
+}
+
+void *THE_MatAllocFrame(THE_Mat *m)
+{
+	int elements = m->data_count + m->tex_count + m->cube_count;
+	m->ptr = THE_AllocateFrameResource(elements * sizeof(float));
+	return m->ptr;
 }

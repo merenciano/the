@@ -25,6 +25,11 @@ typedef struct {
 	uint32_t inst_count;
 } THE_DrawCommandData;
 
+typedef struct THE_DrawData {
+	THE_Mesh mesh;
+	THE_Mat material;
+} THE_DrawData;
+
 typedef struct {
 	char in_path[128];
 	THE_Texture out_cube;
@@ -58,10 +63,10 @@ typedef struct {
 
 typedef union {
 	THE_ClearData clear;
-	THE_DrawCommandData draw;
+	THE_DrawData draw;
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData renderops;
-	THE_Shader use_shader;
+	THE_Mat mat;
 	THE_Framebuffer usefb;
 } THE_CommandData;
 

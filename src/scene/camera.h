@@ -4,12 +4,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 struct THE_Camera {
 	float view_mat[16];
 	float proj_mat[16];
 	float far_value;
 	float fov;
 };
+
+extern struct THE_Camera camera;
 
 void THE_CameraInit(struct THE_Camera *cam, float fov,
 	float far, uint32_t width, uint32_t height);

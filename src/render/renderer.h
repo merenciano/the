@@ -11,6 +11,37 @@
 #define THE_MAX_FRAMEBUFFERS 8
 #define THE_MAX_SHADERS 32
 
+struct THE_PbrData {
+	float model[16];
+	float color[3];
+	float use_albedo_map;
+	float use_pbr_maps;
+	float tiling_x;
+	float tiling_y;
+	float padding;
+	float roughness;
+	float metallic;
+	float normal_map_intensity;
+	float paddingg;
+};
+
+struct THE_PbrSceneData {
+	float view_projection[16];
+	float camera_position[3];
+	float padding;
+	float sunlight[4];
+};
+
+struct THE_EquirecToCubeData {
+	float vp[16];
+};
+
+struct THE_PrefilterEnvData {
+	float vp[16];
+	float roughness;
+	float padding[3];
+};
+
 enum THE_TexType {
 	THE_TEX_NONE = 0,
 	THE_TEX_R,
@@ -30,6 +61,14 @@ typedef int32_t THE_Texture;
 typedef int32_t THE_Framebuffer;
 typedef int32_t THE_Shader;
 
+typedef struct THE_Mat {
+	void *ptr;
+	int data_count;
+	int tex_count;
+	int cube_count;
+	THE_Shader shader;
+} THE_Mat;
+
 typedef struct {
 	float *data;
 	THE_Texture *tex;
@@ -40,12 +79,9 @@ typedef struct {
 
 typedef THE_ShaderData THE_Material;
 
-
 extern THE_Mesh SPHERE_MESH;
 extern THE_Mesh CUBE_MESH;
 extern THE_Mesh QUAD_MESH;
-
-extern struct THE_Camera camera;
 
 void THE_InitRender(void);
 void THE_RenderFrame(void);
@@ -75,6 +111,13 @@ void THE_MaterialSetFrameTexture(THE_Material *mat, THE_Texture *tex, int32_t co
 
 THE_Framebuffer THE_CreateFramebuffer(int32_t width, int32_t height, bool color, bool depth);
 THE_Texture THE_GetFrameColor(THE_Framebuffer fb);
+
+THE_Mat THE_MatDefault(void);
+/* MatAlloc does not initialize the shader value. */
+void *THE_MatAlloc(THE_Mat *);
+
+/* MatAllocFrame does not initialize the shader value. */
+void *THE_MatAllocFrame(THE_Mat *);
 
 #endif
 

@@ -3,6 +3,7 @@
 
 #include <mathc.h>
 
+struct THE_Camera camera;
 typedef struct THE_Camera THE_Camera;
 
 static const float SENSIBILITY = 1.0f / 1000.0f;
