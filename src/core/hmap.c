@@ -5,18 +5,18 @@
 #include <string.h>
 #include <stdio.h>
 
-#define HMapGetHeader(HM) ((HMapHeader*)(HM) - 1)
+#define HMapGetHeader(HM) ((struct HMapHeader*)(HM) - 1)
 #define HMapGetCapacity(HM) (HMapGetHeader(HM)->capacity)
 #define HMapGetCount(HM) (HMapGetHeader(HM)->count)
 #define HMapGetNodeSize(HM) (HMapGetHeader(HM)->node_size)
 #define HMapGetValueSize(HM) (HMapGetHeader(HM)->value_size)
 
-typedef struct {
+struct HMapHeader {
 	uint32_t capacity;
 	uint32_t count;
 	uint32_t node_size;
 	uint32_t value_size;
-} HMapHeader;
+};
 
 typedef struct {
 	union {
@@ -58,8 +58,9 @@ HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size)
 {
 	assert(capacity <= (1 << 31));
 	capacity = NextPow2(capacity);
-	size_t map_size = (value_size + sizeof(HMapKey)) * capacity + sizeof(HMapHeader);
-	HMapHeader *hm = calloc(map_size, 1);
+	size_t map_size = (value_size + sizeof(HMapKey)) * capacity
+		+ sizeof(struct HMapHeader);
+	struct HMapHeader *hm = calloc(map_size, 1);
 
 	hm->capacity = capacity;
 	hm->count = 0;
@@ -71,7 +72,7 @@ HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size)
 
 void THE_HMapDelete(HMap *hm)
 {
-	free((HMapHeader*)hm - 1);
+	free((struct HMapHeader*)hm - 1);
 }
 
 void THE_HMapInsert(HMap *hm, const char *key, void *value)
@@ -81,7 +82,6 @@ void THE_HMapInsert(HMap *hm, const char *key, void *value)
 
 	HMapKey mk;
 	mk.hash = HMapHash(key);
-	printf("Key %s = %s : Hash: 0x%lX\n", key, mk.name, mk.hash);
 	uint32_t offset = mk.hash & (HMapGetCapacity(hm) - 1);
 
 	HMap *node;
@@ -91,13 +91,11 @@ void THE_HMapInsert(HMap *hm, const char *key, void *value)
 			printf("Key %s already here!\n", key);
 			return;
 		}
-		//printf("Collision\n");
 		offset = (offset + 1) & (HMapGetCapacity(hm) - 1);
 	}
 
-	//printf("Inserted\n");
 	node->key.hash = mk.hash;
-	memcpy(&(node->value), value, (HMapGetValueSize(hm)));
+	memcpy(&(node->value), value, HMapGetValueSize(hm));
 	++HMapGetCount(hm);
 }
 

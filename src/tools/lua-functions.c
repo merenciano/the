@@ -1,3 +1,6 @@
+
+#if 0
+
 #include "lua-functions.h"
 #include "tools/helper-functions.h"
 
@@ -62,3 +65,5 @@ int32_t LUA_SetSunIntensity(lua_State *L)
 	lua_pop(L, 1);
 	return 0;
 }
+
+#endif

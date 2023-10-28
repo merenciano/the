@@ -1,18 +1,17 @@
 #ifndef THE_CORE_CHRONO_H
 #define THE_CORE_CHRONO_H
 
-#include <time.h>
-typedef struct timespec timespec;
+#include <stdint.h>
 
-typedef struct THE_Chrono {
-	timespec start;
-	timespec end;
-} THE_Chrono;
+#define THE_ChronoElapsed(CHRONO) (THE_ChronoTime() - CHRONO)
+#define THE_ChronoSeconds(CHRONO) (CHRONO / 1000000000.0f)
+#define THE_ChronoMilli(CHRONO) (CHRONO / 1000000)
+#define THE_ChronoMicro(CHRONO) (CHRONO / 1000)
+#define THE_ChronoNano(CHRONO) (CHRONO)
 
-void THE_ChronoStart(THE_Chrono *chrono);
-void THE_ChronoEnd(THE_Chrono *chrono);
+typedef int64_t THE_Chrono;
 
-float THE_ChronoDurationSec(THE_Chrono *chrono);
-float THE_ChronoDurationMS(THE_Chrono *chrono);
+THE_Chrono THE_ChronoTime(void);
+//THE_Chrono THE_ChronoElapsed(THE_Chrono chrono);
 
 #endif

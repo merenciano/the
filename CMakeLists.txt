@@ -20,7 +20,7 @@ target_compile_definitions(${THE_NAME} PUBLIC
 	)
 
 target_compile_options(${THE_NAME} PUBLIC
-	-Wall
+		-Wall
 	)
 
 target_include_directories(${THE_NAME} PUBLIC

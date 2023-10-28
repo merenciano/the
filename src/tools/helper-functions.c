@@ -1,3 +1,4 @@
+#if 0
 #include "helper-functions.h"
 #include "tools/resource-map.h"
 #include "core/manager.h"
@@ -17,7 +18,7 @@ void THE_CreateEntity(const char *mesh, const char *tex)
     pbr.normal_map_intensity = 0.0f;
     e->mesh = THE_ResourceMapGetMesh(&resource_map, mesh);
     //e->mat = g_mats.pbr;
-    THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(THE_PbrData) / 4);
+    THE_MaterialSetData(&e->mat, (float*)&pbr, sizeof(struct THE_PbrData) / 4);
     THE_Texture t[4];
     for (s32 i = 0; i < 4; ++i) {
         t[i] = THE_ResourceMapGetTexture(&resource_map, tex);
@@ -43,3 +44,4 @@ void THE_SetSunIntensity(float intensity)
 {
 	sun_dir_intensity.w = intensity;
 }
+#endif

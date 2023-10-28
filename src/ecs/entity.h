@@ -1,14 +1,17 @@
+// TODO: Esta clase a la mierda
 #ifndef THE_ENTITY_H
 #define THE_ENTITY_H
 
 #include "render/renderer.h"
 
-typedef struct {
-	struct mat4 transform;
+struct THE_Entity {
+	float transform[16];
 	THE_Mesh mesh;
 	THE_Shader mat;
 	THE_Material mat_data;
-} THE_Entity;
+};
+
+typedef struct THE_Entity THE_Entity;
 
 THE_Entity *THE_EntityCreate(void);
 THE_Entity *THE_GetEntities(void);

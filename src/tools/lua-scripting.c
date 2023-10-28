@@ -1,3 +1,4 @@
+#if 0
 #include "lua-scripting.h"
 #include "core/definitions.h"
 #include "tools/lua-functions.h"
@@ -46,3 +47,5 @@ void THE_ScriptingSetGlobal(const char *name, float value)
 	lua_pushnumber(L, value);
 	lua_setglobal(L, name);
 }
+
+#endif
