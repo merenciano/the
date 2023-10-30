@@ -1,10 +1,25 @@
-#ifndef __THE_RENDER_INTERNAL_RESOURCES_H__
-#define __THE_RENDER_INTERNAL_RESOURCES_H__
+#ifndef THE_RENDER_INTERNAL_RESOURCES_H
+#define THE_RENDER_INTERNAL_RESOURCES_H
 
 #include "renderer.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
+
+#ifdef THE_RENDER_CHECKS
+#define THE__CHECK_HANDLE(TYPE, HANDLE)                                       \
+	({                                                                        \
+		THE_ASSERT(HANDLE >= 0, "Bad resource state");                        \
+		THE_ASSERT(HANDLE < TYPE##_count, "Out of bounds handle");            \
+	})
+
+#define THE__CHECK_INTERNAL(RESOURCE)                                         \
+	({                                                                        \
+		THE_ASSERT(RESOURCE && RESOURCE->internal_id >= 0,                    \
+		  "Invalid internal resource.");                                      \
+	})
+
+#endif // THE_RENDER_CHECKS
 
 enum THE_VertexAttributes {
 	A_POSITION = 0,
@@ -15,53 +30,57 @@ enum THE_VertexAttributes {
 	VERTEX_ATTRIBUTE_COUNT
 };
 
+typedef enum THE_ResourceFlags { RF_DIRTY = 1 << 0 } THE_ResourceFlags;
+
+typedef struct THE_InternalResource {
+	int id;
+	int flags;
+} THE_InternalResource;
+
 typedef struct {
 	float *vtx;
-	uint32_t *idx;
-	size_t vtx_size;
-	size_t elements;
-	int32_t attr_flags;
-	int32_t internal_id;
+	IDX_T *idx;
+	unsigned vtx_size;
+	unsigned elements;
+	int attr_flags;
+	int internal_id;
 	uint32_t internal_buffers_id[2];
 } THE_InternalMesh;
 
 typedef struct {
 	char path[64];
 	void *pix;
-	int32_t internal_id;
-	int32_t cpu_version;
-	int32_t gpu_version;
-	uint32_t texture_unit;
-	int32_t width;
-	int32_t height;
-	int32_t type;
+	int internal_id;
+	int cpu_version;
+	int gpu_version;
+	int texture_unit;
+	int width;
+	int height;
+	int type;
 } THE_InternalTexture;
 
 typedef struct {
-	int32_t internal_id;
-	int32_t cpu_version;
-	int32_t gpu_version;
-	int32_t width;
-	int32_t height;
+	THE_InternalResource res;
+	int internal_id;
+	int cpu_version;
+	int gpu_version;
+	int width;
+	int height;
 	THE_Texture color_tex;
 	THE_Texture depth_tex;
 } THE_InternalFramebuffer;
 
-enum THE_DataGroup {
-	THE_SHADER_COMMON_DATA = 0,
-	THE_SHADER_DATA = 1
-};
+enum THE_DataGroup { THE_SHADER_COMMON_DATA = 0, THE_SHADER_DATA = 1 };
 
 typedef struct {
-	int32_t data;
-	int32_t tex;
-	int32_t cubemap;
+	int data;
+	int tex;
+	int cubemap;
 } THE_DataLocations;
 
 typedef struct {
 	const char *shader_name;
-	int32_t program_id;
-	THE_ShaderData common_data;
+	int program_id;
 	THE_DataLocations data_loc[2];
 } THE_InternalShader;
 
@@ -69,9 +88,9 @@ extern THE_InternalMesh *meshes;
 extern THE_InternalTexture *textures;
 extern THE_InternalFramebuffer *framebuffers;
 extern THE_InternalShader *shaders;
-extern size_t mesh_count;
-extern size_t texture_count;
-extern size_t framebuffer_count;
-extern size_t shader_count;
+extern int mesh_count;
+extern int texture_count;
+extern int framebuffer_count;
+extern int shader_count;
 
 #endif

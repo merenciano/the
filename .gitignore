@@ -1,8 +1,10 @@
 .cache/
+.idea/
 .vscode/
 build/
 lib/*.a
 lib/*.so
+cmake-build**/
 extern/cimgui/*.so
 examples/*/imgui.ini
 examples/matball/matballs

@@ -72,14 +72,12 @@ bool Update(void *context)
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
 	fbuff->next = rops;
-	rops->data.renderops.blend = true;
-	rops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
-	rops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
-	rops->data.renderops.depth_test = true;
-	rops->data.renderops.write_depth = true;
-	rops->data.renderops.cull_face = THE_CULLFACE_BACK;
-	rops->data.renderops.depth_func = THE_DEPTHFUNC_LESS;
-	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
+	rops->data.rend_opts.enable_flags = 
+		THE_BLEND | THE_DEPTH_TEST | THE_DEPTH_WRITE | THE_CULL_FACE;
+	rops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
+	rops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
+	rops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
+	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LESS;
 	rops->execute = THE_RenderOptionsExecute;
 
 	mat4_multiply(((HelloMatData*)ctx->e->mat.ptr)->vp, camera.proj_mat, camera.view_mat);
@@ -107,9 +105,8 @@ bool Update(void *context)
 	THE_RenderEntities(THE_GetEntities(), THE_EntitiesSize());
 
 	rops = THE_AllocateCommand();
-	rops->data.renderops.cull_face = THE_CULLFACE_DISABLED;
-	rops->data.renderops.depth_func = THE_DEPTHFUNC_LEQUAL;
-	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
+	rops->data.rend_opts.disable_flags = THE_CULL_FACE;
+	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LEQUAL;
 	rops->execute = THE_RenderOptionsExecute;
 	
 	THE_CameraStaticViewProjection(ctx->skymat.ptr, &camera);
@@ -132,8 +129,7 @@ bool Update(void *context)
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
 	fbuff2->next = rops2;
-	rops2->data.renderops.depth_test = false;
-	rops2->data.renderops.changed_mask = THE_DEPTH_TEST_BIT;
+	rops2->data.rend_opts.disable_flags = THE_DEPTH_TEST;
 	rops2->execute = THE_RenderOptionsExecute;
 
 	THE_RenderCommand *clear2 = THE_AllocateCommand();

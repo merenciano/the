@@ -5,8 +5,6 @@
 #include "core/io.h"
 #include "scene/camera.h"
 
-#include <stdio.h>
-
 //#define MTR_ENABLED
 #include "minitrace.h"
 

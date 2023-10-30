@@ -3,27 +3,12 @@
 
 #include "renderer.h"
 
-#define THE_BLEND_FUNC_BIT     1U
-#define THE_ENABLE_BLEND_BIT   1U << 1U
-#define THE_WRITE_DEPTH_BIT    1U << 2U
-#define THE_DEPTH_TEST_BIT     1U << 3U
-#define THE_CULL_FACE_BIT      1U << 4U
-#define THE_DEPTH_FUNC_BIT     1U << 5U
-
 typedef struct {
 	float color[4];
 	bool color_buffer;
 	bool depth_buffer;
 	bool stencil_buffer;
 } THE_ClearData;
-
-typedef struct {
-	THE_Mesh mesh;
-	THE_Shader shader;
-	THE_Material mat;
-	int *inst_attr;
-	uint32_t inst_count;
-} THE_DrawCommandData;
 
 typedef struct THE_DrawData {
 	THE_Mesh mesh;
@@ -37,37 +22,76 @@ typedef struct {
 	THE_Texture out_lut;
 } THE_EquirectToCubeData;
 
-enum THE_RenderOptions {
-	THE_BLENDFUNC_ONE,
-	THE_BLENDFUNC_SRC_ALPHA,
-	THE_BLENDFUNC_ONE_MINUS_SRC_ALPHA,
-	THE_BLENDFUNC_ZERO,
-	THE_CULLFACE_DISABLED,
-	THE_CULLFACE_FRONT,
-	THE_CULLFACE_BACK,
-	THE_CULLFACE_FRONT_AND_BACK,
-	THE_DEPTHFUNC_LEQUAL,
-	THE_DEPTHFUNC_LESS,
+enum THE_BlendFuncOpt {
+	// TODO: Add as needed.
+	THE_BLEND_FUNC_INVALID = 0,
+	THE_BLEND_FUNC_ONE,
+	THE_BLEND_FUNC_SRC_ALPHA,
+	THE_BLEND_FUNC_ONE_MINUS_SRC_ALPHA,
+	THE_BLEND_FUNC_ZERO,
 };
 
+typedef struct THE_BlendFunc {
+	enum THE_BlendFuncOpt src;
+	enum THE_BlendFuncOpt dst;
+} THE_BlendFunc;
+
+typedef enum THE_CullFace {
+	THE_CULL_FACE_CURRENT = 0,
+	THE_CULL_FACE_FRONT,
+	THE_CULL_FACE_BACK,
+	THE_CULL_FACE_FRONT_AND_BACK,
+} THE_CullFace;
+
+typedef enum THE_DepthFunc {
+	// TODO: Add as needed.
+	THE_DEPTH_FUNC_CURRENT = 0,
+	THE_DEPTH_FUNC_LEQUAL,
+	THE_DEPTH_FUNC_LESS,
+} THE_DepthFunc;
+
+typedef enum THE_RenderOptions {
+	THE_BLEND = 1 << 0,
+	THE_CULL_FACE = 1 << 1,
+	THE_DEPTH_TEST = 1 << 2,
+	THE_DEPTH_WRITE = 1 << 3,
+	THE_REND_OPTS_COUNT
+} THE_RenderOptions;
+
 typedef struct {
-	uint32_t changed_mask;
-	enum THE_RenderOptions sfactor;
-	enum THE_RenderOptions dfactor;
-	enum THE_RenderOptions cull_face;
-	enum THE_RenderOptions depth_func;
-	bool depth_test;
-	bool write_depth;
-	bool blend;
+	int enable_flags;
+	int disable_flags;
+	THE_BlendFunc blend_func;
+	THE_CullFace cull_face;
+	THE_DepthFunc depth_func;
 } THE_RenderOptionsData;
+
+typedef enum THE_AttachSlot {
+	THE_ATTACH_IGNORE,
+	THE_ATTACH_DEPTH,
+	THE_ATTACH_COLOR
+} THE_AttachSlot;
+
+typedef struct THE_FBAttachment {
+	THE_Texture tex;
+	THE_AttachSlot slot;
+	int8_t level;
+	int8_t side;
+} THE_FBAttachment;
+
+typedef struct THE_SetFramebufferData {
+	THE_Framebuffer fb;
+	THE_FBAttachment attachment;
+} THE_SetFramebufferData;
 
 typedef union {
 	THE_ClearData clear;
 	THE_DrawData draw;
 	THE_EquirectToCubeData eqr_cube;
-	THE_RenderOptionsData renderops;
+	THE_RenderOptionsData rend_opts;
 	THE_Mat mat;
 	THE_Framebuffer usefb;
+	THE_SetFramebufferData set_fb;
 } THE_CommandData;
 
 struct THE_RenderCommand {
@@ -96,5 +120,6 @@ extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);
 extern void THE_UseFramebufferExecute(THE_CommandData *data);
 extern void THE_UseShaderExecute(THE_CommandData *data);
+extern void THE_SetFramebufferExecute(THE_CommandData *data);
 
 #endif

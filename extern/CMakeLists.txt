@@ -1,14 +1,11 @@
 
 target_sources(${THE_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/include/cimgui.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/cimgui_impl.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/mathc.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/minitrace.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/GLFW/glfw3.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/GLFW/glfw3native.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/tinyobj_loader_c.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/buddy_alloc.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/KHR/khrplatform.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mathc.c

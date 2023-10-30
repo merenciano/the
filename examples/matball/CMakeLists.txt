@@ -9,14 +9,7 @@ target_include_directories(${MATBALLS} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/../../extern/include
 	)
 
-target_compile_definitions(${MATBALLS} PUBLIC
-	"-DIMGUI_IMPL_API=extern \"C\" "
-	"-DCIMGUI_USE_GLFW"
-	"-DCIMGUI_USE_OPENGL3"
-	)
-
 target_link_libraries(${MATBALLS} PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}/../../extern/cimgui/libcimgui.so
 	the
 	GL
 	X11

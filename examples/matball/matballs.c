@@ -1,8 +1,7 @@
 #include "render/renderer.h"
 #include "the.h"
-#include <string.h>
-#include <stdlib.h>
 #include <mathc.h>
+#include <string.h>
 
 struct Materials {
 	THE_Shader fullscreen_img;
@@ -21,11 +20,13 @@ THE_Mat pbr_common;
 THE_Mat sky_common;
 THE_Mat fulls;
 
-static float g_sunlight[4] = {0.0f, -1.0f, -0.1f, 1.0f};
+static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 1.0f };
 
-void Init(void *context)
+void
+Init(void *context)
 {
-	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
+	g_fb = THE_CreateFramebuffer(
+	  THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
 	g_resources.meshes = THE_HMapCreate(8, sizeof(THE_Mesh));
 	g_resources.textures = THE_HMapCreate(64, sizeof(THE_Texture));
 
@@ -48,53 +49,90 @@ void Init(void *context)
 	THE_ResourceMapAddMeshFromPath(rm, "MatBall", "assets/obj/matball-n.obj");
 	THE_ResourceMapAddTexture(rm, "Skybox", 1024, 1024, THE_TEX_ENVIRONMENT);
 	THE_ResourceMapAddTexture(rm, "Irradian", 1024, 1024, THE_TEX_ENVIRONMENT);
-	THE_ResourceMapAddTexture(rm, "Prefilte", 128, 128, THE_TEX_PREFILTER_ENVIRONMENT);
+	THE_ResourceMapAddTexture(
+	  rm, "Prefilte", 128, 128, THE_TEX_PREFILTER_ENVIRONMENT);
 	THE_ResourceMapAddTexture(rm, "LutMap", 512, 512, THE_TEX_LUT);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Gold_A" ,"assets/tex/celtic-gold/celtic-gold_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Gold_N" ,"assets/tex/celtic-gold/celtic-gold_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Gold_M" ,"assets/tex/celtic-gold/celtic-gold_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Gold_R" ,"assets/tex/celtic-gold/celtic-gold_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Gold_A", "assets/tex/celtic-gold/celtic-gold_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Gold_N", "assets/tex/celtic-gold/celtic-gold_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Gold_M", "assets/tex/celtic-gold/celtic-gold_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Gold_R", "assets/tex/celtic-gold/celtic-gold_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_A", "assets/tex/peeling/peeling_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_N", "assets/tex/peeling/peeling_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_M", "assets/tex/peeling/peeling_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_R", "assets/tex/peeling/peeling_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Peel_A", "assets/tex/peeling/peeling_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Peel_N", "assets/tex/peeling/peeling_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Peel_M", "assets/tex/peeling/peeling_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Peel_R", "assets/tex/peeling/peeling_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_A", "assets/tex/rusted/rusted_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_N", "assets/tex/rusted/rusted_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_M", "assets/tex/rusted/rusted_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_R", "assets/tex/rusted/rusted_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Rust_A", "assets/tex/rusted/rusted_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Rust_N", "assets/tex/rusted/rusted_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Rust_M", "assets/tex/rusted/rusted_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Rust_R", "assets/tex/rusted/rusted_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_A", "assets/tex/tiles/tiles_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_N", "assets/tex/tiles/tiles_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_M", "assets/tex/tiles/tiles_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_R", "assets/tex/tiles/tiles_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Tiles_A", "assets/tex/tiles/tiles_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Tiles_N", "assets/tex/tiles/tiles_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Tiles_M", "assets/tex/tiles/tiles_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Tiles_R", "assets/tex/tiles/tiles_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Future_A", "assets/tex/ship-panels/ship-panels_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Future_N", "assets/tex/ship-panels/ship-panels_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Future_M", "assets/tex/ship-panels/ship-panels_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Future_R", "assets/tex/ship-panels/ship-panels_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(rm, "Future_A",
+	  "assets/tex/ship-panels/ship-panels_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Future_N", "assets/tex/ship-panels/ship-panels_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Future_M", "assets/tex/ship-panels/ship-panels_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Future_R", "assets/tex/ship-panels/ship-panels_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_A", "assets/tex/shore/shore_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_N", "assets/tex/shore/shore_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_M", "assets/tex/shore/shore_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_R", "assets/tex/shore/shore_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Shore_A", "assets/tex/shore/shore_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Shore_N", "assets/tex/shore/shore_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Shore_M", "assets/tex/shore/shore_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Shore_R", "assets/tex/shore/shore_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_A", "assets/tex/cliff/cliff_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_N", "assets/tex/cliff/cliff_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_M", "assets/tex/cliff/cliff_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_R", "assets/tex/cliff/cliff_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Cliff_A", "assets/tex/cliff/cliff_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Cliff_N", "assets/tex/cliff/cliff_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Cliff_M", "assets/tex/cliff/cliff_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Cliff_R", "assets/tex/cliff/cliff_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_A", "assets/tex/granite/granite_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_N", "assets/tex/granite/granite_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_M", "assets/tex/granite/granite_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_R", "assets/tex/granite/granite_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Granit_A", "assets/tex/granite/granite_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Granit_N", "assets/tex/granite/granite_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Granit_M", "assets/tex/granite/granite_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Granit_R", "assets/tex/granite/granite_R.png", THE_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_A", "assets/tex/foam/foam_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_N", "assets/tex/foam/foam_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_M", "assets/tex/foam/foam_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_R", "assets/tex/foam/foam_R.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Foam_A", "assets/tex/foam/foam_A.png", THE_TEX_SRGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Foam_N", "assets/tex/foam/foam_N.png", THE_TEX_RGB);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Foam_M", "assets/tex/foam/foam_M.png", THE_TEX_R);
+	THE_ResourceMapAddTextureFromPath(
+	  rm, "Foam_R", "assets/tex/foam/foam_R.png", THE_TEX_R);
 
 	struct THE_PbrData pbr;
 	pbr.color[0] = 1.0f;
@@ -108,7 +146,7 @@ void Init(void *context)
 	pbr.roughness = 0.5f;
 	pbr.normal_map_intensity = 1.0f;
 
-	float position[3] = {-2.0f, 0.0f, 0.0f};
+	float position[3] = { -2.0f, 0.0f, 0.0f };
 
 	// CelticGold
 	{
@@ -121,7 +159,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Gold_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Gold_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Gold_R");
@@ -143,7 +181,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Shore_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Shore_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Shore_R");
@@ -165,7 +203,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Peel_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Peel_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Peel_R");
@@ -188,7 +226,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Rust_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Rust_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Rust_R");
@@ -210,7 +248,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Tiles_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Tiles_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Tiles_R");
@@ -232,7 +270,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Future_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Future_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Future_R");
@@ -255,7 +293,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Cliff_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Cliff_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Cliff_R");
@@ -277,7 +315,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Granit_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Granit_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Granit_R");
@@ -299,7 +337,7 @@ void Init(void *context)
 		e->mat.shader = g_mats.pbr;
 		struct THE_PbrData *d = THE_MatAlloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture*)d + e->mat.data_count;
+		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
 		t[0] = THE_ResourceMapGetTexture(rm, "Foam_A");
 		t[1] = THE_ResourceMapGetTexture(rm, "Foam_M");
 		t[2] = THE_ResourceMapGetTexture(rm, "Foam_R");
@@ -307,13 +345,11 @@ void Init(void *context)
 	}
 
 	THE_RenderCommand *rendops = THE_AllocateCommand();
-	rendops->data.renderops.depth_test = true;
-	rendops->data.renderops.write_depth = true;
-	rendops->data.renderops.cull_face = THE_CULLFACE_BACK;
-	rendops->data.renderops.blend = true;
-	rendops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
-	rendops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
-	rendops->data.renderops.changed_mask = 0xFF & ~THE_DEPTH_FUNC_BIT;
+	rendops->data.rend_opts.enable_flags =
+	  THE_DEPTH_TEST | THE_DEPTH_WRITE | THE_BLEND;
+	rendops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
+	rendops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
+	rendops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
 	rendops->execute = THE_RenderOptionsExecute;
 
 	THE_RenderCommand *sky = THE_AllocateCommand();
@@ -325,8 +361,10 @@ void Init(void *context)
 	rendops->next = sky;
 
 	THE_RenderCommand *irradiance = THE_AllocateCommand();
-	strcpy(irradiance->data.eqr_cube.in_path, "assets/tex/env/helipad-dif.hdr");
-	irradiance->data.eqr_cube.out_cube = THE_ResourceMapGetTexture(rm, "Irradian");
+	strcpy(
+	  irradiance->data.eqr_cube.in_path, "assets/tex/env/helipad-dif.hdr");
+	irradiance->data.eqr_cube.out_cube =
+	  THE_ResourceMapGetTexture(rm, "Irradian");
 	irradiance->data.eqr_cube.out_prefilt = THE_UNINIT;
 	irradiance->data.eqr_cube.out_lut = THE_UNINIT;
 	irradiance->execute = THE_EquirectToCubeExecute;
@@ -353,30 +391,32 @@ void Init(void *context)
 	skytex[sky_common.data_count] = THE_ResourceMapGetTexture(rm, "Skybox");
 }
 
-bool Update(void *context)
+bool
+Update(void *context)
 {
 	THE_InputUpdate();
 	THE_CameraMovementSystem(&camera, deltatime);
 
-	// PBR Material common data.
+	/* PBR common shader data. */
 	struct THE_PbrSceneData *common_pbr = pbr_common.ptr;
-	mat4_multiply(common_pbr->view_projection, camera.proj_mat, camera.view_mat);
+	mat4_multiply(
+	  common_pbr->view_projection, camera.proj_mat, camera.view_mat);
 	THE_CameraPosition(common_pbr->camera_position, &camera);
 	vec4_assign(common_pbr->sunlight, g_sunlight);
 
-	THE_RenderCommand* fbuff = THE_AllocateCommand();
-	fbuff->data.usefb = g_fb;
-	fbuff->execute = THE_UseFramebufferExecute;
+	THE_RenderCommand *fbuff = THE_AllocateCommand();
+	fbuff->data.set_fb.fb = g_fb;
+	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
+	fbuff->execute = THE_SetFramebufferExecute;
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
-	rops->data.renderops.blend = true;
-	rops->data.renderops.sfactor = THE_BLENDFUNC_ONE;
-	rops->data.renderops.dfactor = THE_BLENDFUNC_ZERO;
-	rops->data.renderops.depth_func = THE_DEPTHFUNC_LESS;
-	rops->data.renderops.depth_test = true;
-	rops->data.renderops.write_depth = true;
-	rops->data.renderops.cull_face = THE_CULLFACE_BACK;
-	rops->data.renderops.changed_mask = 0xFF; // Everything changed.
+	memset(&rops->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
+	rops->data.rend_opts.enable_flags =
+	  THE_BLEND | THE_DEPTH_TEST | THE_DEPTH_WRITE;
+	rops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
+	rops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
+	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LESS;
+	rops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
 	rops->execute = THE_RenderOptionsExecute;
 	fbuff->next = rops;
 
@@ -402,9 +442,9 @@ bool Update(void *context)
 	THE_RenderEntities(THE_GetEntities(), THE_EntitiesSize());
 
 	rops = THE_AllocateCommand();
-	rops->data.renderops.cull_face = THE_CULLFACE_DISABLED;
-	rops->data.renderops.depth_func = THE_DEPTHFUNC_LEQUAL;
-	rops->data.renderops.changed_mask = THE_CULL_FACE_BIT | THE_DEPTH_FUNC_BIT;
+	memset(&rops->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
+	rops->data.rend_opts.disable_flags = THE_CULL_FACE;
+	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LEQUAL;
 	rops->execute = THE_RenderOptionsExecute;
 
 	THE_CameraStaticViewProjection(sky_common.ptr, &camera);
@@ -418,22 +458,16 @@ bool Update(void *context)
 	draw_sky->data.draw.material = sky_common;
 	draw_sky->execute = THE_DrawExecute;
 	use_sky_shader->next = draw_sky;
-	
-	/*
-	THE_RenderCommand *sky = THE_AllocateCommand();
-	sky->data.skybox.cubemap = THE_ResourceMapGetTexture(&g_resources, "Skybox");
-	sky->execute = THE_SkyboxExecute;
-	rops->next = sky;
-	*/
 
 	fbuff = THE_AllocateCommand();
-	fbuff->data.usefb = THE_DEFAULT;
-	fbuff->execute = THE_UseFramebufferExecute;
+	fbuff->data.set_fb.fb = THE_DEFAULT;
+	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
+	fbuff->execute = THE_SetFramebufferExecute;
 	draw_sky->next = fbuff;
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();
-	rops2->data.renderops.depth_test = false;
-	rops2->data.renderops.changed_mask = THE_DEPTH_TEST_BIT;
+	memset(&rops2->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
+	rops2->data.rend_opts.disable_flags = THE_DEPTH_TEST;
 	rops2->execute = THE_RenderOptionsExecute;
 	fbuff->next = rops2;
 
@@ -465,18 +499,17 @@ bool Update(void *context)
 	return true;
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-	struct THE_Config cnfg = {
-		.init_func = Init,
+	struct THE_Config cnfg = { .init_func = Init,
 		.update_func = Update,
 		.heap_size = THE_GB(1),
 		.window_title = "THE Material Demo",
 		.window_width = 1280,
 		.window_height = 720,
-		.vsync = true
-	};
-	
+		.vsync = true };
+
 	THE_Start(&cnfg);
 
 	THE_End();

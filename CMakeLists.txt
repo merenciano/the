@@ -14,9 +14,6 @@ set_target_properties(${THE_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CU
 target_compile_definitions(${THE_NAME} PUBLIC
 	_GLFW_X11
 	LUA_USE_POSIX
-	IMGUI_IMPL_API=extern\t\"C\"\t
-	CIMGUI_USE_GLFW
-	CIMGUI_USE_OPENGL3
 	)
 
 target_compile_options(${THE_NAME} PUBLIC

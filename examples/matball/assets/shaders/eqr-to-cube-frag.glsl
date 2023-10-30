@@ -1,8 +1,8 @@
 #version 330 core
 
-#define EQUIREC_ENV_MAP u_entity_tex[0]
+#define EQUIREC_ENV_MAP u_scene_tex[0]
 
-uniform sampler2D u_entity_tex[1];
+uniform sampler2D u_scene_tex[1];
 
 const vec2 inv_atan = vec2(0.1591, 0.3183);
 
