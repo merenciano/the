@@ -781,9 +781,12 @@ the__attach_to_fb(THE_FBAttachment a)
 {
 	int id = textures[a.tex].internal_id;
 	GLenum target = a.side < 0 ? GL_TEXTURE_2D :
-							   GL_TEXTURE_CUBE_MAP_POSITIVE_X + a.side;
+								 GL_TEXTURE_CUBE_MAP_POSITIVE_X + a.side;
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, a.slot, target, id, a.level);
+	GLenum slot = a.slot == THE_ATTACH_COLOR ? GL_COLOR_ATTACHMENT0 :
+											   GL_DEPTH_ATTACHMENT;
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, id, a.level);
 }
 
 static void
@@ -811,23 +814,19 @@ the__sync_gpu_fb(THE_Framebuffer fb, const THE_FBAttachment *atta)
 	} else {
 		if (ifb->depth_tex != THE_INACTIVE) {
 			the__sync_gpu_tex(ifb->depth_tex);
-			THE_FBAttachment a = {
-				.tex = ifb->depth_tex,
-				.slot = THE_ATTACH_DEPTH,
-				.side = -1,
-				.level = 0
-			};
+			THE_FBAttachment a = { .tex = ifb->depth_tex,
+				                   .slot = THE_ATTACH_DEPTH,
+				                   .side = -1,
+				                   .level = 0 };
 			the__attach_to_fb(a);
 		}
 
 		if (ifb->color_tex != THE_INACTIVE) {
 			the__sync_gpu_tex(ifb->color_tex);
-			THE_FBAttachment a = {
-			  .tex = ifb->color_tex,
-			  .slot = THE_ATTACH_COLOR,
-			  .side = -1,
-			  .level = 0
-			};
+			THE_FBAttachment a = { .tex = ifb->color_tex,
+				                   .slot = THE_ATTACH_COLOR,
+				                   .side = -1,
+				                   .level = 0 };
 			the__attach_to_fb(a);
 		}
 	}

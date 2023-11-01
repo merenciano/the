@@ -81,8 +81,8 @@ AddShader()
 void
 THE_InitRender()
 {
-	curr_pool = THE_PersistentAlloc(THE_MB(16) * sizeof(THE_RenderCommand));
-	next_pool = THE_PersistentAlloc(THE_MB(16) * sizeof(THE_RenderCommand));
+	curr_pool = THE_PersistentAlloc(THE_MB(16));
+	next_pool = THE_PersistentAlloc(THE_MB(16));
 	curr_pool_tail = curr_pool;
 	next_pool_tail = next_pool;
 
