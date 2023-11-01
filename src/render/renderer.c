@@ -190,36 +190,61 @@ THE_AllocateFrameResource(uint32_t size)
 	return ret;
 }
 
-int32_t
-THE_IsInsideFramePool(void *address)
-{
-	return address > (void *)*frame_pool &&
-	  address < (void *)*frame_pool + THE_FRAME_POOL_SIZE;
-}
-
-uint32_t
-THE_RenderQueueUsed()
-{
-	return curr_pool_tail - curr_pool;
-}
-
 THE_Texture
-THE_CreateTexture(const char *path, enum THE_TexType t)
+THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 {
 	THE_ASSERT(*path != '\0', "For empty textures use THE_CreateEmptyTexture");
 
-	THE_Texture ret = AddTexture();
-	strcpy(textures[ret].path, path);
-	textures[ret].pix = NULL;
-	textures[ret].internal_id = THE_UNINIT;
-	textures[ret].cpu_version = 1;
-	textures[ret].gpu_version = 0;
-	textures[ret].texture_unit = THE_UNINIT;
-	textures[ret].width = 0;
-	textures[ret].height = 0;
-	textures[ret].type = t;
+	THE_Texture tex = AddTexture();
+	textures[tex].internal_id = THE_UNINIT;
+	textures[tex].cpu_version = 1;
+	textures[tex].gpu_version = 0;
+	textures[tex].texture_unit = THE_UNINIT;
+	textures[tex].type = t;
 
-	return ret;
+	int nchannels = 0;
+	int *width = &textures[tex].width;
+	int *height = &textures[tex].height;
+	stbi_set_flip_vertically_on_load(1);
+
+	switch (textures[tex].type) {
+	case THE_TEX_RGB_F16:
+	case THE_TEX_RGBA_F16:
+	case THE_TEX_LUT:
+		textures[tex].pix = stbi_loadf(path, width, height, &nchannels, 0);
+		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded");
+		break;
+
+	case THE_TEX_RGB:
+	case THE_TEX_SRGB:
+		nchannels = 3;
+		textures[tex].pix = stbi_load(path, width, height, &nchannels, 3);
+		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
+		break;
+
+	case THE_TEX_R:
+		nchannels = 1;
+		textures[tex].pix = stbi_load(path, width, height, &nchannels, 1);
+		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
+		break;
+
+	case THE_TEX_SKYBOX:
+
+			stbi_set_flip_vertically_on_load(0);
+			for (int i = 0; i < 6; ++i) {
+				t->path[13] = cube_prefix[i];
+				uint8_t *img_data = stbi_load(t->path, &width, &height, &nchannels,
+											  0);
+				THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
+			}
+		break;
+
+	default:
+		THE_ASSERT(false, "Default case LoadTexture.");
+		return THE_UNINIT;
+	}
+
+	return tex;
 }
 
 THE_Texture
@@ -228,7 +253,6 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
 
 	THE_Texture ret = AddTexture();
-	*(textures[ret].path) = '\0';
 	textures[ret].pix = NULL;
 	textures[ret].internal_id = THE_UNINIT;
 	textures[ret].cpu_version = 1;
@@ -239,46 +263,6 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 	textures[ret].type = t;
 
 	return ret;
-}
-
-void
-THE_LoadTexture(THE_Texture tex, const char *path)
-{
-	THE_ASSERT(*path != '\0', "Invalid path");
-
-	int32_t width, height, nchannels = 0;
-	stbi_set_flip_vertically_on_load(1);
-
-	switch (textures[tex].type) {
-	case THE_TEX_RGB_F16:
-	case THE_TEX_RGBA_F16:
-	case THE_TEX_LUT:
-		textures[tex].pix = stbi_loadf(path, &width, &height, &nchannels, 0);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded");
-		break;
-
-	case THE_TEX_RGB:
-	case THE_TEX_SRGB:
-		nchannels = 3;
-		textures[tex].pix = stbi_load(path, &width, &height, &nchannels, 3);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
-		break;
-
-	case THE_TEX_R:
-		nchannels = 1;
-		textures[tex].pix = stbi_load(path, &width, &height, &nchannels, 1);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
-		break;
-
-	default:
-		THE_ASSERT(false, "Default case LoadTexture.");
-		return;
-	}
-
-	strcpy(textures[tex].path, path);
-	textures[tex].cpu_version++;
-	textures[tex].width = width;
-	textures[tex].height = height;
 }
 
 void
@@ -309,32 +293,27 @@ THE_CreateCubeMesh()
 		0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 1.0f,
 		-0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 1.0f,
 
-		-0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f,
-		0.0f, // 4
+		-0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 		0.5f,  -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
 		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
 		-0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
 
-		-0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f,
-		0.0f, // 8
+		-0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f, 0.0f,
 		-0.5f, 0.5f,  -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 1.0f,
 		-0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  0.0f, 1.0f,
 		-0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 0.0f,
 
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,
-		0.0f, // 12
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 		0.5f,  0.5f,  -0.5f, 1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
 		0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
 		0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
 
-		-0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f,
-		1.0f, // 16
+		-0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 1.0f,
 		0.5f,  -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  1.0f, 1.0f,
 		0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 0.0f,
 		-0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  0.0f, 0.0f,
 
-		-0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,
-		1.0f, // 20
+		-0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
 		0.5f,  0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
 		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
 		-0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
@@ -493,16 +472,7 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 			tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset++];
 			float v1[14], v2[14], v3[14];
 
-			v1[0] = attrib.vertices[3 * idx.v_idx + 0]; // Cast the
-			                                            // 3 to
-			                                            // int64_t
-			                                            // in case
-			                                            // of
-			                                            // overflow
-			                                            // (that
-			                                            // would be
-			                                            // a large
-			                                            // obj)
+			v1[0] = attrib.vertices[3 * idx.v_idx + 0];
 			v1[1] = attrib.vertices[3 * idx.v_idx + 1];
 			v1[2] = attrib.vertices[3 * idx.v_idx + 2];
 			v1[3] = attrib.normals[3 * idx.vn_idx + 0];

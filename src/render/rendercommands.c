@@ -287,43 +287,15 @@ the__create_texture(THE_Texture tex, bool release_from_ram)
 	t->texture_unit = tex + 1;
 	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
 	glBindTexture(GL_TEXTURE_2D, t->internal_id);
+	glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
+				 t->height, 0, config.format, config.type, t->pix);
+	if (t->pix) {
+		stbi_image_free(t->pix);
+		t->pix = NULL;
 
-	if (t->type == THE_TEX_RGB_F16) {
-		if (!t->pix) {
-			stbi_set_flip_vertically_on_load(1);
-			int width, height, nchannels;
-			t->pix = stbi_loadf(t->path, &width, &height, &nchannels, 0);
-			t->width = width;
-			t->height = height;
+		if (t->type == GL_UNSIGNED_BYTE) {
+			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		THE_ASSERT(t->pix, "The image couldn't be loaded");
-		glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
-		             t->height, 0, config.format, config.type, t->pix);
-		if (release_from_ram) {
-			stbi_image_free(t->pix);
-			t->pix = NULL;
-		}
-	} else if (*(t->path) != '\0') {
-		if (!t->pix) {
-			stbi_set_flip_vertically_on_load(1);
-			int width, height, nchannels;
-			t->pix = stbi_load(t->path, &width, &height, &nchannels,
-			                   config.channels);
-			t->width = width;
-			t->height = height;
-		}
-
-		THE_ASSERT(t->pix, "The image couldn't be loaded");
-		glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
-		             t->height, 0, config.format, config.type, t->pix);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		if (release_from_ram) {
-			stbi_image_free(t->pix);
-			t->pix = NULL;
-		}
-	} else {
-		glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
-		             t->height, 0, config.format, config.type, NULL);
 	}
 	// No shadows outside shadow maps
 	float border_color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -548,7 +520,7 @@ THE_EquirectToCubeExecute(THE_CommandData *data)
 	glBindFramebuffer(GL_FRAMEBUFFER, fb);
 	glViewport(0, 0, icu->width, icu->height);
 	// Manually sync framebuffer here after changing textures
-	THE_Texture equirec = THE_CreateTexture(path, THE_TEX_RGB_F16);
+	THE_Texture equirec = THE_CreateTextureFromFile(path, THE_TEX_RGB_F16);
 	the__create_texture(equirec, false);
 	THE_CommandData ro;
 	ro.rend_opts.disable_flags = THE_CULL_FACE;
@@ -859,67 +831,6 @@ THE_SetFramebufferExecute(THE_CommandData *data)
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[d->fb].res.id);
 	}
 	the__set_viewport(d->fb);
-}
-
-void
-THE_UseFramebufferExecute(THE_CommandData *data)
-{
-	if (data->usefb == THE_DEFAULT) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		return;
-	}
-
-	THE_InternalFramebuffer *ifb = framebuffers + data->usefb;
-	GLsizei width;
-	GLsizei height;
-
-	if (ifb->gpu_version == 0) {
-		THE_ASSERT(data->usefb >= 0 && ifb->cpu_version > 0,
-		           "Framebuffer not created");
-		glGenFramebuffers(1, (GLuint *)&(ifb->internal_id));
-		if (ifb->color_tex >= 0) {
-			the__create_texture(ifb->color_tex, false);
-		}
-		if (ifb->depth_tex >= 0) {
-			the__create_texture(ifb->depth_tex, false);
-		}
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, ifb->internal_id);
-
-	// Set viewport
-	if (ifb->color_tex >= 0) {
-		width = textures[ifb->color_tex].width;
-		height = textures[ifb->color_tex].height;
-		glViewport(0, 0, width, height);
-	}
-
-	if (ifb->depth_tex >= 0) {
-		if (ifb->color_tex >= 0) {
-			THE_ASSERT(
-			  width == textures[ifb->depth_tex].width &&
-				height == textures[ifb->depth_tex].height,
-			  "Color and depth texture sizes of framebuffer not matching");
-		} else {
-			width = textures[ifb->depth_tex].width;
-			height = textures[ifb->depth_tex].height;
-			glViewport(0, 0, width, height);
-		}
-	}
-
-	// Update framebuffer if the textures have been changed
-	if (ifb->gpu_version < ifb->cpu_version) {
-		if (ifb->color_tex >= 0) {
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			                       GL_TEXTURE_2D,
-			                       textures[ifb->color_tex].internal_id, 0);
-		}
-		if (ifb->depth_tex >= 0) {
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-			                       GL_TEXTURE_2D,
-			                       textures[ifb->depth_tex].internal_id, 0);
-		}
-		ifb->gpu_version = ifb->cpu_version;
-	}
 }
 
 #endif // THE_OPENGL

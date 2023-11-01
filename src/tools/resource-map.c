@@ -33,13 +33,13 @@ THE_ResourceMapAddTextureFromPath(THE_ResourceMap *rm, const char *name,
 {
 	THE_ASSERT(
 	  path, "For the creation of empty textures call with size params");
-	THE_Texture tex = THE_CreateTexture(path, type);
+	THE_Texture tex = THE_CreateTextureFromFile(path, type);
 	THE_HMapInsert(rm->textures, name, &tex);
 }
 
 void
 THE_ResourceMapAddTexture(THE_ResourceMap *rm, const char *name,
-  uint32_t width, uint32_t height, enum THE_TexType type)
+  int width, int height, enum THE_TexType type)
 {
 	THE_ASSERT(width > 0 && height > 0, "0,0 size texture is no texture");
 	THE_Texture tex = THE_CreateEmptyTexture(width, height, type);

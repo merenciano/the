@@ -34,7 +34,8 @@ void Init(void *context)
 	*t = THE_GetFrameColor(ctx->fb);
 	ctx->fs_mat.shader = ctx->fs_img;
 
-	ctx->skycube = THE_CreateTexture("./assets/tex/Xcave.png", THE_TEX_SKYBOX);
+	ctx->skycube = THE_CreateTextureFromFile("./assets/tex/Xcave.png",
+	                                         THE_TEX_SKYBOX);
 
 	ctx->skymat.data_count = 16;
 	ctx->skymat.tex_count = 0;
@@ -67,8 +68,9 @@ bool Update(void *context)
 	THE_CameraMovementSystem(&camera, deltatime);
 
 	THE_RenderCommand *fbuff = THE_AllocateCommand();
-	fbuff->data.usefb = ctx->fb;
-	fbuff->execute = THE_UseFramebufferExecute;
+	fbuff->data.set_fb.fb = ctx->fb;
+	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
+	fbuff->execute = THE_SetFramebufferExecute;
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
 	fbuff->next = rops;
@@ -123,8 +125,9 @@ bool Update(void *context)
 	use_sky_shader->next = draw_sky;
 
 	THE_RenderCommand *fbuff2 = THE_AllocateCommand();
-	fbuff2->data.usefb = THE_DEFAULT;
-	fbuff2->execute = THE_UseFramebufferExecute;
+	fbuff2->data.set_fb.fb = THE_DEFAULT;
+	fbuff2->data.set_fb.attachment.slot = THE_IGNORE;
+	fbuff2->execute = THE_SetFramebufferExecute;
 	draw_sky->next = fbuff2;
 
 	THE_RenderCommand *rops2 = THE_AllocateCommand();

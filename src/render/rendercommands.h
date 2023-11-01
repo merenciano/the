@@ -90,7 +90,6 @@ typedef union {
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData rend_opts;
 	THE_Mat mat;
-	THE_Framebuffer usefb;
 	THE_SetFramebufferData set_fb;
 } THE_CommandData;
 
@@ -112,13 +111,10 @@ typedef struct {
 	THE_RenderCommand *next_last;
 } THE_RenderQueue;
 
-uint32_t THE_RenderQueueUsed(void);
-
 extern void THE_ClearExecute(THE_CommandData *data);
 extern void THE_DrawExecute(THE_CommandData *data);
 extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);
-extern void THE_UseFramebufferExecute(THE_CommandData *data);
 extern void THE_UseShaderExecute(THE_CommandData *data);
 extern void THE_SetFramebufferExecute(THE_CommandData *data);
 

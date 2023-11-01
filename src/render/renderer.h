@@ -71,11 +71,9 @@ void THE_InitRender(void);
 void THE_RenderFrame(void);
 void THE_RenderEndFrame(void);
 void *THE_AllocateFrameResource(uint32_t size);
-int32_t THE_IsInsideFramePool(void *address);
 
-THE_Texture THE_CreateTexture(const char *path, enum THE_TexType t);
+THE_Texture THE_CreateTextureFromFile(const char *path, enum THE_TexType t);
 THE_Texture THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t);
-void THE_LoadTexture(THE_Texture tex, const char *path);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
 
 THE_Mesh THE_CreateCubeMesh(void);
