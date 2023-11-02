@@ -278,7 +278,7 @@ the__create_texture(THE_Texture tex, bool release_from_ram)
 	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
 	glBindTexture(GL_TEXTURE_2D, t->internal_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
-				 t->height, 0, config.format, config.type, t->pix);
+				 t->height, 0, config.format, config.type, t->pix[0]);
 	if (t->pix[0]) {
 		stbi_image_free(t->pix[0]);
 		t->pix[0] = NULL;

@@ -212,20 +212,20 @@ THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 	case THE_TEX_RGBA_F16:
 	case THE_TEX_LUT:
 		textures[tex].pix[0] = stbi_loadf(path, width, height, &nchannels, 0);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded");
+		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded");
 		break;
 
 	case THE_TEX_RGB:
 	case THE_TEX_SRGB:
 		nchannels = 3;
 		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 3);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
+		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded.");
 		break;
 
 	case THE_TEX_R:
 		nchannels = 1;
 		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 1);
-		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
+		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded.");
 		break;
 
 	case THE_TEX_SKYBOX:
