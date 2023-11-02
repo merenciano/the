@@ -152,24 +152,14 @@ CreateCubemap(THE_Texture tex)
 	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, t->internal_id);
 
-	// The path for cubemaps will be the directory where the skyboxfaces
-	// are and inside the directory the faces must have these names
 	if (t->type == THE_TEX_SKYBOX) {
-		const char *cube_prefix = "RLUDFB";
-		int width, height, nchannels;
-		stbi_set_flip_vertically_on_load(0);
 		for (int i = 0; i < 6; ++i) {
-			t->path[13] = cube_prefix[i];
-			uint8_t *img_data = stbi_load(t->path, &width, &height, &nchannels,
-			                              0);
-			THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-			             config.internal_format, width, height, 0,
-			             config.format, config.type, img_data);
-			stbi_image_free(img_data);
+			             config.internal_format, t->width, t->height, 0,
+			             config.format, config.type, t->pix[i]);
+			stbi_image_free(t->pix[i]);
+			t->pix[i] = NULL;
 		}
-		t->width = width;
-		t->height = height;
 	} else {
 		THE_ASSERT(t->width > 0 && t->height > 0,
 		           "The texture have to have size for the empty environment");
@@ -289,9 +279,9 @@ the__create_texture(THE_Texture tex, bool release_from_ram)
 	glBindTexture(GL_TEXTURE_2D, t->internal_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width,
 				 t->height, 0, config.format, config.type, t->pix);
-	if (t->pix) {
-		stbi_image_free(t->pix);
-		t->pix = NULL;
+	if (t->pix[0]) {
+		stbi_image_free(t->pix[0]);
+		t->pix[0] = NULL;
 
 		if (t->type == GL_UNSIGNED_BYTE) {
 			glGenerateMipmap(GL_TEXTURE_2D);

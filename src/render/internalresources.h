@@ -49,7 +49,7 @@ typedef struct {
 
 typedef struct {
 	char path[64];
-	void *pix;
+	void *pix[6];
 	int internal_id;
 	int cpu_version;
 	int gpu_version;

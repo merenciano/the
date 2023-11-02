@@ -211,32 +211,35 @@ THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 	case THE_TEX_RGB_F16:
 	case THE_TEX_RGBA_F16:
 	case THE_TEX_LUT:
-		textures[tex].pix = stbi_loadf(path, width, height, &nchannels, 0);
+		textures[tex].pix[0] = stbi_loadf(path, width, height, &nchannels, 0);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded");
 		break;
 
 	case THE_TEX_RGB:
 	case THE_TEX_SRGB:
 		nchannels = 3;
-		textures[tex].pix = stbi_load(path, width, height, &nchannels, 3);
+		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 3);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
 		break;
 
 	case THE_TEX_R:
 		nchannels = 1;
-		textures[tex].pix = stbi_load(path, width, height, &nchannels, 1);
+		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 1);
 		THE_ASSERT(textures[tex].pix, "The image couldn't be loaded.");
 		break;
 
 	case THE_TEX_SKYBOX:
-
-			stbi_set_flip_vertically_on_load(0);
-			for (int i = 0; i < 6; ++i) {
-				t->path[13] = cube_prefix[i];
-				uint8_t *img_data = stbi_load(t->path, &width, &height, &nchannels,
-											  0);
-				THE_ASSERT(img_data, "Couldn't load the image to the cubemap");
-			}
+		stbi_set_flip_vertically_on_load(0);
+		const char *cube_prefix = "RLUDFB";
+		char path_buffer[512];
+		memset(path_buffer, '\0', 512);
+		strcpy(path_buffer, path);
+		for (int i = 0; i < 6; ++i) {
+			path_buffer[13] = cube_prefix[i];
+			textures[tex].pix[i] = stbi_load(path_buffer, width, height, &nchannels,
+											0);
+			THE_ASSERT(textures[tex].pix[i], "Couldn't load the image to the cubemap");
+		}
 		break;
 
 	default:
@@ -253,7 +256,9 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
 
 	THE_Texture ret = AddTexture();
-	textures[ret].pix = NULL;
+	for (int face = 0; face < 6; ++face) {
+		textures[ret].pix[face] = NULL;
+	}
 	textures[ret].internal_id = THE_UNINIT;
 	textures[ret].cpu_version = 1;
 	textures[ret].gpu_version = 0;
@@ -268,9 +273,11 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 void
 THE_FreeTextureData(THE_Texture tex)
 {
-	if (textures[tex].pix) {
-		stbi_image_free(textures[tex].pix);
-		textures[tex].pix = NULL;
+	for (int face = 0; face < 6; ++face) {
+		if (textures[tex].pix[face]) {
+			stbi_image_free(textures[tex].pix);
+			textures[tex].pix[face] = NULL;
+		}
 	}
 }
 
