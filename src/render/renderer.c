@@ -321,6 +321,13 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 	return tex;
 }
 
+int *THE_TexSize(THE_Texture t, int *out)
+{
+	out[0] = textures[t].width;
+	out[1] = textures[t].height;
+	return out;
+}
+
 void
 THE_FreeTextureData(THE_Texture tex)
 {

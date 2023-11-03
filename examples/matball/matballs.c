@@ -82,6 +82,7 @@ ConvertEqrToCubeCommandList(THE_Texture tex_in,
 	for (int i = 0; i < 6; ++i) {
 		THE_RenderCommand *cube_fb = THE_AllocateCommand();
 		cube_fb->data.set_fb.fb = fb;
+		cube_fb->data.set_fb.vp_x = THE_IGNORE;
 		cube_fb->data.set_fb.attachment = atta;
 		cube_fb->data.set_fb.attachment.side = i;
 		cube_fb->execute = THE_SetFramebufferExecute;
@@ -114,15 +115,51 @@ GeneratePrefilterCommandList(THE_Texture tex_in,
 	*sky_tex = tex_in;
 	use_pref->execute = THE_UseShaderExecute;
 	last_command->next = use_pref;
+	last_command = use_pref;
 
 	THE_Material mat = GenerateRenderToCubeMat();
-	THE_RenderCommand *prefilter = THE_AllocateCommand();
-	prefilter->data.eqr_cube.fb = fb;
-	prefilter->data.eqr_cube.out_prefilt = tex_out;
-	prefilter->data.eqr_cube.draw_cubemap = mat;
-	prefilter->execute = THE_EquirectToCubeExecute;
-	use_pref->next = prefilter;
-	return prefilter;
+	int tex_size[2];
+	float tex_width = (float)THE_TexSize(tex_out, tex_size)[0];
+	for (int i = 0; i < 5; ++i) {
+		int16_t vp_size = (int16_t)(tex_width * powf(0.5f, (float)i));
+		float roughness = (float)i / 4.0f;
+
+		for (int side = 0; side < 6; ++side) {
+			THE_RenderCommand *fb_comm = THE_AllocateCommand();
+			fb_comm->data.set_fb.fb = fb;
+			fb_comm->data.set_fb.vp_x = vp_size;
+			fb_comm->data.set_fb.vp_y = vp_size;
+			fb_comm->data.set_fb.attachment.tex = tex_out;
+			fb_comm->data.set_fb.attachment.slot = THE_ATTACH_COLOR;
+			fb_comm->data.set_fb.attachment.side = side;
+			fb_comm->data.set_fb.attachment.level = i;
+			fb_comm->execute = THE_SetFramebufferExecute;
+			last_command->next = fb_comm;
+
+			THE_RenderCommand *clear_comm = THE_AllocateCommand();
+			clear_comm->data.clear.color_buffer = true;
+			clear_comm->data.clear.depth_buffer = false;
+			clear_comm->data.clear.stencil_buffer = false;
+			clear_comm->execute = THE_ClearExecute;
+			fb_comm->next = clear_comm;
+
+			THE_RenderCommand *draw_comm = THE_AllocateCommand();
+			draw_comm->data.draw.mesh = CUBE_MESH;
+			draw_comm->data.draw.material.shader = g_mats.prefilter_env;
+			draw_comm->data.draw.material.data_count = sizeof(struct THE_PrefilterEnvData) / sizeof(float);
+			draw_comm->data.draw.material.tex_count = 0;
+			draw_comm->data.draw.material.cube_count = 0;
+			float *vp = THE_MaterialAllocFrame(&draw_comm->data.draw.material);
+			mat4_assign(vp, (float*)mat.ptr + 16 * side);
+			vp[16] = roughness;
+			draw_comm->execute = THE_DrawExecute;
+			clear_comm->next = draw_comm;
+			draw_comm->next = NULL;
+			last_command = draw_comm;
+		}
+	}
+
+	return last_command;
 }
 
 static THE_RenderCommand *
@@ -131,6 +168,7 @@ GenerateLutCommandlist(THE_Framebuffer fb, THE_RenderCommand *last_command)
 	THE_Texture lut_tex = THE_ResourceMapGetTexture(&g_resources, "LutMap");
 	THE_RenderCommand *set_init_fb = THE_AllocateCommand();
 	set_init_fb->data.set_fb.fb = fb;
+	set_init_fb->data.set_fb.vp_x = THE_IGNORE;
 	set_init_fb->data.set_fb.attachment.slot = THE_ATTACH_COLOR;
 	set_init_fb->data.set_fb.attachment.tex = lut_tex;
 	set_init_fb->data.set_fb.attachment.side = -1;
@@ -586,6 +624,7 @@ Update(void *context)
 
 	THE_RenderCommand *fbuff = THE_AllocateCommand();
 	fbuff->data.set_fb.fb = g_fb;
+	fbuff->data.set_fb.vp_x = THE_IGNORE;
 	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
 	fbuff->execute = THE_SetFramebufferExecute;
 

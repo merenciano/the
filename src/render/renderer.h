@@ -73,6 +73,7 @@ void *THE_AllocateFrameResource(unsigned int size);
 
 THE_Texture THE_CreateTextureFromFile(const char *path, enum THE_TexType t);
 THE_Texture THE_CreateEmptyTexture(int width, int height, enum THE_TexType t);
+int *THE_TexSize(THE_Texture tex, int *out);
 void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
 
 THE_Mesh THE_CreateCubeMesh(void);
@@ -93,4 +94,3 @@ void *THE_MaterialAlloc(THE_Material *);
 void *THE_MaterialAllocFrame(THE_Material *);
 
 #endif
-

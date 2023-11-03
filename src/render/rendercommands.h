@@ -3,6 +3,8 @@
 
 #include "renderer.h"
 
+#include <stdint.h>
+
 typedef struct {
 	float color[4];
 	bool color_buffer;
@@ -14,12 +16,6 @@ typedef struct THE_DrawData {
 	THE_Mesh mesh;
 	THE_Material material;
 } THE_DrawData;
-
-typedef struct {
-	THE_Framebuffer fb;
-	THE_Texture out_prefilt;
-	THE_Material draw_cubemap;
-} THE_EquirectToCubeData;
 
 enum THE_BlendFuncOpt {
 	// TODO: Add as needed.
@@ -80,13 +76,14 @@ typedef struct THE_FBAttachment {
 
 typedef struct THE_SetFramebufferData {
 	THE_Framebuffer fb;
+	int16_t vp_x;
+	int16_t vp_y;
 	THE_FBAttachment attachment;
 } THE_SetFramebufferData;
 
 typedef union {
 	THE_ClearData clear;
 	THE_DrawData draw;
-	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData rend_opts;
 	THE_Material mat;
 	THE_SetFramebufferData set_fb;
@@ -112,7 +109,6 @@ typedef struct {
 
 extern void THE_ClearExecute(THE_CommandData *data);
 extern void THE_DrawExecute(THE_CommandData *data);
-extern void THE_EquirectToCubeExecute(THE_CommandData *data);
 extern void THE_RenderOptionsExecute(THE_CommandData *data);
 extern void THE_UseShaderExecute(THE_CommandData *data);
 extern void THE_SetFramebufferExecute(THE_CommandData *data);

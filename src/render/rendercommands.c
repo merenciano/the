@@ -71,8 +71,9 @@ the__enable_render_opt(int opt)
 	case THE_DEPTH_WRITE:
 		glDepthMask(GL_TRUE);
 		break;
+	default:
+		break;
 	}
-	return;
 }
 
 static void
@@ -94,7 +95,6 @@ the__disable_render_opt(int opt)
 	default:
 		break;
 	}
-	return;
 }
 
 static GLenum
@@ -155,12 +155,23 @@ the__attach_to_fb(THE_FBAttachment a)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, id, a.level);
 }
 
-void
-the__set_viewport(THE_Framebuffer fb)
+static void
+the__set_viewport_from_fb(THE_Framebuffer fb)
 {
 	int w, h;
 	THE_FbDimensions(fb, &w, &h);
 	glViewport(0, 0, w, h);
+}
+
+static void the__set_viewport(int x, int y)
+{
+	if (x < 0) {
+		int win_size[2];
+		THE_WindowSize(win_size);
+		glViewport(0, 0, win_size[0], win_size[1]);
+	} else {
+		glViewport(0, 0, x, y);
+	}
 }
 
 static GLsizei
@@ -302,7 +313,7 @@ the__create_cubemap(THE_Texture tex)
 }
 
 static void
-the__create_texture(THE_Texture tex, bool release_from_ram)
+the__create_texture(THE_Texture tex)
 {
 	THE_TextureConfig config;
 	THE_InternalTexture *t = textures + tex;
@@ -541,7 +552,7 @@ the__sync_gpu_tex(THE_Texture tex)
 	THE_InternalTexture *mutated = NULL;
 	THE_InternalTexture *itex = textures + tex;
 	if (itex->res.id == THE_UNINIT) {
-		the__create_texture(tex, false);
+		the__create_texture(tex);
 		mutated = itex;
 	}
 	THE_ASSERT(the__resource_check(itex), "Invalid internal resource.");
@@ -667,48 +678,6 @@ THE_DrawExecute(THE_CommandData *data)
 }
 
 void
-THE_EquirectToCubeExecute(THE_CommandData *data)
-{
-	THE_Texture o_pref = data->eqr_cube.out_prefilt;
-	THE_Framebuffer fb = data->eqr_cube.fb;
-	THE_Material mat = data->eqr_cube.draw_cubemap;
-
-	THE_InternalTexture *ipref = textures + o_pref;
-
-	for (int i = 0; i < 5; ++i) {
-		int32_t s = (float)ipref->width * powf(0.5f, (float)i);
-
-		for (int j = 0; j < 6; ++j) {
-			THE_CommandData usefb;
-			usefb.set_fb.fb = fb;
-			usefb.set_fb.attachment.tex = o_pref;
-			usefb.set_fb.attachment.slot = THE_ATTACH_COLOR;
-			usefb.set_fb.attachment.side = j;
-			usefb.set_fb.attachment.level = i;
-			THE_SetFramebufferExecute(&usefb);
-			glViewport(0, 0, s, s);
-
-			THE_CommandData clear_cd;
-			clear_cd.clear.color_buffer = true;
-			clear_cd.clear.depth_buffer = false;
-			clear_cd.clear.stencil_buffer = false;
-			THE_ClearExecute(&clear_cd);
-
-			THE_CommandData draw_cd;
-			draw_cd.draw.mesh = CUBE_MESH;
-			draw_cd.draw.material.shader = 3;
-			draw_cd.draw.material.data_count = sizeof(struct THE_PrefilterEnvData) / sizeof(float);
-			draw_cd.draw.material.tex_count = 0;
-			draw_cd.draw.material.cube_count = 0;
-			float *vp = THE_MaterialAllocFrame(&draw_cd.draw.material);
-			mat4_assign(vp, (float*)mat.ptr + 16 * j);
-			vp[16] = i / 4.0f;
-			THE_DrawExecute(&draw_cd);
-		}
-	}
-}
-
-void
 THE_RenderOptionsExecute(THE_CommandData *data)
 {
 	int enable = data->rend_opts.enable_flags;
@@ -746,9 +715,7 @@ THE_SetFramebufferExecute(THE_CommandData *data)
 	const THE_SetFramebufferData *d = &data->set_fb;
 	if (d->fb == THE_DEFAULT) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		int win_size[2];
-		THE_WindowSize(win_size);
-		glViewport(0, 0, win_size[0], win_size[1]);
+		the__set_viewport(-1, -1);
 		return;
 	}
 
@@ -762,7 +729,11 @@ THE_SetFramebufferExecute(THE_CommandData *data)
 	} else {
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[d->fb].res.id);
 	}
-	the__set_viewport(d->fb);
+	if (d->vp_x > 0) {
+		the__set_viewport(d->vp_x, d->vp_y);
+	} else {
+		the__set_viewport_from_fb(d->fb);
+	}
 }
 
 #endif // THE_OPENGL
