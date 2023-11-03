@@ -43,7 +43,6 @@ typedef struct {
 typedef struct {
 	THE_InternalResource res;
 	void *pix[6];
-	int texture_unit;
 	int width;
 	int height;
 	int type;

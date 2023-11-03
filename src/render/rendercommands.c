@@ -222,7 +222,7 @@ the__create_mesh(THE_Mesh mesh, THE_Shader shader)
 }
 
 static void
-CreateCubemap(THE_Texture tex)
+the__create_cubemap(THE_Texture tex)
 {
 	THE_CubeConfig config;
 	THE_InternalTexture *t = textures + tex;
@@ -264,8 +264,7 @@ CreateCubemap(THE_Texture tex)
 	}
 
 	glGenTextures(1, (GLuint *)&(t->res.id));
-	t->texture_unit = tex + 1;
-	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
+	glActiveTexture(GL_TEXTURE0 + tex);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, t->res.id);
 
 	if (t->type == THE_TEX_SKYBOX) {
@@ -376,7 +375,9 @@ the__create_texture(THE_Texture tex, bool release_from_ram)
 		break;
 
 	case THE_TEX_SKYBOX:
-		CreateCubemap(tex);
+	case THE_TEX_ENVIRONMENT:
+	case THE_TEX_PREFILTER_ENVIRONMENT:
+		the__create_cubemap(tex);
 		return;
 		break;
 
@@ -392,8 +393,7 @@ the__create_texture(THE_Texture tex, bool release_from_ram)
 	}
 
 	glGenTextures(1, (GLuint *)&(t->res.id));
-	t->texture_unit = tex + 1;
-	glActiveTexture(GL_TEXTURE0 + t->texture_unit);
+	glActiveTexture(GL_TEXTURE0 + tex);
 	glBindTexture(GL_TEXTURE_2D, t->res.id);
 	glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width, t->height,
 	             0, config.format, config.type, t->pix[0]);
@@ -607,22 +607,16 @@ the__set_shader_data(THE_Material m, enum THE_DataGroup group)
 {
 	THE_InternalShader *s = shaders + m.shader;
 	THE_ASSERT(the__resource_check(s), "Invalid internal shader.");
-	THE_ASSERT(m.tex_count < 16, "So many textures, increase array size");
-	// TODO: Tex units igual que el handle de textura (saltarse la textura
-	// 0 si hace falta)
-	int tex_units[16];
-	THE_Texture *t = (THE_Texture*)m.ptr + m.data_count;
+	THE_Texture *t = (THE_Texture *)m.ptr + m.data_count;
 	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
 		if (the__is_dirty(textures + t[i])) {
 			the__sync_gpu_tex(t[i]);
 		}
-		tex_units[i] = textures[t[i]].texture_unit;
 	}
 
 	glUniform4fv(s->data_loc[group].data, m.data_count / 4, m.ptr);
-	glUniform1iv(s->data_loc[group].tex, m.tex_count, tex_units);
-	glUniform1iv(s->data_loc[group].cubemap, m.cube_count,
-	             tex_units + m.tex_count);
+	glUniform1iv(s->data_loc[group].tex, m.tex_count, t);
+	glUniform1iv(s->data_loc[group].cubemap, m.cube_count, t + m.tex_count);
 }
 
 void
@@ -675,133 +669,43 @@ THE_DrawExecute(THE_CommandData *data)
 void
 THE_EquirectToCubeExecute(THE_CommandData *data)
 {
-	THE_Texture o_cube = data->eqr_cube.out_cube;
 	THE_Texture o_pref = data->eqr_cube.out_prefilt;
-	THE_Texture o_lut = data->eqr_cube.out_lut;
-	const char *path = data->eqr_cube.in_path;
-	THE_InternalTexture *icu = textures + o_cube;
+	THE_Framebuffer fb = data->eqr_cube.fb;
+	THE_Material mat = data->eqr_cube.draw_cubemap;
 
-	if (icu->res.id == THE_UNINIT) {
-		CreateCubemap(o_cube);
-	}
+	THE_InternalTexture *ipref = textures + o_pref;
 
-	float proj[16] = { 0.0f };
-	mat4_perspective(proj, to_radians(90.0f), 1.0f, 0.1f, 10.0f);
+	for (int i = 0; i < 5; ++i) {
+		int32_t s = (float)ipref->width * powf(0.5f, (float)i);
 
-	struct mat4 views[] = {
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(1.0f, 0.0f, 0.0f),
-		              svec3(0.0f, -1.0f, 0.0f)),
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(-1.0f, 0.0f, 0.0f),
-		              svec3(0.0f, -1.0f, 0.0f)),
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(0.0f, 1.0f, 0.0f),
-		              svec3(0.0f, 0.0f, 1.0f)),
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(0.0f, -1.0f, 0.0f),
-		              svec3(0.0f, 0.0f, -1.0f)),
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(0.0f, 0.0f, 1.0f),
-		              svec3(0.0f, -1.0f, 0.0f)),
-		smat4_look_at(svec3(0.0f, 0.0f, 0.0f), svec3(0.0f, 0.0f, -1.0f),
-		              svec3(0.0f, -1.0f, 0.0f)),
-	};
-
-	GLuint fb;
-	glGenFramebuffers(1, &fb);
-	glBindFramebuffer(GL_FRAMEBUFFER, fb);
-	glViewport(0, 0, icu->width, icu->height);
-	// Manually sync framebuffer here after changing textures
-	THE_Texture equirec = THE_CreateTextureFromFile(path, THE_TEX_RGB_F16);
-	the__create_texture(equirec, false);
-	THE_CommandData ro;
-	ro.rend_opts.disable_flags = THE_CULL_FACE;
-	THE_RenderOptionsExecute(&ro);
-
-	THE_CommandData use_tocube = { .mat.shader = 2,
-		                           .mat.data_count = 0,
-		                           .mat.tex_count = 1,
-		                           .mat.cube_count = 0 };
-	THE_Texture *eqtex = THE_MatAllocFrame(&use_tocube.mat);
-	*eqtex = equirec;
-	THE_UseShaderExecute(&use_tocube);
-
-	THE_Material mat_tocube = {
-		.shader = 2, .data_count = 16 * 6, .tex_count = 0, .cube_count = 0
-	};
-	float *vp = THE_MatAllocFrame(&mat_tocube);
-
-	for (int i = 0; i < 6; ++i) {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		                       GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, icu->res.id,
-		                       0);
-
-		float *view = (float *)&views[i];
-		mat4_multiply(vp + 16 * i, proj, view);
-		THE_DrawData dd = { .mesh = CUBE_MESH, .material = mat_tocube };
-		dd.material.data_count = 16;
-		dd.material.ptr = (float *)mat_tocube.ptr + 16 * i;
-		THE_DrawExecute((THE_CommandData *)&dd);
-	}
-
-	if (o_pref != THE_UNINIT) {
-		THE_InternalTexture *ipref = textures + o_pref;
-		if (ipref->res.id == THE_UNINIT) {
-			CreateCubemap(o_pref);
-		}
-
-		struct THE_PrefilterEnvData pref_data;
-		for (int i = 0; i < 5; ++i) {
-			// mip size
-			int32_t s = (float)ipref->width * powf(0.5f, (float)i);
+		for (int j = 0; j < 6; ++j) {
+			THE_CommandData usefb;
+			usefb.set_fb.fb = fb;
+			usefb.set_fb.attachment.tex = o_pref;
+			usefb.set_fb.attachment.slot = THE_ATTACH_COLOR;
+			usefb.set_fb.attachment.side = j;
+			usefb.set_fb.attachment.level = i;
+			THE_SetFramebufferExecute(&usefb);
 			glViewport(0, 0, s, s);
-			pref_data.roughness = i / 4.0f; // mip / max mip levels - 1
+
+			THE_CommandData clear_cd;
+			clear_cd.clear.color_buffer = true;
+			clear_cd.clear.depth_buffer = false;
+			clear_cd.clear.stencil_buffer = false;
+			THE_ClearExecute(&clear_cd);
 
 			THE_CommandData draw_cd;
 			draw_cd.draw.mesh = CUBE_MESH;
-			for (int j = 0; j < 6; ++j) {
-				float *view = (float *)&views[j];
-				mat4_multiply(pref_data.vp, proj, view);
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-				                       GL_TEXTURE_CUBE_MAP_POSITIVE_X + j,
-				                       ipref->res.id, i);
-				glClear(GL_COLOR_BUFFER_BIT);
-				draw_cd.draw.material.shader = 3; // prefilter
-				                                  // env
-				draw_cd.draw.material.data_count =
-				  sizeof(struct THE_PrefilterEnvData) / 4;
-				draw_cd.draw.material.tex_count = 0;
-				draw_cd.draw.material.cube_count = 1;
-				struct THE_PrefilterEnvData *d =
-				  THE_MatAllocFrame(&draw_cd.draw.material);
-				*d = pref_data;
-				((THE_Texture *)d)[draw_cd.draw.material.data_count] = o_cube;
-
-				THE_CommandData cmdata;
-				cmdata.mat = draw_cd.draw.material;
-				THE_UseShaderExecute(&cmdata);
-				THE_DrawExecute(&draw_cd);
-			}
+			draw_cd.draw.material.shader = 3;
+			draw_cd.draw.material.data_count = sizeof(struct THE_PrefilterEnvData) / sizeof(float);
+			draw_cd.draw.material.tex_count = 0;
+			draw_cd.draw.material.cube_count = 0;
+			float *vp = THE_MaterialAllocFrame(&draw_cd.draw.material);
+			mat4_assign(vp, (float*)mat.ptr + 16 * j);
+			vp[16] = i / 4.0f;
+			THE_DrawExecute(&draw_cd);
 		}
 	}
-
-	if (o_lut != THE_UNINIT) {
-		THE_InternalTexture *ilut = textures + o_lut;
-		if (ilut->res.id == THE_UNINIT) {
-			the__create_texture(o_lut, false);
-		}
-		glViewport(0, 0, ilut->width, ilut->height);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		                       GL_TEXTURE_2D, ilut->res.id, 0);
-		glClear(GL_COLOR_BUFFER_BIT);
-		THE_CommandData draw_cd;
-		draw_cd.draw.mesh = QUAD_MESH;
-		draw_cd.draw.material = THE_MatDefault();
-		draw_cd.draw.material.shader = 4; // THE_MT_LUT_GEN;
-		THE_CommandData cmdata;
-		cmdata.mat = draw_cd.draw.material;
-		THE_UseShaderExecute(&cmdata);
-		THE_DrawExecute(&draw_cd);
-	}
-
-	glDeleteFramebuffers(1, &fb);
-	THE_FreeTextureData(equirec);
 }
 
 void
@@ -846,6 +750,10 @@ THE_SetFramebufferExecute(THE_CommandData *data)
 		THE_WindowSize(win_size);
 		glViewport(0, 0, win_size[0], win_size[1]);
 		return;
+	}
+
+	if (d->attachment.slot != THE_IGNORE) {
+		framebuffers[d->fb].res.flags |= RF_DIRTY;
 	}
 
 	THE__CHECK_HANDLE(framebuffer, d->fb);

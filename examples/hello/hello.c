@@ -32,7 +32,7 @@ Init(void *context)
 	ctx->fs_mat.data_count = 0;
 	ctx->fs_mat.tex_count = 1;
 	ctx->fs_mat.cube_count = 0;
-	THE_Texture *t = THE_MatAlloc(&ctx->fs_mat);
+	THE_Texture *t = THE_MaterialAlloc(&ctx->fs_mat);
 	*t = THE_GetFrameColor(ctx->fb);
 	ctx->fs_mat.shader = ctx->fs_img;
 
@@ -43,7 +43,7 @@ Init(void *context)
 	ctx->skymat.tex_count = 0;
 	ctx->skymat.cube_count = 1;
 	ctx->skymat.shader = ctx->skybox;
-	THE_Texture *cube = THE_MatAlloc(&ctx->skymat);
+	THE_Texture *cube = THE_MaterialAlloc(&ctx->skymat);
 	cube[ctx->skymat.data_count] = ctx->skycube;
 
 	ctx->hello_mat.color[0] = 1.0f;
@@ -58,7 +58,7 @@ Init(void *context)
 	ctx->e->mat.data_count = sizeof(HelloMatData) / 4;
 	ctx->e->mat.tex_count = 0;
 	ctx->e->mat.cube_count = 0;
-	HelloMatData *mat_data = THE_MatAlloc(&ctx->e->mat);
+	HelloMatData *mat_data = THE_MaterialAlloc(&ctx->e->mat);
 	ctx->e->mat.shader = ctx->hellomat;
 	*mat_data = ctx->hello_mat;
 }
@@ -100,7 +100,7 @@ Update(void *context)
 	clear->execute = THE_ClearExecute;
 
 	THE_RenderCommand *usemat = THE_AllocateCommand();
-	usemat->data.mat = THE_MatDefault();
+	usemat->data.mat = THE_MaterialDefault();
 	usemat->data.mat.shader = ctx->hellomat;
 	usemat->execute = THE_UseShaderExecute;
 	clear->next = usemat;
@@ -123,7 +123,7 @@ Update(void *context)
 
 	THE_RenderCommand *draw_sky = THE_AllocateCommand();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material = THE_MatDefault();
+	draw_sky->data.draw.material = THE_MaterialDefault();
 	draw_sky->data.draw.material.shader = ctx->skybox;
 	draw_sky->execute = THE_DrawExecute;
 	use_sky_shader->next = draw_sky;

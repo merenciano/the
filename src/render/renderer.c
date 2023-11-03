@@ -9,9 +9,9 @@
 
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
-#define STBI_MALLOC(sz) THE_Alloc(sz)
-#define STBI_REALLOC(p, newsz) THE_Realloc(p, newsz)
-#define STBI_FREE(p) THE_Free(p)
+#define STBI_MALLOC THE_Alloc
+#define STBI_REALLOC THE_Realloc
+#define STBI_FREE THE_Free
 #endif
 #include "stb_image.h"
 
@@ -32,7 +32,7 @@ THE_RenderQueue render_queue;
 
 typedef struct THE_AvailableNode {
 	struct THE_AvailableNode *next;
-	int32_t value;
+	int value;
 } THE_AvailableNode;
 
 static THE_RenderCommand *curr_pool;
@@ -44,28 +44,49 @@ static int8_t *frame_pool[2];
 static int8_t *frame_pool_last;
 static int frame_switch;
 
+static void
+the__file_reader(void *ctx,
+                 const char *path,
+                 int is_mtl,
+                 const char *obj_path,
+                 char **buf,
+                 size_t *size)
+{
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		return;
+	}
+
+	fseek(f, 0L, SEEK_END);
+	*size = ftell(f);
+	rewind(f);
+
+	*buf = THE_Alloc(*size + 1);
+	THE_ASSERT(*buf, "Allocation failed.");
+
+	if (fread(*buf, *size, 1, f) != 1) {
+		THE_ASSERT(false, "Read failed.");
+	}
+
+	fclose(f);
+}
+
 static THE_Mesh
-AddMesh()
+the__create_mesh_handle()
 {
 	THE_ASSERT(mesh_count < THE_MAX_MESHES, "Max meshes reached");
-	meshes[mesh_count].res.id = THE_UNINIT;
-	meshes[mesh_count].res.flags = RF_DIRTY;
-	meshes[mesh_count].internal_buffers_id[0] = THE_UNINIT;
-	meshes[mesh_count].internal_buffers_id[1] = THE_UNINIT;
-	meshes[mesh_count].attr_flags = 0;
-	meshes[mesh_count].elements = 0;
 	return mesh_count++;
 }
 
 static THE_Texture
-AddTexture()
+the__create_tex_handle()
 {
 	THE_ASSERT(texture_count < THE_MAX_TEXTURES, "Max textures reached");
 	return texture_count++;
 }
 
 static THE_Framebuffer
-AddFramebuffer()
+the__create_fb_handle()
 {
 	THE_ASSERT(framebuffer_count < THE_MAX_FRAMEBUFFERS,
 	           "Max framebuffers reached");
@@ -73,10 +94,50 @@ AddFramebuffer()
 }
 
 static THE_Shader
-AddShader()
+the__create_shader_handle()
 {
 	THE_ASSERT(shader_count < THE_MAX_SHADERS, "Max shaders reached");
 	return shader_count++;
+}
+
+static THE_Texture
+the__new_texture()
+{
+	THE_Texture tex = the__create_tex_handle();
+	THE__CHECK_HANDLE(texture, tex);
+	textures[tex].res.id = THE_UNINIT;
+	textures[tex].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
+	for (int face = 0; face < 6; ++face) {
+		textures[tex].pix[face] = NULL;
+	}
+	return tex;
+}
+
+static THE_Mesh
+the__new_mesh()
+{
+	THE_Mesh mesh = the__create_mesh_handle();
+	meshes[mesh].res.id = THE_UNINIT;
+	meshes[mesh].res.flags = RF_DIRTY;
+	meshes[mesh].attr_flags = 0;
+	meshes[mesh].vtx = NULL;
+	meshes[mesh].idx = NULL;
+	meshes[mesh].vtx_size = 0;
+	meshes[mesh].elements = 0;
+	meshes[mesh].internal_buffers_id[0] = THE_UNINIT;
+	meshes[mesh].internal_buffers_id[1] = THE_UNINIT;
+	return mesh;
+}
+
+static THE_Framebuffer
+the__new_framebuffer()
+{
+	THE_Framebuffer fb = the__create_fb_handle();
+	framebuffers[fb].res.id = THE_UNINIT;
+	framebuffers[fb].res.flags = RF_DIRTY;
+	framebuffers[fb].color_tex = THE_INACTIVE;
+	framebuffers[fb].depth_tex = THE_INACTIVE;
+	return fb;
 }
 
 void
@@ -87,14 +148,13 @@ THE_InitRender()
 	curr_pool_tail = curr_pool;
 	next_pool_tail = next_pool;
 
-	meshes = THE_PersistentAlloc(sizeof(THE_InternalMesh) * THE_MAX_MESHES);
-	textures =
-	  THE_PersistentAlloc(sizeof(THE_InternalTexture) * THE_MAX_TEXTURES);
-	framebuffers = THE_PersistentAlloc(sizeof(THE_InternalFramebuffer) *
-	                                   THE_MAX_FRAMEBUFFERS);
-	shaders = THE_PersistentAlloc(sizeof(THE_InternalShader) * 64);
+	meshes = THE_PersistentAlloc(sizeof(*meshes) * THE_MAX_MESHES);
+	textures = THE_PersistentAlloc(sizeof(*textures) * THE_MAX_TEXTURES);
+	framebuffers =
+	  THE_PersistentAlloc(sizeof(*framebuffers) * THE_MAX_FRAMEBUFFERS);
+	shaders = THE_PersistentAlloc(sizeof(*shaders) * THE_MAX_SHADERS);
 	mesh_count = 0;
-	texture_count = 0;
+	texture_count = 1;
 	framebuffer_count = 0;
 	shader_count = 0;
 
@@ -196,15 +256,8 @@ THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 {
 	THE_ASSERT(*path != '\0', "For empty textures use THE_CreateEmptyTexture");
 
-	THE_Texture tex = AddTexture();
-	textures[tex].res.id = THE_UNINIT;
-	textures[tex].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
-	textures[tex].texture_unit = THE_UNINIT;
+	THE_Texture tex = the__new_texture();
 	textures[tex].type = t;
-
-	for (int face = 0; face < 6; ++face) {
-		textures[tex].pix[face] = NULL;
-	}
 
 	int nchannels = 0;
 	int *width = &textures[tex].width;
@@ -260,18 +313,12 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 {
 	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
 
-	THE_Texture ret = AddTexture();
-	for (int face = 0; face < 6; ++face) {
-		textures[ret].pix[face] = NULL;
-	}
-	textures[ret].res.id = THE_UNINIT;
-	textures[ret].res.flags = RF_DIRTY;
-	textures[ret].texture_unit = THE_UNINIT;
-	textures[ret].width = width;
-	textures[ret].height = height;
-	textures[ret].type = t;
+	THE_Texture tex = the__new_texture();
+	textures[tex].width = width;
+	textures[tex].height = height;
+	textures[tex].type = t;
 
-	return ret;
+	return tex;
 }
 
 void
@@ -288,7 +335,7 @@ THE_FreeTextureData(THE_Texture tex)
 THE_Shader
 THE_CreateShader(const char *shader)
 {
-	THE_Shader ret = AddShader();
+	THE_Shader ret = the__create_shader_handle();
 	shaders[ret].shader_name = shader;
 	shaders[ret].res.id = THE_UNINIT;
 	shaders[ret].res.flags = RF_DIRTY;
@@ -336,8 +383,7 @@ THE_CreateCubeMesh()
 		13, 12, 14, 12, 15, 14, 16, 17, 18, 18, 19, 16, 23, 22, 20, 22, 21, 20,
 	};
 
-	THE_Mesh ret = AddMesh();
-	meshes[ret].res.id = THE_UNINIT;
+	THE_Mesh ret = the__new_mesh();
 	meshes[ret].res.flags = RF_DIRTY;
 	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 	meshes[ret].vtx = &VERTICES[0];
@@ -356,16 +402,13 @@ THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
 	const float x_step = 1.0f / (float)(x_segments - 1);
 	const float y_step = 1.0f / (float)(y_segments - 1);
 
-	THE_Mesh ret = AddMesh();
-	meshes[ret].res.id = THE_UNINIT;
+	THE_Mesh ret = the__new_mesh();
 	meshes[ret].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
-	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
-	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
+	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 	meshes[ret].vtx_size = x_segments * y_segments * 8 * sizeof(float);
 	meshes[ret].elements = x_segments * y_segments * 6;
 	meshes[ret].vtx = THE_Alloc(meshes[ret].vtx_size);
 	meshes[ret].idx = THE_Alloc(meshes[ret].elements * sizeof(uint32_t));
-	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 
 	float *v = meshes[ret].vtx;
 	for (int y = 0; y < y_segments; ++y) {
@@ -382,8 +425,8 @@ THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
 			*v++ = px;
 			*v++ = py;
 			*v++ = pz;
-			*v++ = x * y_step;
-			*v++ = y * x_step;
+			*v++ = (float)x * y_step;
+			*v++ = (float)y * x_step;
 		}
 	}
 
@@ -412,47 +455,18 @@ THE_CreateQuadMesh()
 		-1.0f, 1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
 	};
 
-	static uint32_t INDICES[] = { 0, 1, 2, 0, 2, 3 };
+	static unsigned int INDICES[] = { 0, 1, 2, 0, 2, 3 };
 
-	THE_Mesh ret = AddMesh();
-	meshes[ret].res.id = THE_UNINIT;
-	meshes[ret].res.flags = RF_DIRTY;
-	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
-	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
-	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
-	meshes[ret].vtx = &VERTICES[0];
-	meshes[ret].idx = &INDICES[0];
-	meshes[ret].vtx_size = sizeof(VERTICES);
-	meshes[ret].elements = sizeof(INDICES) / sizeof(*INDICES);
+	THE_Mesh mesh = the__new_mesh();
+	meshes[mesh].res.flags = RF_DIRTY;
+	meshes[mesh].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
+	  (1 << A_UV);
+	meshes[mesh].vtx = &VERTICES[0];
+	meshes[mesh].idx = &INDICES[0];
+	meshes[mesh].vtx_size = sizeof(VERTICES);
+	meshes[mesh].elements = sizeof(INDICES) / sizeof(*INDICES);
 
-	return ret;
-}
-
-static void
-FileReader(void *ctx,
-           const char *path,
-           int is_mtl,
-           const char *obj_path,
-           char **buf,
-           size_t *size)
-{
-	FILE *f = fopen(path, "rb");
-	if (!f) {
-		return;
-	}
-
-	fseek(f, 0L, SEEK_END);
-	*size = ftell(f);
-	rewind(f);
-
-	*buf = THE_Alloc(*size + 1);
-	THE_ASSERT(*buf, "Allocation failed.");
-
-	if (fread(*buf, *size, 1, f) != 1) {
-		THE_ASSERT(false, "Read failed.");
-	}
-
-	fclose(f);
+	return mesh;
 }
 
 THE_Mesh
@@ -465,7 +479,7 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 	size_t mats_count;
 
 	int result = tinyobj_parse_obj(&attrib, &shapes, &shape_count, &mats,
-	                               &mats_count, path, FileReader, NULL,
+	                               &mats_count, path, the__file_reader, NULL,
 	                               TINYOBJ_FLAG_TRIANGULATE);
 
 	THE_ASSERT(result == TINYOBJ_SUCCESS, "Obj loader failed.");
@@ -575,46 +589,35 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 		}
 	}
 
-	THE_Mesh ret = AddMesh();
-	meshes[ret].res.id = THE_UNINIT;
-	meshes[ret].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
-	meshes[ret].internal_buffers_id[0] = THE_UNINIT;
-	meshes[ret].internal_buffers_id[1] = THE_UNINIT;
-	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
+	THE_Mesh mesh = the__new_mesh();
+	meshes[mesh].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
+	meshes[mesh].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
 	  (1 << A_TANGENT) | (1 << A_BITANGENT) | (1 << A_UV);
-	meshes[ret].vtx = vertices;
-	meshes[ret].idx = indices;
-	meshes[ret].vtx_size = vertices_count * sizeof(float);
-	meshes[ret].elements = indices_count;
+	meshes[mesh].vtx = vertices;
+	meshes[mesh].idx = indices;
+	meshes[mesh].vtx_size = vertices_count * sizeof(meshes[mesh].vtx[0]);
+	meshes[mesh].elements = indices_count;
 
-	return ret;
+	return mesh;
 }
 
 THE_Framebuffer
 THE_CreateFramebuffer(int width, int height, bool color, bool depth)
 {
 	THE_ASSERT(width > 0 && height > 0, "Invalid dimensions");
-	THE_ASSERT(color || depth, "Textureless framebuffers not permitted");
-	THE_Framebuffer ret = AddFramebuffer();
+	THE_Framebuffer fb = the__new_framebuffer();
 
 	if (color) {
-		framebuffers[ret].color_tex = THE_CreateEmptyTexture(width, height,
-		                                                     THE_TEX_RGBA_F16);
-	} else {
-		framebuffers[ret].color_tex = THE_INACTIVE;
+		framebuffers[fb].color_tex = THE_CreateEmptyTexture(width, height,
+		                                                    THE_TEX_RGBA_F16);
 	}
 
 	if (depth) {
-		framebuffers[ret].depth_tex = THE_CreateEmptyTexture(width, height,
-		                                                     THE_TEX_DEPTH);
-	} else {
-		framebuffers[ret].depth_tex = THE_INACTIVE;
+		framebuffers[fb].depth_tex = THE_CreateEmptyTexture(width, height,
+		                                                    THE_TEX_DEPTH);
 	}
 
-	framebuffers[ret].res.id = THE_UNINIT;
-	framebuffers[ret].res.flags = RF_DIRTY;
-
-	return ret;
+	return fb;
 }
 
 THE_Texture
@@ -645,7 +648,7 @@ THE_FbDimensions(THE_Framebuffer fb, int *w, int *h)
 }
 
 THE_Material
-THE_MatDefault(void)
+THE_MaterialDefault(void)
 {
 	THE_Material ret = { .ptr = NULL,
 		                 .data_count = 0,
@@ -656,7 +659,7 @@ THE_MatDefault(void)
 }
 
 void *
-THE_MatAlloc(THE_Material *m)
+THE_MaterialAlloc(THE_Material *m)
 {
 	int elements = m->data_count + m->tex_count + m->cube_count;
 	m->ptr = THE_Alloc(elements * sizeof(float));
@@ -664,7 +667,7 @@ THE_MatAlloc(THE_Material *m)
 }
 
 void *
-THE_MatAllocFrame(THE_Material *m)
+THE_MaterialAllocFrame(THE_Material *m)
 {
 	int elements = m->data_count + m->tex_count + m->cube_count;
 	m->ptr = THE_AllocateFrameResource(elements * sizeof(float));

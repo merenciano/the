@@ -85,12 +85,12 @@ THE_Framebuffer THE_CreateFramebuffer(int width, int height, bool color, bool de
 THE_Texture THE_GetFrameColor(THE_Framebuffer fb);
 void THE_FbDimensions(THE_Framebuffer, int *w, int *h);
 
-THE_Material THE_MatDefault(void);
-/* MatAlloc does not initialize the shader value. */
-void *THE_MatAlloc(THE_Material *);
+THE_Material THE_MaterialDefault(void);
+/* MaterialAlloc does not initialize the shader value. */
+void *THE_MaterialAlloc(THE_Material *);
 
-/* MatAllocFrame does not initialize the shader value. */
-void *THE_MatAllocFrame(THE_Material *);
+/* MaterialAllocFrame does not initialize the shader value. */
+void *THE_MaterialAllocFrame(THE_Material *);
 
 #endif
 

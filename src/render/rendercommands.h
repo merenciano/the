@@ -16,10 +16,9 @@ typedef struct THE_DrawData {
 } THE_DrawData;
 
 typedef struct {
-	char in_path[128];
-	THE_Texture out_cube;
+	THE_Framebuffer fb;
 	THE_Texture out_prefilt;
-	THE_Texture out_lut;
+	THE_Material draw_cubemap;
 } THE_EquirectToCubeData;
 
 enum THE_BlendFuncOpt {

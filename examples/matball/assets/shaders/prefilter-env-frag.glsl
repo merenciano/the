@@ -1,9 +1,9 @@
 #version 330 core
 
-#define ENVIRONMENT_MAP u_entity_cube[0]
+#define ENVIRONMENT_MAP u_scene_cube[0]
 #define ROUGHNESS       u_entity_data[4].x
 
-uniform samplerCube u_entity_cube[1];
+uniform samplerCube u_scene_cube[1];
 uniform vec4 u_entity_data[5];
 
 const float PI = 3.14159265359;
