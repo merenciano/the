@@ -2,9 +2,6 @@
 #define THE_RENDER_INTERNAL_RESOURCES_H
 
 #include "renderer.h"
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
 
 #ifdef THE_RENDER_CHECKS
 #define THE__CHECK_HANDLE(TYPE, HANDLE)                                       \
@@ -12,13 +9,6 @@
 		THE_ASSERT(HANDLE >= 0, "Bad resource state");                        \
 		THE_ASSERT(HANDLE < TYPE##_count, "Out of bounds handle");            \
 	})
-
-#define THE__CHECK_INTERNAL(RESOURCE)                                         \
-	({                                                                        \
-		THE_ASSERT(RESOURCE && RESOURCE->internal_id >= 0,                    \
-		  "Invalid internal resource.");                                      \
-	})
-
 #endif // THE_RENDER_CHECKS
 
 enum THE_VertexAttributes {
@@ -30,7 +20,10 @@ enum THE_VertexAttributes {
 	VERTEX_ATTRIBUTE_COUNT
 };
 
-typedef enum THE_ResourceFlags { RF_DIRTY = 1 << 0 } THE_ResourceFlags;
+typedef enum THE_ResourceFlags {
+	RF_DIRTY = 1 << 0,
+	RF_FREE_AFTER_LOAD = 1 << 1
+} THE_ResourceFlags;
 
 typedef struct THE_InternalResource {
 	int id;
@@ -38,21 +31,18 @@ typedef struct THE_InternalResource {
 } THE_InternalResource;
 
 typedef struct {
+	THE_InternalResource res;
 	float *vtx;
 	IDX_T *idx;
-	unsigned vtx_size;
-	unsigned elements;
+	unsigned int vtx_size;
+	unsigned int elements;
 	int attr_flags;
-	int internal_id;
-	uint32_t internal_buffers_id[2];
+	unsigned int internal_buffers_id[2];
 } THE_InternalMesh;
 
 typedef struct {
-	char path[64];
+	THE_InternalResource res;
 	void *pix[6];
-	int internal_id;
-	int cpu_version;
-	int gpu_version;
 	int texture_unit;
 	int width;
 	int height;
@@ -61,9 +51,6 @@ typedef struct {
 
 typedef struct {
 	THE_InternalResource res;
-	int internal_id;
-	int cpu_version;
-	int gpu_version;
 	int width;
 	int height;
 	THE_Texture color_tex;
@@ -79,10 +66,12 @@ typedef struct {
 } THE_DataLocations;
 
 typedef struct {
+	THE_InternalResource res;
 	const char *shader_name;
-	int program_id;
 	THE_DataLocations data_loc[2];
 } THE_InternalShader;
+
+bool the__resource_check(void *resource);
 
 extern THE_InternalMesh *meshes;
 extern THE_InternalTexture *textures;

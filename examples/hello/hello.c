@@ -1,6 +1,6 @@
 #include "the.h"
-#include <string.h>
 #include <mathc.h>
+#include <string.h>
 
 typedef struct {
 	float model[16];
@@ -15,15 +15,17 @@ typedef struct HelloCtx {
 	THE_Shader skybox;
 	THE_Framebuffer fb;
 	THE_Texture skycube;
-	THE_Mat fs_mat;
-	THE_Mat skymat;
+	THE_Material fs_mat;
+	THE_Material skymat;
 	THE_Entity *e;
 } HelloCtx;
 
-void Init(void *context)
+void
+Init(void *context)
 {
 	HelloCtx *ctx = context;
-	ctx->fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(), true, true);
+	ctx->fb = THE_CreateFramebuffer(THE_WindowGetWidth(),
+	                                THE_WindowGetHeight(), true, true);
 	ctx->hellomat = THE_CreateShader("hello");
 	ctx->fs_img = THE_CreateShader("fullscreen-img");
 	ctx->skybox = THE_CreateShader("skybox");
@@ -50,18 +52,19 @@ void Init(void *context)
 	ctx->hello_mat.color[3] = 1.0f;
 
 	ctx->e = THE_EntityCreate();
-	float pos[3] = {0.0f, 0.0f, -4.0f};
+	float pos[3] = { 0.0f, 0.0f, -4.0f };
 	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
 	ctx->e->mesh = SPHERE_MESH;
 	ctx->e->mat.data_count = sizeof(HelloMatData) / 4;
 	ctx->e->mat.tex_count = 0;
 	ctx->e->mat.cube_count = 0;
-	HelloMatData* mat_data = THE_MatAlloc(&ctx->e->mat);
+	HelloMatData *mat_data = THE_MatAlloc(&ctx->e->mat);
 	ctx->e->mat.shader = ctx->hellomat;
 	*mat_data = ctx->hello_mat;
 }
 
-bool Update(void *context)
+bool
+Update(void *context)
 {
 	HelloCtx *ctx = context;
 	THE_InputUpdate();
@@ -74,15 +77,16 @@ bool Update(void *context)
 
 	THE_RenderCommand *rops = THE_AllocateCommand();
 	fbuff->next = rops;
-	rops->data.rend_opts.enable_flags = 
-		THE_BLEND | THE_DEPTH_TEST | THE_DEPTH_WRITE | THE_CULL_FACE;
+	rops->data.rend_opts.enable_flags = THE_BLEND | THE_DEPTH_TEST |
+	  THE_DEPTH_WRITE | THE_CULL_FACE;
 	rops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
 	rops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
 	rops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
 	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LESS;
 	rops->execute = THE_RenderOptionsExecute;
 
-	mat4_multiply(((HelloMatData*)ctx->e->mat.ptr)->vp, camera.proj_mat, camera.view_mat);
+	mat4_multiply(((HelloMatData *)ctx->e->mat.ptr)->vp, camera.proj_mat,
+	              camera.view_mat);
 
 	THE_RenderCommand *clear = THE_AllocateCommand();
 	rops->next = clear;
@@ -110,7 +114,7 @@ bool Update(void *context)
 	rops->data.rend_opts.disable_flags = THE_CULL_FACE;
 	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LEQUAL;
 	rops->execute = THE_RenderOptionsExecute;
-	
+
 	THE_CameraStaticViewProjection(ctx->skymat.ptr, &camera);
 	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
 	use_sky_shader->data.mat = ctx->skymat;
@@ -163,20 +167,19 @@ bool Update(void *context)
 	return true;
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	HelloCtx ctx;
-	struct THE_Config cnfg = {
-		.init_func = Init,
-		.update_func = Update,
-		.context = &ctx,
-		.heap_size = THE_GB(1U),
-		.window_title = "THE_Hello",
-		.window_width = 1280,
-		.window_height = 720,
-		.vsync = true
-	};
-	
+	struct THE_Config cnfg = { .init_func = Init,
+		                       .update_func = Update,
+		                       .context = &ctx,
+		                       .heap_size = THE_GB(1U),
+		                       .window_title = "THE_Hello",
+		                       .window_width = 1280,
+		                       .window_height = 720,
+		                       .vsync = true };
+
 	THE_Start(&cnfg);
 	THE_End();
 

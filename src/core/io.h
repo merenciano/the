@@ -2,7 +2,6 @@
 #define THE_CORE_IO_H
 
 #include "thefinitions.h"
-#include <stdint.h>
 #include <stdbool.h>
 
 enum THE_Input {
@@ -23,16 +22,17 @@ typedef struct {
 	float mouse_x;
 	float mouse_y;
 	float scroll;
-	uint32_t input_bitmap;
+	unsigned int input_bitmap;
 } THE_InputState;
 
-bool THE_IOInit(const char *title, int32_t width, int32_t height, bool limit_framerate);
+bool THE_IOInit(const char *title, int width, int height, bool limit_framerate);
 void THE_IOPollEvents(void);
 
-int32_t THE_WindowShouldClose(void);
+int THE_WindowShouldClose(void);
 void THE_WindowSwapBuffers(void);
-int32_t THE_WindowGetWidth(void);
-int32_t THE_WindowGetHeight(void);
+int *THE_WindowSize(int *out);
+int THE_WindowGetWidth(void);
+int THE_WindowGetHeight(void);
 
 void THE_InputUpdate(void);
 void THE_InputSetScroll(float offset);

@@ -1,6 +1,5 @@
 #include "io.h"
 
-#include <stdio.h>
 #include <assert.h>
 
 #include "glad/glad.h"
@@ -23,7 +22,7 @@ static void ScrollCallback(GLFWwindow *window, double x_offset, double y_offset)
 	THE_InputSetScroll((float)y_offset);
 }
 
-bool THE_IOInit(const char *title, int32_t width, int32_t height, bool limit_framerate)
+bool THE_IOInit(const char *title, int width, int height, bool limit_framerate)
 {
 	if (!glfwInit() || internal_window) { // glfwInit fail or window init already
 		return false;
@@ -67,7 +66,7 @@ void THE_IOPollEvents()
 
 // OUTPUT  ------------------------------
 
-int32_t THE_WindowShouldClose()
+int THE_WindowShouldClose()
 {
 	THE_ASSERT(internal_window, "The IO system is uninitalized");
 	return glfwWindowShouldClose(internal_window);
@@ -79,20 +78,25 @@ void THE_WindowSwapBuffers()
 	glfwSwapBuffers(internal_window);
 }
 
-
-
-int32_t THE_WindowGetWidth()
+int *THE_WindowSize(int *out)
 {
 	THE_ASSERT(internal_window, "The IO system is uninitalizedt");
-	int32_t width;
+	glfwGetWindowSize(internal_window, out, out + 1);
+	return out;
+}
+
+int THE_WindowGetWidth()
+{
+	THE_ASSERT(internal_window, "The IO system is uninitalizedt");
+	int width;
 	glfwGetWindowSize(internal_window, &width, NULL);
 	return width;
 }
 
-int32_t THE_WindowGetHeight()
+int THE_WindowGetHeight()
 {
 	THE_ASSERT(internal_window, "The IO system is uninitalized");
-	int32_t height;
+	int height;
 	glfwGetWindowSize(internal_window, NULL, &height);
 	return height;
 }

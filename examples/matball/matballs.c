@@ -16,9 +16,9 @@ struct Materials g_mats;
 static THE_ResourceMap g_resources;
 THE_Framebuffer g_fb;
 
-THE_Mat pbr_common;
-THE_Mat sky_common;
-THE_Mat fulls;
+THE_Material pbr_common;
+THE_Material sky_common;
+THE_Material fulls;
 
 static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 1.0f };
 

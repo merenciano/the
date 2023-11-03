@@ -3,8 +3,7 @@
 
 #include <mathc.h>
 
-struct THE_Camera camera;
-typedef struct THE_Camera THE_Camera;
+THE_Camera camera;
 
 static const float SENSIBILITY = 1.0f / 1000.0f;
 static const float SPEED = 100.0f;
@@ -12,16 +11,19 @@ static const float SCROLL_SENSIBILITY = 1.0f;
 static float UP[3] = { 0.0f, 1.0f, 0.0f };
 
 void
-THE_CameraInit(
-  THE_Camera *cam, float fov, float far, uint32_t width, uint32_t height)
+THE_CameraInit(THE_Camera *cam,
+               float fov,
+               float far,
+               float width,
+               float height)
 {
 	cam->fov = fov;
 	cam->far_value = far;
 	float pos[] = { 0.0f, 2.0f, 2.0f };
 	float target[] = { 0.0f, 0.0f, -1.0f };
 	mat4_look_at(cam->view_mat, pos, target, UP);
-	mat4_perspective_fov(
-	  cam->proj_mat, to_radians(fov), (float)width, (float)height, 0.01f, far);
+	mat4_perspective_fov(cam->proj_mat, to_radians(fov), width, height, 0.01f,
+	                     far);
 }
 
 float *
@@ -77,14 +79,15 @@ THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 	float tmp_vec[3];
 	if (THE_InputIsButtonPressed(THE_MOUSE_RIGHT)) {
 		float mouse_offset[2] = { THE_InputGetMouseX() - mouse_down_pos[0],
-			mouse_down_pos[1] - THE_InputGetMouseY() }; // Y axis inverted
+			                      mouse_down_pos[1] -
+			                        THE_InputGetMouseY() }; // Y axis inverted
 
 		mouse_offset[0] *= SENSIBILITY;
 		mouse_offset[1] *= SENSIBILITY;
 
 		vec3_add(fwd, fwd,
-		  vec3_multiply_f(
-			tmp_vec, vec3_cross(tmp_vec, UP, fwd), -mouse_offset[0]));
+		         vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd),
+		                         -mouse_offset[0]));
 		vec3_add(fwd, fwd, vec3_multiply_f(tmp_vec, UP, mouse_offset[1]));
 
 		mouse_down_pos[0] = THE_InputGetMouseX();
@@ -102,12 +105,14 @@ THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 
 	if (THE_InputIsButtonPressed(THE_KEY_LEFT)) {
 		vec3_add(eye, eye,
-		  vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd), speed));
+		         vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd),
+		                         speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_RIGHT)) {
 		vec3_add(eye, eye,
-		  vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd), -speed));
+		         vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, UP, fwd),
+		                         -speed));
 	}
 
 	if (THE_InputIsButtonPressed(THE_KEY_1)) {
@@ -125,7 +130,8 @@ THE_CameraMovementSystem(THE_Camera *cam, float deltatime)
 		cam->fov -= THE_InputGetScroll() * SCROLL_SENSIBILITY;
 		cam->fov = clampf(cam->fov, 1.0f, 120.0f);
 		mat4_perspective(cam->proj_mat, to_radians(cam->fov),
-		  (float)THE_WindowGetWidth() / (float)THE_WindowGetHeight(), 0.1f,
-		  cam->far_value);
+		                 (float)THE_WindowGetWidth() /
+		                   (float)THE_WindowGetHeight(),
+		                 0.1f, cam->far_value);
 	}
 }

@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct THE_DrawData {
 	THE_Mesh mesh;
-	THE_Mat material;
+	THE_Material material;
 } THE_DrawData;
 
 typedef struct {
@@ -75,8 +75,8 @@ typedef enum THE_AttachSlot {
 typedef struct THE_FBAttachment {
 	THE_Texture tex;
 	THE_AttachSlot slot;
-	int8_t level;
-	int8_t side;
+	int level;
+	int side;
 } THE_FBAttachment;
 
 typedef struct THE_SetFramebufferData {
@@ -89,7 +89,7 @@ typedef union {
 	THE_DrawData draw;
 	THE_EquirectToCubeData eqr_cube;
 	THE_RenderOptionsData rend_opts;
-	THE_Mat mat;
+	THE_Material mat;
 	THE_SetFramebufferData set_fb;
 } THE_CommandData;
 
