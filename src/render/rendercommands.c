@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <mathc.h>
 #define THE_OPENGL // Hardcoded until another backend is implemented.
 #ifdef THE_OPENGL
 #include <glad/glad.h>

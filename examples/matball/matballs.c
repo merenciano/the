@@ -89,6 +89,7 @@ ConvertEqrToCubeCommandList(THE_Texture tex_in,
 		last->next = cube_fb;
 
 		THE_RenderCommand *draw_cube = THE_AllocateCommand();
+		draw_cube->data.draw.mesh = CUBE_MESH;
 		draw_cube->data.draw.material = draw_tocube;
 		draw_cube->data.draw.material.data_count = 16;
 		draw_cube->data.draw.material.ptr = (float *)draw_tocube.ptr + 16 * i;
@@ -146,11 +147,12 @@ GeneratePrefilterCommandList(THE_Texture tex_in,
 			THE_RenderCommand *draw_comm = THE_AllocateCommand();
 			draw_comm->data.draw.mesh = CUBE_MESH;
 			draw_comm->data.draw.material.shader = g_mats.prefilter_env;
-			draw_comm->data.draw.material.data_count = sizeof(struct THE_PrefilterEnvData) / sizeof(float);
+			draw_comm->data.draw.material.data_count =
+			  sizeof(struct THE_PrefilterEnvData) / sizeof(float);
 			draw_comm->data.draw.material.tex_count = 0;
 			draw_comm->data.draw.material.cube_count = 0;
 			float *vp = THE_MaterialAllocFrame(&draw_comm->data.draw.material);
-			mat4_assign(vp, (float*)mat.ptr + 16 * side);
+			mat4_assign(vp, (float *)mat.ptr + 16 * side);
 			vp[16] = roughness;
 			draw_comm->execute = THE_DrawExecute;
 			clear_comm->next = draw_comm;

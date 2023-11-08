@@ -321,7 +321,8 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 	return tex;
 }
 
-int *THE_TexSize(THE_Texture t, int *out)
+int *
+THE_TexSize(THE_Texture t, int *out)
 {
 	out[0] = textures[t].width;
 	out[1] = textures[t].height;
@@ -419,12 +420,10 @@ THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
 
 	float *v = meshes[ret].vtx;
 	for (int y = 0; y < y_segments; ++y) {
+		float py = sinf((float)-M_PI_2 + (float)M_PI * (float)y * x_step);
 		for (int x = 0; x < x_segments; ++x) {
-			float py = sinf(-M_PI_2 + M_PI * y * x_step);
-			float px = cosf(M_PI * 2.0f * x * y_step) *
-			  sinf(M_PI * y * x_step);
-			float pz = sinf(M_PI * 2.0f * x * y_step) *
-			  sinf(M_PI * y * x_step);
+			float px = cosf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
+			float pz = sinf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
 
 			*v++ = px;
 			*v++ = py;

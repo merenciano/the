@@ -9,7 +9,7 @@
 #define IDX_T uint16_t
 #else
 #define THE_ELEM_ARRAY_32
-#define IDX_T unsigned
+#define IDX_T unsigned int
 #endif
 
 #define THE_RENDER_CHECKS

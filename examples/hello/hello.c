@@ -20,9 +20,13 @@ typedef struct HelloCtx {
 	THE_Entity *e;
 } HelloCtx;
 
+#define NYAS_TYPES_IMPL
+#define NYAS_TYPES_TEST
+#include "core/types.h"
 void
 Init(void *context)
 {
+	nyas_arr_test();
 	HelloCtx *ctx = context;
 	ctx->fb = THE_CreateFramebuffer(THE_WindowGetWidth(),
 	                                THE_WindowGetHeight(), true, true);
