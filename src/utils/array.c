@@ -128,7 +128,7 @@ nyas_arr_cmp(void *a, void *b)
 		return (ptrdiff_t)(hdr(a)->esz - hdr(b)->esz);
 	}
 
-	return !memcmp(a, b, hdr(a)->len * hdr(a)->esz);
+	return memcmp(a, b, hdr(a)->len * hdr(a)->esz);
 }
 
 void *

@@ -1,5 +1,5 @@
 
-target_sources(${THE_NAME} PRIVATE
+target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/mathc.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/minitrace.h

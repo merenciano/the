@@ -10,25 +10,19 @@ CXX_COMP=clang++
 BUILD_TYPE=Debug
 GENERATE=1
 BUILD=1
-EXECUTE=0
 CLEAN=0
+GENERATOR=/usr/bin/make
 
-while getopts ":bdrcxg" ARGOPT; do
+while getopts ":bdrcg:" ARGOPT; do
 	case $ARGOPT in
 		b)
 			BUILD=1
 			GENERATE=0
-			EXECUTE=0
 			;;
 		g)
 			GENERATE=1
 			BUILD=0
-			EXECUTE=0
-			;;
-		x)
-			GENERATE=0
-			BUILD=0
-			EXECUTE=1
+			GENERATOR=/usr/bin/${OPTARG}
 			;;
 		d)
 			BUILD_TYPE=Debug
@@ -39,6 +33,8 @@ while getopts ":bdrcxg" ARGOPT; do
 			POSTFIX=
 			;;
 		c)
+			BUILD=0
+			GENERATE=0
 			CLEAN=1
 			;;
 	esac
@@ -52,15 +48,10 @@ mkdir -p ${BUILD_PATH}/${BUILD_TYPE}
 cd ${BUILD_PATH}/${BUILD_TYPE}
 
 if [[ GENERATE -eq 1 ]]; then
-	cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DCMAKE_C_COMPILER=${C_COMP} -DCMAKE_CXX_COMPILER=${CXX_COMP} ../..
+	cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DCMAKE_C_COMPILER=${C_COMP} -DCMAKE_CXX_COMPILER=${CXX_COMP} -DCMAKE_MAKE_PROGRAM=${GENERATOR} ../..
 fi
 
 if [[ BUILD -eq 1 ]]; then
 	cmake --build .
-fi
-
-if [[ EXECUTE -eq 1 ]]; then
-	cd ../..
-	eval ${EXEC_PATH}${POSTFIX}
 fi
 

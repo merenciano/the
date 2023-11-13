@@ -1,4 +1,4 @@
-target_sources(${THE_NAME} PRIVATE
+target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/the.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c

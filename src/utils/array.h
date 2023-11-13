@@ -247,9 +247,9 @@ typedef void *arr_elem;
 /**
  * Debug functions.
  */
-#ifdef NYAS_DEBUG
-#ifndef NYAS_LOG
+#if defined(NYAS_DEBUG) || defined(NYAS_ARR_TEST)
 #include <stdio.h>
+#ifndef NYAS_LOG
 #define NYAS_LOG printf
 #endif
 
@@ -260,12 +260,13 @@ typedef void *arr_elem;
 static void
 NYAS_DBG_PRINTARR(void *arr, void (*print_elem)(void *elem))
 {
-	NYAS_LOG("Array %x -> Length(%ul), Capacity(%ul), ElemSize(%ul):\n", arr,
-	         *((size_t *)arr - 2), *((size_t *)arr - 1), *((size_t *)arr - 3));
+	NYAS_LOG("Array %lx -> Length(%lu), Capacity(%lu), ElemSize(%lu):", (size_t)arr,
+	         *(((size_t *)arr) - 2), *((size_t *)arr - 1), *((size_t *)arr - 3));
 	for (int i = 0; i < nyas_arr_len(arr); ++i) {
 		printf(" [%d]", i);
-		print_elem(nyas_arr_at(i));
+		print_elem(nyas_arr_at(arr, i));
 	}
+	fflush(stdout);
 }
 #endif // NYAS_DEBUG
 #endif // NYAS_UTILS_ARRAY_H
@@ -275,7 +276,6 @@ NYAS_DBG_PRINTARR(void *arr, void (*print_elem)(void *elem))
  */
 #ifdef NYAS_ARR_TEST
 #include <stdint.h>
-#include <stdio.h>
 #ifndef NYAS_LOG
 #define NYAS_LOG printf
 #endif
@@ -285,7 +285,12 @@ NYAS_DBG_PRINTARR(void *arr, void (*print_elem)(void *elem))
 #define NYAS_ASSERT assert
 #endif
 
-void
+void PrintFloat(void *f)
+{
+	printf("%f", *(float*)f);
+}
+
+static void
 nyas_arr_test(void)
 {
 	const char *world = "mon";
@@ -316,6 +321,7 @@ nyas_arr_test(void)
 	nyas_arr arr_cpy = nyas_arr_create(16, 4);
 	nyas_arr_cpyfta(&arr_cpy, pix, 0, 0, 0);
 	assert(nyas_arr_cmp(pix, arr_cpy) == 0);
+	NYAS_DBG_PRINTARR(pix, PrintFloat);
 
 	NYAS_ASSERT(*(float *)nyas_arr_rm(pix, 0) == 0.0f);
 	NYAS_ASSERT(nyas_arr_len(pix) == 4);
