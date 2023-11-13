@@ -11,7 +11,9 @@ target_sources(${THE_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/types.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/string.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/config.h
     ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.c

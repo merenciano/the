@@ -1,5 +1,6 @@
 BasedOnStyle: Mozilla
 AlignAfterOpenBracket: Align
+AlignEscapedNewlines: Left
 AlignOperands: DontAlign
 AlwaysBreakAfterReturnType: TopLevelDefinitions
 BinPackArguments: true
@@ -27,7 +28,7 @@ PenaltyBreakOpenParenthesis: 100
 #PenaltyIndentedWhitespace: 1
 #PenaltyReturnTypeOnItsOwnLine: 10
 PointerAlignment: Right
-PPIndentWidth: -1
+PPIndentWidth: 1
 ReflowComments: true
 SeparateDefinitionBlocks: Leave
 #SpacesInParens: Never
@@ -36,3 +37,4 @@ IndentWidth: 4
 TabWidth: 4
 ColumnLimit: 79
 UseTab: AlignWithSpaces
+WhitespaceSensitiveMacros: [ERR_IF]

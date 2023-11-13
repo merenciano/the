@@ -20,9 +20,9 @@ typedef struct HelloCtx {
 	THE_Entity *e;
 } HelloCtx;
 
-#define NYAS_TYPES_IMPL
-#define NYAS_TYPES_TEST
-#include "core/types.h"
+#define NYAS_ARR_TEST
+#include "utils/array.h"
+
 void
 Init(void *context)
 {
