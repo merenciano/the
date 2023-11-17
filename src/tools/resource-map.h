@@ -1,19 +1,30 @@
-#ifndef THE_TOOLS_RESOURCE_MAP_H
-#define THE_TOOLS_RESOURCE_MAP_H
+#ifndef NYAS_TOOLS_RESOURCE_MAP_H
+#define NYAS_TOOLS_RESOURCE_MAP_H
 
 #include "core/hmap.h"
 #include "render/renderer.h"
 
 typedef struct {
-	THE_HMap *meshes;
-	THE_HMap *textures;
-} THE_ResourceMap;
+	nyas_hmap *meshes;
+	nyas_hmap *textures;
+} nyas_resourcemap;
 
-void THE_ResourceMapAddMeshFromPath(THE_ResourceMap *rm, const char *name, const char *path);
-void THE_ResourceMapAddMesh(THE_ResourceMap *rm, const char *name, THE_Mesh mesh);
-THE_Mesh THE_ResourceMapGetMesh(THE_ResourceMap *rm, const char *name);
-void THE_ResourceMapAddTextureFromPath(THE_ResourceMap *rm, const char *name, const char *path, enum THE_TexType t);
-void THE_ResourceMapAddTexture(THE_ResourceMap *rm, const char *name, int width, int height, enum THE_TexType t);
-THE_Texture THE_ResourceMapGetTexture(THE_ResourceMap *rm, const char *name);
+void nyas_resourcemap_mesh_file(nyas_resourcemap *rm,
+                                const char *name,
+                                const char *path);
+void nyas_resourcemap_mesh_add(nyas_resourcemap *rm,
+                               const char *name,
+                               nyas_mesh mesh);
+nyas_mesh nyas_resourcemap_mesh(nyas_resourcemap *rm, const char *name);
+void nyas_resourcemap_tex_file(nyas_resourcemap *rm,
+                               const char *name,
+                               const char *path,
+                               enum nyas_textype t);
+void nyas_resourcemap_tex_add(nyas_resourcemap *rm,
+                              const char *name,
+                              int width,
+                              int height,
+                              enum nyas_textype t);
+nyas_tex nyas_resourcemap_tex(nyas_resourcemap *rm, const char *name);
 
-#endif
+#endif // NYAS_TOOLS_RESOURCE_MAP_H

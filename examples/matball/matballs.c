@@ -1,28 +1,28 @@
-#include "render/renderer.h"
-#include "the.h"
+#include "nyas.h"
+#include "render/rendercommands.h"
 #include <mathc.h>
 #include <string.h>
 
 struct Materials {
-	THE_Shader fullscreen_img;
-	THE_Shader skybox;
-	THE_Shader eqr_to_cube;
-	THE_Shader prefilter_env;
-	THE_Shader lut_gen;
-	THE_Shader pbr;
+	nyas_shader fullscreen_img;
+	nyas_shader skybox;
+	nyas_shader eqr_to_cube;
+	nyas_shader prefilter_env;
+	nyas_shader lut_gen;
+	nyas_shader pbr;
 };
 
 struct Materials g_mats;
-static THE_ResourceMap g_resources;
-THE_Framebuffer g_fb;
+static nyas_resourcemap g_resources;
+nyas_framebuffer g_fb;
 
-THE_Material pbr_common;
-THE_Material sky_common;
-THE_Material fulls;
+nyas_mat pbr_common;
+nyas_mat sky_common;
+nyas_mat fulls;
 
 static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 1.0f };
 
-static THE_Material
+static nyas_mat
 GenerateRenderToCubeMat(void)
 {
 	float proj[16] = { 0.0f };
@@ -43,12 +43,12 @@ GenerateRenderToCubeMat(void)
 		              svec3(0.0f, -1.0f, 0.0f)),
 	};
 
-	THE_Material mat_tocube = { .shader = g_mats.eqr_to_cube,
-		                        .data_count = 16 * 6,
-		                        .tex_count = 0,
-		                        .cube_count = 0 };
+	nyas_mat mat_tocube = { .shader = g_mats.eqr_to_cube,
+		                    .data_count = 16 * 6,
+		                    .tex_count = 0,
+		                    .cube_count = 0 };
 
-	float *vp = THE_MaterialAllocFrame(&mat_tocube);
+	float *vp = nyas_mat_alloc_frame(&mat_tocube);
 	for (int i = 0; i < 6; ++i) {
 		float *view = (float *)&views[i];
 		mat4_multiply(vp + 16 * i, proj, view);
@@ -57,43 +57,43 @@ GenerateRenderToCubeMat(void)
 	return mat_tocube;
 }
 
-static THE_RenderCommand *
-ConvertEqrToCubeCommandList(THE_Texture tex_in,
-                            THE_Texture tex_out,
-                            THE_Framebuffer fb,
-                            THE_RenderCommand *last_command)
+static nyas_cmd *
+ConvertEqrToCubeCommandList(nyas_tex tex_in,
+                            nyas_tex tex_out,
+                            nyas_framebuffer fb,
+                            nyas_cmd *last_command)
 {
-	THE_RenderCommand *use_tocube = THE_AllocateCommand();
+	nyas_cmd *use_tocube = nyas_cmd_alloc();
 	use_tocube->data.mat.shader = g_mats.eqr_to_cube;
 	use_tocube->data.mat.data_count = 0;
 	use_tocube->data.mat.tex_count = 1;
 	use_tocube->data.mat.cube_count = 0;
-	THE_Texture *eqr = THE_MaterialAllocFrame(&use_tocube->data.mat);
+	nyas_tex *eqr = nyas_mat_alloc_frame(&use_tocube->data.mat);
 	*eqr = tex_in;
-	use_tocube->execute = THE_UseShaderExecute;
+	use_tocube->execute = nyas_setshader_fn;
 	last_command->next = use_tocube;
 
-	THE_FBAttachment atta = { .slot = THE_ATTACH_COLOR,
-		                      .tex = tex_out,
-		                      .level = 0 };
+	nyas_fbattach atta = { .slot = NYAS_ATTACH_COLOR,
+		                   .tex = tex_out,
+		                   .level = 0 };
 
-	THE_RenderCommand *last = use_tocube;
-	THE_Material draw_tocube = GenerateRenderToCubeMat();
+	nyas_cmd *last = use_tocube;
+	nyas_mat draw_tocube = GenerateRenderToCubeMat();
 	for (int i = 0; i < 6; ++i) {
-		THE_RenderCommand *cube_fb = THE_AllocateCommand();
+		nyas_cmd *cube_fb = nyas_cmd_alloc();
 		cube_fb->data.set_fb.fb = fb;
-		cube_fb->data.set_fb.vp_x = THE_IGNORE;
+		cube_fb->data.set_fb.vp_x = NYAS_IGNORE;
 		cube_fb->data.set_fb.attachment = atta;
 		cube_fb->data.set_fb.attachment.side = i;
-		cube_fb->execute = THE_SetFramebufferExecute;
+		cube_fb->execute = nyas_setfb_fn;
 		last->next = cube_fb;
 
-		THE_RenderCommand *draw_cube = THE_AllocateCommand();
+		nyas_cmd *draw_cube = nyas_cmd_alloc();
 		draw_cube->data.draw.mesh = CUBE_MESH;
 		draw_cube->data.draw.material = draw_tocube;
 		draw_cube->data.draw.material.data_count = 16;
 		draw_cube->data.draw.material.ptr = (float *)draw_tocube.ptr + 16 * i;
-		draw_cube->execute = THE_DrawExecute;
+		draw_cube->execute = nyas_draw_fn;
 		cube_fb->next = draw_cube;
 		last = draw_cube;
 	}
@@ -101,60 +101,60 @@ ConvertEqrToCubeCommandList(THE_Texture tex_in,
 	return last;
 }
 
-static THE_RenderCommand *
-GeneratePrefilterCommandList(THE_Texture tex_in,
-                             THE_Texture tex_out,
-                             THE_Framebuffer fb,
-                             THE_RenderCommand *last_command)
+static nyas_cmd *
+GeneratePrefilterCommandList(nyas_tex tex_in,
+                             nyas_tex tex_out,
+                             nyas_framebuffer fb,
+                             nyas_cmd *last_command)
 {
-	THE_RenderCommand *use_pref = THE_AllocateCommand();
+	nyas_cmd *use_pref = nyas_cmd_alloc();
 	use_pref->data.mat.shader = g_mats.prefilter_env;
 	use_pref->data.mat.data_count = 0;
 	use_pref->data.mat.tex_count = 0;
 	use_pref->data.mat.cube_count = 1;
-	THE_Texture *sky_tex = THE_MaterialAllocFrame(&use_pref->data.mat);
+	nyas_tex *sky_tex = nyas_mat_alloc_frame(&use_pref->data.mat);
 	*sky_tex = tex_in;
-	use_pref->execute = THE_UseShaderExecute;
+	use_pref->execute = nyas_setshader_fn;
 	last_command->next = use_pref;
 	last_command = use_pref;
 
-	THE_Material mat = GenerateRenderToCubeMat();
+	nyas_mat mat = GenerateRenderToCubeMat();
 	int tex_size[2];
-	float tex_width = (float)THE_TexSize(tex_out, tex_size)[0];
+	float tex_width = (float)nyas_tex_size(tex_out, tex_size)[0];
 	for (int i = 0; i < 5; ++i) {
 		int16_t vp_size = (int16_t)(tex_width * powf(0.5f, (float)i));
 		float roughness = (float)i / 4.0f;
 
 		for (int side = 0; side < 6; ++side) {
-			THE_RenderCommand *fb_comm = THE_AllocateCommand();
+			nyas_cmd *fb_comm = nyas_cmd_alloc();
 			fb_comm->data.set_fb.fb = fb;
 			fb_comm->data.set_fb.vp_x = vp_size;
 			fb_comm->data.set_fb.vp_y = vp_size;
 			fb_comm->data.set_fb.attachment.tex = tex_out;
-			fb_comm->data.set_fb.attachment.slot = THE_ATTACH_COLOR;
+			fb_comm->data.set_fb.attachment.slot = NYAS_ATTACH_COLOR;
 			fb_comm->data.set_fb.attachment.side = side;
 			fb_comm->data.set_fb.attachment.level = i;
-			fb_comm->execute = THE_SetFramebufferExecute;
+			fb_comm->execute = nyas_setfb_fn;
 			last_command->next = fb_comm;
 
-			THE_RenderCommand *clear_comm = THE_AllocateCommand();
+			nyas_cmd *clear_comm = nyas_cmd_alloc();
 			clear_comm->data.clear.color_buffer = true;
 			clear_comm->data.clear.depth_buffer = false;
 			clear_comm->data.clear.stencil_buffer = false;
-			clear_comm->execute = THE_ClearExecute;
+			clear_comm->execute = nyas_clear_fn;
 			fb_comm->next = clear_comm;
 
-			THE_RenderCommand *draw_comm = THE_AllocateCommand();
+			nyas_cmd *draw_comm = nyas_cmd_alloc();
 			draw_comm->data.draw.mesh = CUBE_MESH;
 			draw_comm->data.draw.material.shader = g_mats.prefilter_env;
-			draw_comm->data.draw.material.data_count =
-			  sizeof(struct THE_PrefilterEnvData) / sizeof(float);
+			draw_comm->data.draw.material.data_count = sizeof(struct mat4) /
+			  sizeof(float);
 			draw_comm->data.draw.material.tex_count = 0;
 			draw_comm->data.draw.material.cube_count = 0;
-			float *vp = THE_MaterialAllocFrame(&draw_comm->data.draw.material);
+			float *vp = nyas_mat_alloc_frame(&draw_comm->data.draw.material);
 			mat4_assign(vp, (float *)mat.ptr + 16 * side);
 			vp[16] = roughness;
-			draw_comm->execute = THE_DrawExecute;
+			draw_comm->execute = nyas_draw_fn;
 			clear_comm->next = draw_comm;
 			draw_comm->next = NULL;
 			last_command = draw_comm;
@@ -164,39 +164,39 @@ GeneratePrefilterCommandList(THE_Texture tex_in,
 	return last_command;
 }
 
-static THE_RenderCommand *
-GenerateLutCommandlist(THE_Framebuffer fb, THE_RenderCommand *last_command)
+static nyas_cmd *
+GenerateLutCommandlist(nyas_framebuffer fb, nyas_cmd *last_command)
 {
-	THE_Texture lut_tex = THE_ResourceMapGetTexture(&g_resources, "LutMap");
-	THE_RenderCommand *set_init_fb = THE_AllocateCommand();
+	nyas_tex lut_tex = nyas_resourcemap_tex(&g_resources, "LutMap");
+	nyas_cmd *set_init_fb = nyas_cmd_alloc();
 	set_init_fb->data.set_fb.fb = fb;
-	set_init_fb->data.set_fb.vp_x = THE_IGNORE;
-	set_init_fb->data.set_fb.attachment.slot = THE_ATTACH_COLOR;
+	set_init_fb->data.set_fb.vp_x = NYAS_IGNORE;
+	set_init_fb->data.set_fb.attachment.slot = NYAS_ATTACH_COLOR;
 	set_init_fb->data.set_fb.attachment.tex = lut_tex;
 	set_init_fb->data.set_fb.attachment.side = -1;
 	set_init_fb->data.set_fb.attachment.level = 0;
-	set_init_fb->execute = THE_SetFramebufferExecute;
+	set_init_fb->execute = nyas_setfb_fn;
 	last_command->next = set_init_fb;
 
-	THE_RenderCommand *clear_comm = THE_AllocateCommand();
+	nyas_cmd *clear_comm = nyas_cmd_alloc();
 	clear_comm->data.clear.color_buffer = true;
 	clear_comm->data.clear.depth_buffer = false;
 	clear_comm->data.clear.stencil_buffer = false;
-	clear_comm->execute = THE_ClearExecute;
+	clear_comm->execute = nyas_clear_fn;
 	set_init_fb->next = clear_comm;
 
-	THE_Material lutmat = THE_MaterialDefault();
+	nyas_mat lutmat = nyas_mat_default();
 	lutmat.shader = g_mats.lut_gen;
 
-	THE_RenderCommand *set_lut = THE_AllocateCommand();
+	nyas_cmd *set_lut = nyas_cmd_alloc();
 	set_lut->data.mat = lutmat;
-	set_lut->execute = THE_UseShaderExecute;
+	set_lut->execute = nyas_setshader_fn;
 	clear_comm->next = set_lut;
 
-	THE_RenderCommand *draw_lut = THE_AllocateCommand();
+	nyas_cmd *draw_lut = nyas_cmd_alloc();
 	draw_lut->data.draw.mesh = QUAD_MESH;
 	draw_lut->data.draw.material = lutmat;
-	draw_lut->execute = THE_DrawExecute;
+	draw_lut->execute = nyas_draw_fn;
 	set_lut->next = draw_lut;
 	draw_lut->next = NULL;
 
@@ -206,182 +206,163 @@ GenerateLutCommandlist(THE_Framebuffer fb, THE_RenderCommand *last_command)
 static void
 GeneratePbrEnv(void)
 {
-	THE_ResourceMap *rm = &g_resources;
-	THE_Framebuffer auxfb = THE_CreateFramebuffer(1, 1, false, false);
+	nyas_resourcemap *rm = &g_resources;
+	nyas_framebuffer auxfb = nyas_fb_create(1, 1, false, false);
 
-	THE_RenderCommand *rendops = THE_AllocateCommand();
-	rendops->data.rend_opts.enable_flags = THE_DEPTH_TEST | THE_DEPTH_WRITE |
-	  THE_BLEND;
-	rendops->data.rend_opts.disable_flags = THE_CULL_FACE;
-	rendops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
-	rendops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
-	rendops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
-	rendops->execute = THE_RenderOptionsExecute;
+	nyas_cmd *rendops = nyas_cmd_alloc();
+	rendops->data.rend_opts.enable_flags = NYAS_DEPTH_TEST | NYAS_DEPTH_WRITE |
+	  NYAS_BLEND;
+	rendops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
+	rendops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
+	rendops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
+	rendops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
+	rendops->execute = nyas_rops_fn;
 
-	THE_Texture eqr_in =
-	  THE_CreateTextureFromFile("assets/tex/env/helipad-env.hdr",
-	                            THE_TEX_RGB_F16);
-	THE_Texture eqr_cube_out = THE_ResourceMapGetTexture(rm, "Skybox");
+	nyas_tex eqr_in = nyas_tex_load_img("assets/tex/env/helipad-env.hdr",
+	                                    NYAS_TEX_RGB_F16);
+	nyas_tex eqr_cube_out = nyas_resourcemap_tex(rm, "Skybox");
 
-	THE_RenderCommand *last_tocube =
-	  ConvertEqrToCubeCommandList(eqr_in, eqr_cube_out, auxfb, rendops);
+	nyas_cmd *last_tocube = ConvertEqrToCubeCommandList(eqr_in, eqr_cube_out,
+	                                                    auxfb, rendops);
 
-	THE_Texture irrad_in =
-	  THE_CreateTextureFromFile("assets/tex/env/helipad-dif.hdr",
-	                            THE_TEX_RGB_F16);
-	THE_Texture irrad_out = THE_ResourceMapGetTexture(rm, "Irradian");
+	nyas_tex irrad_in = nyas_tex_load_img("assets/tex/env/helipad-dif.hdr",
+	                                      NYAS_TEX_RGB_F16);
+	nyas_tex irrad_out = nyas_resourcemap_tex(rm, "Irradian");
 
 	last_tocube = ConvertEqrToCubeCommandList(irrad_in, irrad_out, auxfb,
 	                                          last_tocube);
 
-	THE_Texture pref_out = THE_ResourceMapGetTexture(rm, "Prefilte");
-	THE_RenderCommand *pref =
-	  GeneratePrefilterCommandList(eqr_cube_out, pref_out, auxfb, last_tocube);
+	nyas_tex pref_out = nyas_resourcemap_tex(rm, "Prefilte");
+	nyas_cmd *pref = GeneratePrefilterCommandList(eqr_cube_out, pref_out,
+	                                              auxfb, last_tocube);
 
 	GenerateLutCommandlist(auxfb, pref);
-	THE_AddCommands(rendops);
+	nyas_cmd_add(rendops);
 }
 
 void
 Init(void *context)
 {
-	g_fb = THE_CreateFramebuffer(THE_WindowGetWidth(), THE_WindowGetHeight(),
-	                             true, true);
-	g_resources.meshes = THE_HMapCreate(8, sizeof(THE_Mesh));
-	g_resources.textures = THE_HMapCreate(64, sizeof(THE_Texture));
+	g_fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
+	                      true);
+	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
+	g_resources.textures = nyas_hmap_create(64, sizeof(nyas_tex));
 
-	g_mats.fullscreen_img = THE_CreateShader("fullscreen-img");
-	g_mats.skybox = THE_CreateShader("skybox");
-	g_mats.eqr_to_cube = THE_CreateShader("eqr-to-cube");
-	g_mats.prefilter_env = THE_CreateShader("prefilter-env");
-	g_mats.lut_gen = THE_CreateShader("lut-gen");
-	g_mats.pbr = THE_CreateShader("pbr");
+	g_mats.fullscreen_img = nyas_shader_create("fullscreen-img");
+	g_mats.skybox = nyas_shader_create("skybox");
+	g_mats.eqr_to_cube = nyas_shader_create("eqr-to-cube");
+	g_mats.prefilter_env = nyas_shader_create("prefilter-env");
+	g_mats.lut_gen = nyas_shader_create("lut-gen");
+	g_mats.pbr = nyas_shader_create("pbr");
 
 	fulls.shader = g_mats.fullscreen_img;
 	fulls.data_count = 0;
 	fulls.tex_count = 1;
 	fulls.cube_count = 0;
-	THE_Texture *fst = THE_MaterialAlloc(&fulls);
-	*fst = THE_GetFrameColor(g_fb);
+	nyas_tex *fst = nyas_mat_alloc(&fulls);
+	*fst = nyas_fb_color(g_fb);
 
-	THE_ResourceMap *rm = &g_resources;
+	nyas_resourcemap *rm = &g_resources;
 
-	THE_ResourceMapAddMeshFromPath(rm, "MatBall", "assets/obj/matball-n.obj");
-	THE_ResourceMapAddTexture(rm, "Skybox", 1024, 1024, THE_TEX_ENVIRONMENT);
-	THE_ResourceMapAddTexture(rm, "Irradian", 1024, 1024, THE_TEX_ENVIRONMENT);
-	THE_ResourceMapAddTexture(rm, "Prefilte", 128, 128,
-	                          THE_TEX_PREFILTER_ENVIRONMENT);
-	THE_ResourceMapAddTexture(rm, "LutMap", 512, 512, THE_TEX_LUT);
+	nyas_resourcemap_mesh_file(rm, "MatBall", "assets/obj/matball-n.obj");
+	nyas_resourcemap_tex_add(rm, "Skybox", 1024, 1024, NYAS_TEX_ENVIRONMENT);
+	nyas_resourcemap_tex_add(rm, "Irradian", 1024, 1024, NYAS_TEX_ENVIRONMENT);
+	nyas_resourcemap_tex_add(rm, "Prefilte", 128, 128,
+	                         NYAS_TEX_PREFILTER_ENVIRONMENT);
+	nyas_resourcemap_tex_add(rm, "LutMap", 512, 512, NYAS_TEX_LUT);
 
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Gold_A", "assets/tex/celtic-gold/celtic-gold_A.png", THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Gold_N", "assets/tex/celtic-gold/celtic-gold_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Gold_M", "assets/tex/celtic-gold/celtic-gold_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Gold_R", "assets/tex/celtic-gold/celtic-gold_R.png", THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Gold_A",
+	                          "assets/tex/celtic-gold/celtic-gold_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Gold_N",
+	                          "assets/tex/celtic-gold/celtic-gold_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Gold_M",
+	                          "assets/tex/celtic-gold/celtic-gold_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Gold_R",
+	                          "assets/tex/celtic-gold/celtic-gold_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_A",
-	                                  "assets/tex/peeling/peeling_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_N",
-	                                  "assets/tex/peeling/peeling_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_M",
-	                                  "assets/tex/peeling/peeling_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Peel_R",
-	                                  "assets/tex/peeling/peeling_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Peel_A", "assets/tex/peeling/peeling_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Peel_N", "assets/tex/peeling/peeling_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Peel_M", "assets/tex/peeling/peeling_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Peel_R", "assets/tex/peeling/peeling_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_A",
-	                                  "assets/tex/rusted/rusted_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_N",
-	                                  "assets/tex/rusted/rusted_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_M",
-	                                  "assets/tex/rusted/rusted_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Rust_R",
-	                                  "assets/tex/rusted/rusted_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Rust_A", "assets/tex/rusted/rusted_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Rust_N", "assets/tex/rusted/rusted_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Rust_M", "assets/tex/rusted/rusted_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Rust_R", "assets/tex/rusted/rusted_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_A",
-	                                  "assets/tex/tiles/tiles_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_N",
-	                                  "assets/tex/tiles/tiles_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_M",
-	                                  "assets/tex/tiles/tiles_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Tiles_R",
-	                                  "assets/tex/tiles/tiles_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Tiles_A", "assets/tex/tiles/tiles_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Tiles_N", "assets/tex/tiles/tiles_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Tiles_M", "assets/tex/tiles/tiles_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Tiles_R", "assets/tex/tiles/tiles_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Future_A", "assets/tex/ship-panels/ship-panels_A.png",
-	  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Future_N", "assets/tex/ship-panels/ship-panels_N.png", THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Future_M", "assets/tex/ship-panels/ship-panels_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(
-	  rm, "Future_R", "assets/tex/ship-panels/ship-panels_R.png", THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Future_A",
+	                          "assets/tex/ship-panels/ship-panels_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Future_N",
+	                          "assets/tex/ship-panels/ship-panels_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Future_M",
+	                          "assets/tex/ship-panels/ship-panels_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Future_R",
+	                          "assets/tex/ship-panels/ship-panels_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_A",
-	                                  "assets/tex/shore/shore_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_N",
-	                                  "assets/tex/shore/shore_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_M",
-	                                  "assets/tex/shore/shore_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Shore_R",
-	                                  "assets/tex/shore/shore_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Shore_A", "assets/tex/shore/shore_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Shore_N", "assets/tex/shore/shore_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Shore_M", "assets/tex/shore/shore_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Shore_R", "assets/tex/shore/shore_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_A",
-	                                  "assets/tex/cliff/cliff_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_N",
-	                                  "assets/tex/cliff/cliff_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_M",
-	                                  "assets/tex/cliff/cliff_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Cliff_R",
-	                                  "assets/tex/cliff/cliff_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Cliff_A", "assets/tex/cliff/cliff_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Cliff_N", "assets/tex/cliff/cliff_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Cliff_M", "assets/tex/cliff/cliff_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Cliff_R", "assets/tex/cliff/cliff_R.png",
+	                          NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_A",
-	                                  "assets/tex/granite/granite_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_N",
-	                                  "assets/tex/granite/granite_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_M",
-	                                  "assets/tex/granite/granite_M.png",
-	                                  THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Granit_R",
-	                                  "assets/tex/granite/granite_R.png",
-	                                  THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Granit_A",
+	                          "assets/tex/granite/granite_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Granit_N",
+	                          "assets/tex/granite/granite_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Granit_M",
+	                          "assets/tex/granite/granite_M.png", NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Granit_R",
+	                          "assets/tex/granite/granite_R.png", NYAS_TEX_R);
 
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_A",
-	                                  "assets/tex/foam/foam_A.png",
-	                                  THE_TEX_SRGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_N",
-	                                  "assets/tex/foam/foam_N.png",
-	                                  THE_TEX_RGB);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_M",
-	                                  "assets/tex/foam/foam_M.png", THE_TEX_R);
-	THE_ResourceMapAddTextureFromPath(rm, "Foam_R",
-	                                  "assets/tex/foam/foam_R.png", THE_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Foam_A", "assets/tex/foam/foam_A.png",
+	                          NYAS_TEX_SRGB);
+	nyas_resourcemap_tex_file(rm, "Foam_N", "assets/tex/foam/foam_N.png",
+	                          NYAS_TEX_RGB);
+	nyas_resourcemap_tex_file(rm, "Foam_M", "assets/tex/foam/foam_M.png",
+	                          NYAS_TEX_R);
+	nyas_resourcemap_tex_file(rm, "Foam_R", "assets/tex/foam/foam_R.png",
+	                          NYAS_TEX_R);
 
-	struct THE_PbrData pbr;
+	struct nyas_pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
 	pbr.color[1] = 1.0f;
 	pbr.color[2] = 1.0f;
@@ -397,20 +378,20 @@ Init(void *context)
 
 	// CelticGold
 	{
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Gold_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Gold_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Gold_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Gold_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Gold_A");
+		t[1] = nyas_resourcemap_tex(rm, "Gold_M");
+		t[2] = nyas_resourcemap_tex(rm, "Gold_R");
+		t[3] = nyas_resourcemap_tex(rm, "Gold_N");
 	}
 
 	// Shore
@@ -418,21 +399,21 @@ Init(void *context)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Shore_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Shore_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Shore_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Shore_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Shore_A");
+		t[1] = nyas_resourcemap_tex(rm, "Shore_M");
+		t[2] = nyas_resourcemap_tex(rm, "Shore_R");
+		t[3] = nyas_resourcemap_tex(rm, "Shore_N");
 	}
 
 	// Peeling
@@ -441,20 +422,20 @@ Init(void *context)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.7f;
 		position[0] = 2.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Peel_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Peel_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Peel_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Peel_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Peel_A");
+		t[1] = nyas_resourcemap_tex(rm, "Peel_M");
+		t[2] = nyas_resourcemap_tex(rm, "Peel_R");
+		t[3] = nyas_resourcemap_tex(rm, "Peel_N");
 	}
 
 	// Rusted
@@ -464,20 +445,20 @@ Init(void *context)
 		pbr.normal_map_intensity = 0.2f;
 		position[0] = -2.0f;
 		position[2] = -2.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Rust_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Rust_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Rust_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Rust_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Rust_A");
+		t[1] = nyas_resourcemap_tex(rm, "Rust_M");
+		t[2] = nyas_resourcemap_tex(rm, "Rust_R");
+		t[3] = nyas_resourcemap_tex(rm, "Rust_N");
 	}
 
 	// Tiles
@@ -486,20 +467,20 @@ Init(void *context)
 		pbr.tiling_y = 4.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Tiles_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Tiles_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Tiles_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Tiles_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Tiles_A");
+		t[1] = nyas_resourcemap_tex(rm, "Tiles_M");
+		t[2] = nyas_resourcemap_tex(rm, "Tiles_R");
+		t[3] = nyas_resourcemap_tex(rm, "Tiles_N");
 	}
 
 	// Ship Panels
@@ -508,20 +489,20 @@ Init(void *context)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 2.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Future_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Future_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Future_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Future_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Future_A");
+		t[1] = nyas_resourcemap_tex(rm, "Future_M");
+		t[2] = nyas_resourcemap_tex(rm, "Future_R");
+		t[3] = nyas_resourcemap_tex(rm, "Future_N");
 	}
 
 	// Cliff
@@ -531,20 +512,20 @@ Init(void *context)
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = -2.0f;
 		position[2] = -4.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Cliff_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Cliff_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Cliff_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Cliff_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Cliff_A");
+		t[1] = nyas_resourcemap_tex(rm, "Cliff_M");
+		t[2] = nyas_resourcemap_tex(rm, "Cliff_R");
+		t[3] = nyas_resourcemap_tex(rm, "Cliff_N");
 	}
 
 	// Granite
@@ -553,20 +534,20 @@ Init(void *context)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Granit_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Granit_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Granit_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Granit_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Granit_A");
+		t[1] = nyas_resourcemap_tex(rm, "Granit_M");
+		t[2] = nyas_resourcemap_tex(rm, "Granit_R");
+		t[3] = nyas_resourcemap_tex(rm, "Granit_N");
 	}
 
 	// Foam
@@ -575,73 +556,72 @@ Init(void *context)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
 		position[0] = 2.0f;
-		THE_Entity *e = THE_EntityCreate();
+		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
-		e->mesh = THE_ResourceMapGetMesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct THE_PbrData) / 4;
+		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
+		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
 		e->mat.tex_count = 4;
 		e->mat.cube_count = 0;
 		e->mat.shader = g_mats.pbr;
-		struct THE_PbrData *d = THE_MaterialAlloc(&e->mat);
+		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
 		*d = pbr;
-		THE_Texture *t = (THE_Texture *)d + e->mat.data_count;
-		t[0] = THE_ResourceMapGetTexture(rm, "Foam_A");
-		t[1] = THE_ResourceMapGetTexture(rm, "Foam_M");
-		t[2] = THE_ResourceMapGetTexture(rm, "Foam_R");
-		t[3] = THE_ResourceMapGetTexture(rm, "Foam_N");
+		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		t[0] = nyas_resourcemap_tex(rm, "Foam_A");
+		t[1] = nyas_resourcemap_tex(rm, "Foam_M");
+		t[2] = nyas_resourcemap_tex(rm, "Foam_R");
+		t[3] = nyas_resourcemap_tex(rm, "Foam_N");
 	}
 
 	GeneratePbrEnv();
 
-	pbr_common.data_count = sizeof(struct THE_PbrSceneData) / sizeof(float);
+	pbr_common.data_count = sizeof(struct nyas_pbr_desc_scene) / sizeof(float);
 	pbr_common.tex_count = 1;
 	pbr_common.cube_count = 2;
 	pbr_common.shader = g_mats.pbr;
-	THE_Texture *pbr_scene_tex = THE_MaterialAlloc(&pbr_common);
+	nyas_tex *pbr_scene_tex = nyas_mat_alloc(&pbr_common);
 	pbr_scene_tex += pbr_common.data_count;
-	pbr_scene_tex[0] = THE_ResourceMapGetTexture(rm, "LutMap");
-	pbr_scene_tex[1] = THE_ResourceMapGetTexture(rm, "Irradian");
-	pbr_scene_tex[2] = THE_ResourceMapGetTexture(rm, "Prefilte");
+	pbr_scene_tex[0] = nyas_resourcemap_tex(rm, "LutMap");
+	pbr_scene_tex[1] = nyas_resourcemap_tex(rm, "Irradian");
+	pbr_scene_tex[2] = nyas_resourcemap_tex(rm, "Prefilte");
 
 	sky_common.data_count = 16;
 	sky_common.tex_count = 0;
 	sky_common.cube_count = 1;
 	sky_common.shader = g_mats.skybox;
-	THE_Texture *skytex = THE_MaterialAlloc(&sky_common);
-	skytex[sky_common.data_count] = THE_ResourceMapGetTexture(rm, "Skybox");
+	nyas_tex *skytex = nyas_mat_alloc(&sky_common);
+	skytex[sky_common.data_count] = nyas_resourcemap_tex(rm, "Skybox");
 }
 
 bool
 Update(void *context)
 {
-	THE_InputUpdate();
-	THE_CameraMovementSystem(&camera, deltatime);
+	nyas_input_read();
+	nyas_camera_control(&camera, deltatime);
 
 	/* PBR common shader data. */
-	struct THE_PbrSceneData *common_pbr = pbr_common.ptr;
-	mat4_multiply(common_pbr->view_projection, camera.proj_mat,
-	              camera.view_mat);
-	THE_CameraPosition(common_pbr->camera_position, &camera);
+	struct nyas_pbr_desc_scene *common_pbr = pbr_common.ptr;
+	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
+	nyas_camera_pos(common_pbr->camera_position, &camera);
 	vec4_assign(common_pbr->sunlight, g_sunlight);
 
-	THE_RenderCommand *fbuff = THE_AllocateCommand();
+	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = g_fb;
-	fbuff->data.set_fb.vp_x = THE_IGNORE;
-	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
-	fbuff->execute = THE_SetFramebufferExecute;
+	fbuff->data.set_fb.vp_x = NYAS_IGNORE;
+	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->execute = nyas_setfb_fn;
 
-	THE_RenderCommand *rops = THE_AllocateCommand();
-	memset(&rops->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
-	rops->data.rend_opts.enable_flags = THE_BLEND | THE_DEPTH_TEST |
-	  THE_DEPTH_WRITE;
-	rops->data.rend_opts.blend_func.src = THE_BLEND_FUNC_ONE;
-	rops->data.rend_opts.blend_func.dst = THE_BLEND_FUNC_ZERO;
-	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LESS;
-	rops->data.rend_opts.cull_face = THE_CULL_FACE_BACK;
-	rops->execute = THE_RenderOptionsExecute;
+	nyas_cmd *rops = nyas_cmd_alloc();
+	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
+	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST |
+	  NYAS_DEPTH_WRITE;
+	rops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
+	rops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
+	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LESS;
+	rops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
+	rops->execute = nyas_rops_fn;
 	fbuff->next = rops;
 
-	THE_RenderCommand *clear = THE_AllocateCommand();
+	nyas_cmd *clear = nyas_cmd_alloc();
 	clear->data.clear.color_buffer = true;
 	clear->data.clear.depth_buffer = true;
 	clear->data.clear.stencil_buffer = false;
@@ -649,50 +629,50 @@ Update(void *context)
 	clear->data.clear.color[1] = 0.2f;
 	clear->data.clear.color[2] = 0.2f;
 	clear->data.clear.color[3] = 1.0f;
-	clear->execute = THE_ClearExecute;
+	clear->execute = nyas_clear_fn;
 	rops->next = clear;
 
-	THE_RenderCommand *use_pbr = THE_AllocateCommand();
+	nyas_cmd *use_pbr = nyas_cmd_alloc();
 	use_pbr->data.mat = pbr_common;
-	use_pbr->execute = THE_UseShaderExecute;
+	use_pbr->execute = nyas_setshader_fn;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
 
-	THE_AddCommands(fbuff);
+	nyas_cmd_add(fbuff);
 
-	THE_RenderEntities(THE_GetEntities(), THE_EntitiesSize());
+	nyas_entity_draw(nyas_entities(), nyas_entity_count());
 
-	rops = THE_AllocateCommand();
-	memset(&rops->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
-	rops->data.rend_opts.disable_flags = THE_CULL_FACE;
-	rops->data.rend_opts.depth_func = THE_DEPTH_FUNC_LEQUAL;
-	rops->execute = THE_RenderOptionsExecute;
+	rops = nyas_cmd_alloc();
+	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
+	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
+	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
+	rops->execute = nyas_rops_fn;
 
-	THE_CameraStaticViewProjection(sky_common.ptr, &camera);
-	THE_RenderCommand *use_sky_shader = THE_AllocateCommand();
+	nyas_camera_static_vp(sky_common.ptr, &camera);
+	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
 	use_sky_shader->data.mat = sky_common;
-	use_sky_shader->execute = THE_UseShaderExecute;
+	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
-	THE_RenderCommand *draw_sky = THE_AllocateCommand();
+	nyas_cmd *draw_sky = nyas_cmd_alloc();
 	draw_sky->data.draw.mesh = CUBE_MESH;
 	draw_sky->data.draw.material = sky_common;
-	draw_sky->execute = THE_DrawExecute;
+	draw_sky->execute = nyas_draw_fn;
 	use_sky_shader->next = draw_sky;
 
-	fbuff = THE_AllocateCommand();
-	fbuff->data.set_fb.fb = THE_DEFAULT;
-	fbuff->data.set_fb.attachment.slot = THE_IGNORE;
-	fbuff->execute = THE_SetFramebufferExecute;
+	fbuff = nyas_cmd_alloc();
+	fbuff->data.set_fb.fb = NYAS_DEFAULT;
+	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->execute = nyas_setfb_fn;
 	draw_sky->next = fbuff;
 
-	THE_RenderCommand *rops2 = THE_AllocateCommand();
-	memset(&rops2->data.rend_opts, 0, sizeof(THE_RenderOptionsData));
-	rops2->data.rend_opts.disable_flags = THE_DEPTH_TEST;
-	rops2->execute = THE_RenderOptionsExecute;
+	nyas_cmd *rops2 = nyas_cmd_alloc();
+	memset(&rops2->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
+	rops2->data.rend_opts.disable_flags = NYAS_DEPTH_TEST;
+	rops2->execute = nyas_rops_fn;
 	fbuff->next = rops2;
 
-	clear = THE_AllocateCommand();
+	clear = nyas_cmd_alloc();
 	clear->data.clear.color_buffer = true;
 	clear->data.clear.depth_buffer = false;
 	clear->data.clear.stencil_buffer = false;
@@ -700,22 +680,22 @@ Update(void *context)
 	clear->data.clear.color[1] = 0.0f;
 	clear->data.clear.color[2] = 0.0f;
 	clear->data.clear.color[3] = 1.0f;
-	clear->execute = THE_ClearExecute;
+	clear->execute = nyas_clear_fn;
 	rops2->next = clear;
 
-	THE_RenderCommand *usefullscreen = THE_AllocateCommand();
+	nyas_cmd *usefullscreen = nyas_cmd_alloc();
 	usefullscreen->data.mat = fulls;
-	usefullscreen->execute = THE_UseShaderExecute;
+	usefullscreen->execute = nyas_setshader_fn;
 	clear->next = usefullscreen;
 
-	THE_RenderCommand *draw = THE_AllocateCommand();
+	nyas_cmd *draw = nyas_cmd_alloc();
 	draw->data.draw.mesh = QUAD_MESH;
 	draw->data.draw.material = fulls;
-	draw->execute = THE_DrawExecute;
+	draw->execute = nyas_draw_fn;
 	usefullscreen->next = draw;
 	draw->next = NULL;
 
-	THE_AddCommands(rops);
+	nyas_cmd_add(rops);
 
 	return true;
 }
@@ -723,17 +703,17 @@ Update(void *context)
 int
 main(int argc, char **argv)
 {
-	struct THE_Config cnfg = { .init_func = Init,
-		                       .update_func = Update,
-		                       .heap_size = THE_GB(1),
-		                       .window_title = "THE Material Demo",
-		                       .window_width = 1280,
-		                       .window_height = 720,
-		                       .vsync = true };
+	struct nyas_config cnfg = { .init_func = Init,
+		                        .update_func = Update,
+		                        .heap_size = NYAS_GB(1),
+		                        .window_title = "NYAS Material Demo",
+		                        .window_width = 1280,
+		                        .window_height = 720,
+		                        .vsync = true };
 
-	THE_Start(&cnfg);
+	nyas_app_start(&cnfg);
 
-	THE_End();
+	nyas_app_end();
 
 	return 0;
 }

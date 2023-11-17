@@ -10,7 +10,7 @@ target_include_directories(${HELLO} PUBLIC
 	)
 
 target_link_libraries(${HELLO} PUBLIC
-	the
+	nyas
 	GL
 	X11
 	dl

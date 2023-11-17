@@ -1,116 +1,114 @@
-#ifndef THE_RENDER_COMMANDS_H
-#define THE_RENDER_COMMANDS_H
+#ifndef NYAS_PIXEL_COMMANDS_H
+#define NYAS_PIXEL_COMMANDS_H
 
 #include "renderer.h"
 
 #include <stdint.h>
 
-typedef struct {
+typedef struct nyas_clear_cmdata {
 	float color[4];
 	bool color_buffer;
 	bool depth_buffer;
 	bool stencil_buffer;
-} THE_ClearData;
+} nyas_clear_cmdata;
 
-typedef struct THE_DrawData {
-	THE_Mesh mesh;
-	THE_Material material;
-} THE_DrawData;
+typedef struct nyas_draw_cmdata {
+	nyas_mesh mesh;
+	nyas_mat material;
+} nyas_draw_cmdata;
 
-enum THE_BlendFuncOpt {
+enum nyas_blendfn_opt {
 	// TODO: Add as needed.
-	THE_BLEND_FUNC_INVALID = 0,
-	THE_BLEND_FUNC_ONE,
-	THE_BLEND_FUNC_SRC_ALPHA,
-	THE_BLEND_FUNC_ONE_MINUS_SRC_ALPHA,
-	THE_BLEND_FUNC_ZERO,
+	NYAS_BLEND_FUNC_INVALID = 0,
+	NYAS_BLEND_FUNC_ONE,
+	NYAS_BLEND_FUNC_SRC_ALPHA,
+	NYAS_BLEND_FUNC_ONE_MINUS_SRC_ALPHA,
+	NYAS_BLEND_FUNC_ZERO,
 };
 
-typedef struct THE_BlendFunc {
-	enum THE_BlendFuncOpt src;
-	enum THE_BlendFuncOpt dst;
-} THE_BlendFunc;
+typedef struct nyas_blend_fn {
+	enum nyas_blendfn_opt src;
+	enum nyas_blendfn_opt dst;
+} nyas_blend_fn;
 
-typedef enum THE_CullFace {
-	THE_CULL_FACE_CURRENT = 0,
-	THE_CULL_FACE_FRONT,
-	THE_CULL_FACE_BACK,
-	THE_CULL_FACE_FRONT_AND_BACK,
-} THE_CullFace;
+typedef enum nyas_cullface_opt {
+	NYAS_CULL_FACE_CURRENT = 0,
+	NYAS_CULL_FACE_FRONT,
+	NYAS_CULL_FACE_BACK,
+	NYAS_CULL_FACE_FRONT_AND_BACK,
+} nyas_cullface_opt;
 
-typedef enum THE_DepthFunc {
+typedef enum nyas_depthfn_opt {
 	// TODO: Add as needed.
-	THE_DEPTH_FUNC_CURRENT = 0,
-	THE_DEPTH_FUNC_LEQUAL,
-	THE_DEPTH_FUNC_LESS,
-} THE_DepthFunc;
+	NYAS_DEPTH_FUNC_CURRENT = 0,
+	NYAS_DEPTH_FUNC_LEQUAL,
+	NYAS_DEPTH_FUNC_LESS,
+} nyas_depthfn_opt;
 
-typedef enum THE_RenderOptions {
-	THE_BLEND = 1 << 0,
-	THE_CULL_FACE = 1 << 1,
-	THE_DEPTH_TEST = 1 << 2,
-	THE_DEPTH_WRITE = 1 << 3,
-	THE_REND_OPTS_COUNT
-} THE_RenderOptions;
+typedef enum nyas_rops_opt {
+	NYAS_BLEND = 1 << 0,
+	NYAS_CULL_FACE = 1 << 1,
+	NYAS_DEPTH_TEST = 1 << 2,
+	NYAS_DEPTH_WRITE = 1 << 3,
+	NYAS_REND_OPTS_COUNT
+} nyas_rops_opt;
 
-typedef struct {
+typedef struct nyas_rops_cmdata {
 	int enable_flags;
 	int disable_flags;
-	THE_BlendFunc blend_func;
-	THE_CullFace cull_face;
-	THE_DepthFunc depth_func;
-} THE_RenderOptionsData;
+	nyas_blend_fn blend_func;
+	nyas_cullface_opt cull_face;
+	nyas_depthfn_opt depth_func;
+} nyas_rops_cmdata;
 
-typedef enum THE_AttachSlot {
-	THE_ATTACH_IGNORE,
-	THE_ATTACH_DEPTH,
-	THE_ATTACH_COLOR
-} THE_AttachSlot;
+typedef enum nyas_attach_slot {
+	NYAS_ATTACH_IGNORE,
+	NYAS_ATTACH_DEPTH,
+	NYAS_ATTACH_COLOR
+} nyas_attach_slot;
 
-typedef struct THE_FBAttachment {
-	THE_Texture tex;
-	THE_AttachSlot slot;
+typedef struct nyas_fbattach {
+	nyas_tex tex;
+	nyas_attach_slot slot;
 	int level;
 	int side;
-} THE_FBAttachment;
+} nyas_fbattach;
 
-typedef struct THE_SetFramebufferData {
-	THE_Framebuffer fb;
+typedef struct nyas_set_fb_cmdata {
+	nyas_framebuffer fb;
 	int16_t vp_x;
 	int16_t vp_y;
-	THE_FBAttachment attachment;
-} THE_SetFramebufferData;
+	nyas_fbattach attachment;
+} nyas_set_fb_cmdata;
 
-typedef union {
-	THE_ClearData clear;
-	THE_DrawData draw;
-	THE_RenderOptionsData rend_opts;
-	THE_Material mat;
-	THE_SetFramebufferData set_fb;
-} THE_CommandData;
+typedef union nyas_cmdata {
+	nyas_clear_cmdata clear;
+	nyas_draw_cmdata draw;
+	nyas_rops_cmdata rend_opts;
+	nyas_mat mat;
+	nyas_set_fb_cmdata set_fb;
+} nyas_cmdata;
 
-struct THE_RenderCommand {
-	void (*execute)(THE_CommandData *data);
-	struct THE_RenderCommand *next;
-	THE_CommandData data;
-};
+typedef struct nyas_cmd {
+	void (*execute)(nyas_cmdata *data);
+	struct nyas_cmd *next;
+	nyas_cmdata data;
+} nyas_cmd;
 
-typedef struct THE_RenderCommand THE_RenderCommand;
+void nyas_cmd_add(nyas_cmd *rc);
+nyas_cmd *nyas_cmd_alloc(void);
 
-void THE_AddCommands(THE_RenderCommand *rc);
-THE_RenderCommand *THE_AllocateCommand(void);
+typedef struct nyas_cmd_queue {
+	nyas_cmd *curr;
+	nyas_cmd *curr_last;
+	nyas_cmd *next;
+	nyas_cmd *next_last;
+} nyas_cmd_queue;
 
-typedef struct {
-	THE_RenderCommand *curr;
-	THE_RenderCommand *curr_last;
-	THE_RenderCommand *next;
-	THE_RenderCommand *next_last;
-} THE_RenderQueue;
+extern void nyas_clear_fn(nyas_cmdata *data);
+extern void nyas_draw_fn(nyas_cmdata *data);
+extern void nyas_rops_fn(nyas_cmdata *data);
+extern void nyas_setshader_fn(nyas_cmdata *data);
+extern void nyas_setfb_fn(nyas_cmdata *data);
 
-extern void THE_ClearExecute(THE_CommandData *data);
-extern void THE_DrawExecute(THE_CommandData *data);
-extern void THE_RenderOptionsExecute(THE_CommandData *data);
-extern void THE_UseShaderExecute(THE_CommandData *data);
-extern void THE_SetFramebufferExecute(THE_CommandData *data);
-
-#endif
+#endif // NYAS_PIXEL_COMMANDS_H

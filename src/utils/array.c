@@ -202,3 +202,85 @@ nyas_arr_reset(void *arr, size_t elem_size)
 		}
 	}
 }
+
+/**
+ * Debug and unit testing functions.
+ */
+#ifdef NYAS_DEBUG
+#include <stdint.h>
+#include <stdio.h>
+#ifndef NYAS_LOG
+#define NYAS_LOG printf
+#endif
+
+#ifndef NYAS_ASSERT
+#include <assert.h>
+#define NYAS_ASSERT assert
+#endif
+
+/**
+ * Prints info and contents of an array.
+ * Useful for debug builds.
+ */
+void
+nyas_arr_print(void *arr, void (*print_elem)(void *elem))
+{
+	NYAS_LOG("Array %lx -> Length(%lu), Capacity(%lu), ElemSize(%lu):",
+	         (size_t)arr, *(((size_t *)arr) - 2), *((size_t *)arr - 1),
+	         *((size_t *)arr - 3));
+	for (int i = 0; i < nyas_arr_len(arr); ++i) {
+		printf(" [%d]", i);
+		print_elem(nyas_arr_at(arr, i));
+	}
+	fflush(stdout);
+}
+
+static void
+PrintFloat(void *f)
+{
+	printf("%f", *(float *)f);
+}
+
+void
+nyas_arr_test(void)
+{
+	const char *world = "mon";
+	NYAS_LOG("Hola %s\n", world);
+	nyas_arr pix = nyas_arr_create(8, 4);
+	NYAS_ASSERT(nyas_arr_len(pix) == 0);
+	NYAS_ASSERT(hdr(pix)->cap == 8);
+	NYAS_ASSERT(hdr(pix)->esz == 4);
+	float *val = nyas_arr_npush(&pix, 1);
+	*val = 4.0f;
+	NYAS_ASSERT(nyas_arr_len(pix) == 1);
+	NYAS_ASSERT(hdr(pix)->cap == 8);
+	NYAS_ASSERT(hdr(pix)->esz == 4);
+	NYAS_ASSERT(*(float *)nyas_arr_at(pix, 0) == 4.0f);
+	val = nyas_arr_npush(&pix, 4);
+	val[0] = 10.0f;
+	val[1] = -4.0f;
+	uint64_t tmp = (1UL << 63) | (1UL << 31);
+	*(((double *)val) + 2) = *(double *)&tmp;
+
+	NYAS_ASSERT(nyas_arr_len(pix) == 5);
+	NYAS_ASSERT(hdr(pix)->cap == 8);
+	NYAS_ASSERT(hdr(pix)->esz == 4);
+	NYAS_ASSERT(*(float *)nyas_arr_at(pix, 2) == -4.0f);
+	NYAS_LOG("Both should be -0.0f : %f, %f.\n", val[2], val[3]);
+
+	nyas_arr arr_cpy = nyas_arr_create(16, 4);
+	nyas_arr_cpyfta(&arr_cpy, pix, 0, 0, 0);
+	assert(nyas_arr_cmp(pix, arr_cpy) == 0);
+	nyas_arr_print(pix, PrintFloat);
+
+	NYAS_ASSERT(*(float *)nyas_arr_rm(pix, 0) == 0.0f);
+	NYAS_ASSERT(nyas_arr_len(pix) == 4);
+	NYAS_ASSERT(*(float *)nyas_arr_extract(pix, 1) == 10.0f);
+	NYAS_ASSERT(nyas_arr_len(pix) == 3);
+	nyas_arr_reset(pix, 0);
+	NYAS_ASSERT(nyas_arr_len(pix) == 0);
+	nyas_arr_destroy(pix);
+	pix = NULL;
+}
+
+#endif // NYAS_DEBUG

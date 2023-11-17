@@ -8,7 +8,7 @@ typedef struct {
 	size_t len;
 } nyas_stref;
 
-#define nyas_litref(LIT)                                                      \
+#define NYAS_litref(LIT)                                                      \
 	{                                                                         \
 		.str = &LIT[0], .len = (sizeof LIT) - 1                               \
 	}

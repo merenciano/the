@@ -12,40 +12,45 @@ static uint8_t *mem;
 static size_t offset;
 static size_t capacity;
 
-void *THE_PersistentAlloc(size_t size)
+void *
+nyas_mem_reserve(size_t size)
 {
 	offset += MEM_ALIGN_MOD(MEM_ALIGN - MEM_ALIGN_MOD(offset));
 	offset += size;
-	THE_ASSERT(offset <= capacity, "Allocator out of memory");
+	NYAS_ASSERT(offset <= capacity && "Allocator out of memory");
 	return mem + offset - size; 
 }
 
-void *THE_Alloc(size_t size)
+void *nyas_alloc(size_t size)
 {
 	return malloc(size);
 }
 
-void *THE_Calloc(size_t elem_count, size_t elem_size)
+void *
+nyas_calloc(size_t elem_count, size_t elem_size)
 {
 	return calloc(elem_count, elem_size);
 }
 
-void *THE_Realloc(void *ptr, size_t size)
+void *
+nyas_realloc(void *ptr, size_t size)
 {
 	return realloc(ptr, size);
 }
 
-void THE_Free(void *ptr)
+void
+nyas_free(void *ptr)
 {
 	free(ptr);
 }
 
-void THE_MemInit(size_t size)
+void
+nyas_mem_init(size_t size)
 {
-	mem = malloc(size);
-	THE_ASSERT(!((size_t)mem % MEM_ALIGN), "WTF");
+	mem = malloc(size); // TODO: mem minimal instance in stack memory in order to alloc this chunk for itself
+	NYAS_ASSERT(!((size_t)mem % MEM_ALIGN) && "WTF");
 	if (!mem) {
-		THE_SLOG_ERROR("Couldn't allocate THE memory.");
+		NYAS_LOG_ERR("Error allocating initial mem chunk.");
 		exit(1);
 	}
 
@@ -53,23 +58,26 @@ void THE_MemInit(size_t size)
 	capacity = size;
 }
 
-void THE_MemFreeAll()
+void
+nyas_mem_freeall()
 {
 	free(mem);
 	mem = NULL;
 }
 
-float THE_MemUsedMB()
+float
+nyas_mem_mega_used()
 {
-	return THE_MemUsedBytes() / (1024.0f * 1024.0f);
+	return nyas_mem_bytes_used() / (1024.0f * 1024.0f);
 }
 
-size_t THE_MemUsedBytes()
+size_t nyas_mem_bytes_used()
 {
 	return offset;
 }
 
-size_t THE_MemCapacity()
+size_t
+nyas_mem_capacity()
 {
 	return capacity;
 }

@@ -9,48 +9,48 @@
 
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
-#define STBI_MALLOC THE_Alloc
-#define STBI_REALLOC THE_Realloc
-#define STBI_FREE THE_Free
+#define STBI_MALLOC nyas_alloc
+#define STBI_REALLOC nyas_realloc
+#define STBI_FREE nyas_free
 #endif
 #include "stb_image.h"
 
 #ifndef TINYOBJ_LOADER_C_IMPLEMENTATION
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
-#define TINYOBJ_MALLOC THE_Alloc
-#define TINYOBJ_REALLOC THE_Realloc
-#define TINYOBJ_CALLOC THE_Calloc
-#define TINYOBJ_FREE THE_Free
+#define TINYOBJ_MALLOC nyas_alloc
+#define TINYOBJ_REALLOC nyas_realloc
+#define TINYOBJ_CALLOC nyas_calloc
+#define TINYOBJ_FREE nyas_free
 #endif
 #include "tinyobj_loader_c.h"
 
-THE_Mesh SPHERE_MESH;
-THE_Mesh CUBE_MESH;
-THE_Mesh QUAD_MESH;
+nyas_mesh SPHERE_MESH;
+nyas_mesh CUBE_MESH;
+nyas_mesh QUAD_MESH;
 
-THE_RenderQueue render_queue;
+nyas_cmd_queue render_queue;
 
-typedef struct THE_AvailableNode {
-	struct THE_AvailableNode *next;
+typedef struct nyas_AvailableNode {
+	struct nyas_AvailableNode *next;
 	int value;
-} THE_AvailableNode;
+} nyas_AvailableNode;
 
-static THE_RenderCommand *curr_pool;
-static THE_RenderCommand *curr_pool_tail;
-static THE_RenderCommand *next_pool;
-static THE_RenderCommand *next_pool_tail;
+static nyas_cmd *curr_pool;
+static nyas_cmd *curr_pool_tail;
+static nyas_cmd *next_pool;
+static nyas_cmd *next_pool_tail;
 
 static int8_t *frame_pool[2];
 static int8_t *frame_pool_last;
 static int frame_switch;
 
 static void
-the__file_reader(void *ctx,
-                 const char *path,
-                 int is_mtl,
-                 const char *obj_path,
-                 char **buf,
-                 size_t *size)
+nyas__file_reader(void *ctx,
+                  const char *path,
+                  int is_mtl,
+                  const char *obj_path,
+                  char **buf,
+                  size_t *size)
 {
 	FILE *f = fopen(path, "rb");
 	if (!f) {
@@ -61,51 +61,51 @@ the__file_reader(void *ctx,
 	*size = ftell(f);
 	rewind(f);
 
-	*buf = THE_Alloc(*size + 1);
-	THE_ASSERT(*buf, "Allocation failed.");
+	*buf = nyas_alloc(*size + 1);
+	NYAS_ASSERT(*buf && "Allocation failed.");
 
 	if (fread(*buf, *size, 1, f) != 1) {
-		THE_ASSERT(false, "Read failed.");
+		NYAS_ASSERT(false && "Read failed.");
 	}
 
 	fclose(f);
 }
 
-static THE_Mesh
-the__create_mesh_handle()
+static nyas_mesh
+nyas__create_mesh_handle()
 {
-	THE_ASSERT(mesh_count < THE_MAX_MESHES, "Max meshes reached");
+	NYAS_ASSERT(mesh_count < NYAS_MAX_MESHES && "Max meshes reached");
 	return mesh_count++;
 }
 
-static THE_Texture
-the__create_tex_handle()
+static nyas_tex
+nyas__create_tex_handle()
 {
-	THE_ASSERT(texture_count < THE_MAX_TEXTURES, "Max textures reached");
+	NYAS_ASSERT(texture_count < NYAS_MAX_TEXTURES && "Max textures reached");
 	return texture_count++;
 }
 
-static THE_Framebuffer
-the__create_fb_handle()
+static nyas_framebuffer
+nyas__create_fb_handle()
 {
-	THE_ASSERT(framebuffer_count < THE_MAX_FRAMEBUFFERS,
-	           "Max framebuffers reached");
+	NYAS_ASSERT(framebuffer_count < NYAS_MAX_FRAMEBUFFERS &&
+	            "Max framebuffers reached");
 	return framebuffer_count++;
 }
 
-static THE_Shader
-the__create_shader_handle()
+static nyas_shader
+nyas__create_shader_handle()
 {
-	THE_ASSERT(shader_count < THE_MAX_SHADERS, "Max shaders reached");
+	NYAS_ASSERT(shader_count < NYAS_MAX_SHADERS && "Max shaders reached");
 	return shader_count++;
 }
 
-static THE_Texture
-the__new_texture()
+static nyas_tex
+nyas__new_texture()
 {
-	THE_Texture tex = the__create_tex_handle();
-	THE__CHECK_HANDLE(texture, tex);
-	textures[tex].res.id = THE_UNINIT;
+	nyas_tex tex = nyas__create_tex_handle();
+	NYAS__CHECK_HANDLE(texture, tex);
+	textures[tex].res.id = NYAS_UNINIT;
 	textures[tex].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
 	for (int face = 0; face < 6; ++face) {
 		textures[tex].pix[face] = NULL;
@@ -113,46 +113,46 @@ the__new_texture()
 	return tex;
 }
 
-static THE_Mesh
-the__new_mesh()
+static nyas_mesh
+nyas__new_mesh()
 {
-	THE_Mesh mesh = the__create_mesh_handle();
-	meshes[mesh].res.id = THE_UNINIT;
+	nyas_mesh mesh = nyas__create_mesh_handle();
+	meshes[mesh].res.id = NYAS_UNINIT;
 	meshes[mesh].res.flags = RF_DIRTY;
 	meshes[mesh].attr_flags = 0;
 	meshes[mesh].vtx = NULL;
 	meshes[mesh].idx = NULL;
 	meshes[mesh].vtx_size = 0;
 	meshes[mesh].elements = 0;
-	meshes[mesh].internal_buffers_id[0] = THE_UNINIT;
-	meshes[mesh].internal_buffers_id[1] = THE_UNINIT;
+	meshes[mesh].internal_buffers_id[0] = NYAS_UNINIT;
+	meshes[mesh].internal_buffers_id[1] = NYAS_UNINIT;
 	return mesh;
 }
 
-static THE_Framebuffer
-the__new_framebuffer()
+static nyas_framebuffer
+nyas__new_framebuffer()
 {
-	THE_Framebuffer fb = the__create_fb_handle();
-	framebuffers[fb].res.id = THE_UNINIT;
+	nyas_framebuffer fb = nyas__create_fb_handle();
+	framebuffers[fb].res.id = NYAS_UNINIT;
 	framebuffers[fb].res.flags = RF_DIRTY;
-	framebuffers[fb].color_tex = THE_INACTIVE;
-	framebuffers[fb].depth_tex = THE_INACTIVE;
+	framebuffers[fb].color_tex = NYAS_INACTIVE;
+	framebuffers[fb].depth_tex = NYAS_INACTIVE;
 	return fb;
 }
 
 void
-THE_InitRender()
+nyas_px_init()
 {
-	curr_pool = THE_PersistentAlloc(THE_MB(16));
-	next_pool = THE_PersistentAlloc(THE_MB(16));
+	curr_pool = nyas_mem_reserve(NYAS_MB(16));
+	next_pool = nyas_mem_reserve(NYAS_MB(16));
 	curr_pool_tail = curr_pool;
 	next_pool_tail = next_pool;
 
-	meshes = THE_PersistentAlloc(sizeof(*meshes) * THE_MAX_MESHES);
-	textures = THE_PersistentAlloc(sizeof(*textures) * THE_MAX_TEXTURES);
+	meshes = nyas_mem_reserve(sizeof(*meshes) * NYAS_MAX_MESHES);
+	textures = nyas_mem_reserve(sizeof(*textures) * NYAS_MAX_TEXTURES);
 	framebuffers =
-	  THE_PersistentAlloc(sizeof(*framebuffers) * THE_MAX_FRAMEBUFFERS);
-	shaders = THE_PersistentAlloc(sizeof(*shaders) * THE_MAX_SHADERS);
+	  nyas_mem_reserve(sizeof(*framebuffers) * NYAS_MAX_FRAMEBUFFERS);
+	shaders = nyas_mem_reserve(sizeof(*shaders) * NYAS_MAX_SHADERS);
 	mesh_count = 0;
 	texture_count = 1;
 	framebuffer_count = 0;
@@ -165,21 +165,21 @@ THE_InitRender()
 	the half of it that way we can alternate freeing only one half each
 	frame so it is synced with the render queues
 	*/
-	frame_pool[0] = THE_PersistentAlloc(THE_FRAME_POOL_SIZE);
-	frame_pool[1] = frame_pool[0] + THE_FRAME_POOL_SIZE / 2;
+	frame_pool[0] = nyas_mem_reserve(NYAS_FRAME_POOL_SIZE);
+	frame_pool[1] = frame_pool[0] + NYAS_FRAME_POOL_SIZE / 2;
 	frame_pool_last = frame_pool[0];
 	frame_switch = 0;
 
-	SPHERE_MESH = THE_CreateSphereMesh(32, 32);
-	CUBE_MESH = THE_CreateCubeMesh();
-	QUAD_MESH = THE_CreateQuadMesh();
+	SPHERE_MESH = nyas_mesh_create_sphere(32, 32);
+	CUBE_MESH = nyas_mesh_create_cube();
+	QUAD_MESH = nyas_mesh_create_quad();
 }
 
 /*
  * Concatenates a list of commands to the render queue.
  */
 void
-THE_AddCommands(THE_RenderCommand *rc)
+nyas_cmd_add(nyas_cmd *rc)
 {
 	if (render_queue.next_last) {
 		render_queue.next_last->next = rc;
@@ -187,16 +187,16 @@ THE_AddCommands(THE_RenderCommand *rc)
 		render_queue.next = rc;
 	}
 
-	THE_RenderCommand *c = NULL;
+	nyas_cmd *c = NULL;
 	for (c = rc; c->next != NULL; c = c->next)
 		;
 	render_queue.next_last = c;
 }
 
 void
-THE_RenderFrame(void)
+nyas_px_render(void)
 {
-	THE_RenderCommand *i = render_queue.curr;
+	nyas_cmd *i = render_queue.curr;
 	if (!i) {
 		return;
 	}
@@ -212,51 +212,51 @@ THE_RenderFrame(void)
 }
 
 void
-THE_RenderEndFrame(void)
+nyas_frame_end(void)
 {
 	render_queue.curr = render_queue.next;
 	render_queue.curr_last = render_queue.next_last;
 	render_queue.next = NULL;
 	render_queue.next_last = NULL;
 
-	THE_RenderCommand *tmp = curr_pool;
+	nyas_cmd *tmp = curr_pool;
 	curr_pool = next_pool;
 	curr_pool_tail = next_pool_tail;
 	next_pool = tmp;
 	next_pool_tail = tmp; /* Free rendered commands */
-	memset(next_pool, '\0',
-	       THE_RENDER_QUEUE_CAPACITY * sizeof(THE_RenderCommand));
+	memset(next_pool, '\0', NYAS_RENDER_QUEUE_CAPACITY * sizeof(nyas_cmd));
 
 	frame_switch = !frame_switch;
 	frame_pool_last = frame_pool[frame_switch];
-	memset(frame_pool_last, '\0', THE_FRAME_POOL_SIZE / 2);
+	memset(frame_pool_last, '\0', NYAS_FRAME_POOL_SIZE / 2);
 }
 
-THE_RenderCommand *
-THE_AllocateCommand()
+nyas_cmd *
+nyas_cmd_alloc()
 {
-	THE_ASSERT((next_pool_tail - next_pool) < THE_RENDER_QUEUE_CAPACITY - 1,
-	           "Not enough memory in the RenderQueue pool");
+	NYAS_ASSERT((next_pool_tail - next_pool) <
+	              NYAS_RENDER_QUEUE_CAPACITY - 1 &&
+	            "Not enough memory in the RenderQueue pool");
 	return next_pool_tail++;
 }
 
 void *
-THE_AllocateFrameResource(unsigned int size)
+nyas_alloc_frame(unsigned int size)
 {
-	THE_ASSERT(((frame_pool_last + size) - frame_pool[frame_switch]) <
-	             THE_FRAME_POOL_SIZE / 2,
-	           "Not enough memory in the frame pool");
+	NYAS_ASSERT(((frame_pool_last + size) - frame_pool[frame_switch]) <
+	              NYAS_FRAME_POOL_SIZE / 2 &&
+	            "Not enough memory in the frame pool");
 	void *ret = frame_pool_last;
 	frame_pool_last += size;
 	return ret;
 }
 
-THE_Texture
-THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
+nyas_tex
+nyas_tex_load_img(const char *path, enum nyas_textype t)
 {
-	THE_ASSERT(*path != '\0', "For empty textures use THE_CreateEmptyTexture");
+	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_create");
 
-	THE_Texture tex = the__new_texture();
+	nyas_tex tex = nyas__new_texture();
 	textures[tex].type = t;
 
 	int nchannels = 0;
@@ -265,27 +265,27 @@ THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 	stbi_set_flip_vertically_on_load(1);
 
 	switch (textures[tex].type) {
-	case THE_TEX_RGB_F16:
-	case THE_TEX_RGBA_F16:
-	case THE_TEX_LUT:
+	case NYAS_TEX_RGB_F16:
+	case NYAS_TEX_RGBA_F16:
+	case NYAS_TEX_LUT:
 		textures[tex].pix[0] = stbi_loadf(path, width, height, &nchannels, 0);
-		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded");
+		NYAS_ASSERT(textures[tex].pix[0] && "The image couldn't be loaded");
 		break;
 
-	case THE_TEX_RGB:
-	case THE_TEX_SRGB:
+	case NYAS_TEX_RGB:
+	case NYAS_TEX_SRGB:
 		nchannels = 3;
 		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 3);
-		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded.");
+		NYAS_ASSERT(textures[tex].pix[0] && "The image couldn't be loaded.");
 		break;
 
-	case THE_TEX_R:
+	case NYAS_TEX_R:
 		nchannels = 1;
 		textures[tex].pix[0] = stbi_load(path, width, height, &nchannels, 1);
-		THE_ASSERT(textures[tex].pix[0], "The image couldn't be loaded.");
+		NYAS_ASSERT(textures[tex].pix[0] && "The image couldn't be loaded.");
 		break;
 
-	case THE_TEX_SKYBOX:
+	case NYAS_TEX_SKYBOX:
 		stbi_set_flip_vertically_on_load(0);
 		const char *cube_prefix = "RLUDFB";
 		char path_buffer[512];
@@ -295,25 +295,25 @@ THE_CreateTextureFromFile(const char *path, enum THE_TexType t)
 			path_buffer[13] = cube_prefix[i];
 			textures[tex].pix[i] = stbi_load(path_buffer, width, height,
 			                                 &nchannels, 0);
-			THE_ASSERT(textures[tex].pix[i],
-			           "Couldn't load the image to the cubemap");
+			NYAS_ASSERT(textures[tex].pix[i] &&
+			            "Couldn't load the image to the cubemap");
 		}
 		break;
 
 	default:
-		THE_ASSERT(false, "Default case LoadTexture.");
-		return THE_UNINIT;
+		NYAS_ASSERT(false && "Default case LoadTexture.");
+		return NYAS_UNINIT;
 	}
 
 	return tex;
 }
 
-THE_Texture
-THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
+nyas_tex
+nyas_tex_create(int width, int height, enum nyas_textype t)
 {
-	THE_ASSERT(width > 0 && height > 0, "Incorrect dimensions");
+	NYAS_ASSERT(width > 0 && height > 0 && "Incorrect dimensions");
 
-	THE_Texture tex = the__new_texture();
+	nyas_tex tex = nyas__new_texture();
 	textures[tex].width = width;
 	textures[tex].height = height;
 	textures[tex].type = t;
@@ -322,15 +322,15 @@ THE_CreateEmptyTexture(int32_t width, int32_t height, enum THE_TexType t)
 }
 
 int *
-THE_TexSize(THE_Texture t, int *out)
+nyas_tex_size(nyas_tex tex, int *out)
 {
-	out[0] = textures[t].width;
-	out[1] = textures[t].height;
+	out[0] = textures[tex].width;
+	out[1] = textures[tex].height;
 	return out;
 }
 
 void
-THE_FreeTextureData(THE_Texture tex)
+nyas_tex_freepix(nyas_tex tex)
 {
 	for (int face = 0; face < 6; ++face) {
 		if (textures[tex].pix[face]) {
@@ -340,18 +340,18 @@ THE_FreeTextureData(THE_Texture tex)
 	}
 }
 
-THE_Shader
-THE_CreateShader(const char *shader)
+nyas_shader
+nyas_shader_create(const char *shader)
 {
-	THE_Shader ret = the__create_shader_handle();
+	nyas_shader ret = nyas__create_shader_handle();
 	shaders[ret].shader_name = shader;
-	shaders[ret].res.id = THE_UNINIT;
+	shaders[ret].res.id = NYAS_UNINIT;
 	shaders[ret].res.flags = RF_DIRTY;
 	return ret;
 }
 
-THE_Mesh
-THE_CreateCubeMesh()
+nyas_mesh
+nyas_mesh_create_cube()
 {
 	static float VERTICES[] = {
 		// positions          // normals           // uv
@@ -391,7 +391,7 @@ THE_CreateCubeMesh()
 		13, 12, 14, 12, 15, 14, 16, 17, 18, 18, 19, 16, 23, 22, 20, 22, 21, 20,
 	};
 
-	THE_Mesh ret = the__new_mesh();
+	nyas_mesh ret = nyas__new_mesh();
 	meshes[ret].res.flags = RF_DIRTY;
 	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
 	meshes[ret].vtx = &VERTICES[0];
@@ -402,28 +402,31 @@ THE_CreateCubeMesh()
 	return ret;
 }
 
-THE_Mesh
-THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
+nyas_mesh
+nyas_mesh_create_sphere(int32_t y_segments, int32_t x_segments)
 {
-	THE_ASSERT(x_segments > 2 && y_segments > 2, "Invalid number of segments");
+	NYAS_ASSERT(y_segments > 2 && x_segments > 2 &&
+	            "Invalid number of segments");
 
-	const float x_step = 1.0f / (float)(x_segments - 1);
-	const float y_step = 1.0f / (float)(y_segments - 1);
+	const float x_step = 1.0f / (float)(y_segments - 1);
+	const float y_step = 1.0f / (float)(x_segments - 1);
 
-	THE_Mesh ret = the__new_mesh();
+	nyas_mesh ret = nyas__new_mesh();
 	meshes[ret].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
 	meshes[ret].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_UV);
-	meshes[ret].vtx_size = x_segments * y_segments * 8 * sizeof(float);
-	meshes[ret].elements = x_segments * y_segments * 6;
-	meshes[ret].vtx = THE_Alloc(meshes[ret].vtx_size);
-	meshes[ret].idx = THE_Alloc(meshes[ret].elements * sizeof(uint32_t));
+	meshes[ret].vtx_size = y_segments * x_segments * 8 * sizeof(float);
+	meshes[ret].elements = y_segments * x_segments * 6;
+	meshes[ret].vtx = nyas_alloc(meshes[ret].vtx_size);
+	meshes[ret].idx = nyas_alloc(meshes[ret].elements * sizeof(uint32_t));
 
 	float *v = meshes[ret].vtx;
-	for (int y = 0; y < y_segments; ++y) {
+	for (int y = 0; y < x_segments; ++y) {
 		float py = sinf((float)-M_PI_2 + (float)M_PI * (float)y * x_step);
-		for (int x = 0; x < x_segments; ++x) {
-			float px = cosf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
-			float pz = sinf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
+		for (int x = 0; x < y_segments; ++x) {
+			float px = cosf(M_PI * 2.0f * x * y_step) *
+			  sinf(M_PI * y * x_step);
+			float pz = sinf(M_PI * 2.0f * x * y_step) *
+			  sinf(M_PI * y * x_step);
 
 			*v++ = px;
 			*v++ = py;
@@ -437,22 +440,22 @@ THE_CreateSphereMesh(int32_t y_segments, int32_t x_segments)
 	}
 
 	uint32_t *i = meshes[ret].idx;
-	for (int y = 0; y < y_segments; ++y) {
-		for (int x = 0; x < x_segments; ++x) {
-			*i++ = y * x_segments + x;
-			*i++ = y * x_segments + x + 1;
-			*i++ = (y + 1) * x_segments + x + 1;
-			*i++ = y * x_segments + x;
-			*i++ = (y + 1) * x_segments + x + 1;
-			*i++ = (y + 1) * x_segments + x;
+	for (int y = 0; y < x_segments; ++y) {
+		for (int x = 0; x < y_segments; ++x) {
+			*i++ = y * y_segments + x;
+			*i++ = y * y_segments + x + 1;
+			*i++ = (y + 1) * y_segments + x + 1;
+			*i++ = y * y_segments + x;
+			*i++ = (y + 1) * y_segments + x + 1;
+			*i++ = (y + 1) * y_segments + x;
 		}
 	}
 
 	return ret;
 }
 
-THE_Mesh
-THE_CreateQuadMesh()
+nyas_mesh
+nyas_mesh_create_quad()
 {
 	static float VERTICES[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
@@ -463,7 +466,7 @@ THE_CreateQuadMesh()
 
 	static unsigned int INDICES[] = { 0, 1, 2, 0, 2, 3 };
 
-	THE_Mesh mesh = the__new_mesh();
+	nyas_mesh mesh = nyas__new_mesh();
 	meshes[mesh].res.flags = RF_DIRTY;
 	meshes[mesh].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
 	  (1 << A_UV);
@@ -475,8 +478,8 @@ THE_CreateQuadMesh()
 	return mesh;
 }
 
-THE_Mesh
-THE_CreateMeshFromFile_OBJ(const char *path)
+nyas_mesh
+nyas_mesh_load_obj(const char *path)
 {
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t *shapes = NULL;
@@ -485,20 +488,20 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 	size_t mats_count;
 
 	int result = tinyobj_parse_obj(&attrib, &shapes, &shape_count, &mats,
-	                               &mats_count, path, the__file_reader, NULL,
+	                               &mats_count, path, nyas__file_reader, NULL,
 	                               TINYOBJ_FLAG_TRIANGULATE);
 
-	THE_ASSERT(result == TINYOBJ_SUCCESS, "Obj loader failed.");
+	NYAS_ASSERT(result == TINYOBJ_SUCCESS && "Obj loader failed.");
 	if (result != TINYOBJ_SUCCESS) {
-		THE_LOG_ERROR("Error loading obj. Err: %d", result);
+		NYAS_LOG_ERR("Error loading obj. Err: %d", result);
 		return CUBE_MESH;
 	}
 
 	size_t tri_count = attrib.num_face_num_verts;
 	size_t vertices_count = tri_count * 3 * 14;
 	size_t indices_count = tri_count * 3;
-	float *vertices = THE_Alloc(vertices_count * sizeof(*vertices));
-	IDX_T *indices = THE_Alloc(indices_count * sizeof(*indices));
+	float *vertices = nyas_alloc(vertices_count * sizeof(*vertices));
+	IDX_T *indices = nyas_alloc(indices_count * sizeof(*indices));
 	float *vit = vertices;
 	size_t ii = 0; // TODO: Indices right.
 
@@ -595,7 +598,7 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 		}
 	}
 
-	THE_Mesh mesh = the__new_mesh();
+	nyas_mesh mesh = nyas__new_mesh();
 	meshes[mesh].res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
 	meshes[mesh].attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) |
 	  (1 << A_TANGENT) | (1 << A_BITANGENT) | (1 << A_UV);
@@ -607,44 +610,44 @@ THE_CreateMeshFromFile_OBJ(const char *path)
 	return mesh;
 }
 
-THE_Framebuffer
-THE_CreateFramebuffer(int width, int height, bool color, bool depth)
+nyas_framebuffer
+nyas_fb_create(int width, int height, bool color, bool depth)
 {
-	THE_ASSERT(width > 0 && height > 0, "Invalid dimensions");
-	THE_Framebuffer fb = the__new_framebuffer();
+	NYAS_ASSERT(width > 0 && height > 0 && "Invalid dimensions");
+	nyas_framebuffer fb = nyas__new_framebuffer();
 
 	if (color) {
-		framebuffers[fb].color_tex = THE_CreateEmptyTexture(width, height,
-		                                                    THE_TEX_RGBA_F16);
+		framebuffers[fb].color_tex = nyas_tex_create(width, height,
+		                                             NYAS_TEX_RGBA_F16);
 	}
 
 	if (depth) {
-		framebuffers[fb].depth_tex = THE_CreateEmptyTexture(width, height,
-		                                                    THE_TEX_DEPTH);
+		framebuffers[fb].depth_tex = nyas_tex_create(width, height,
+		                                             NYAS_TEX_DEPTH);
 	}
 
 	return fb;
 }
 
-THE_Texture
-THE_GetFrameColor(THE_Framebuffer fb)
+nyas_tex
+nyas_fb_color(nyas_framebuffer fb)
 {
 	return framebuffers[fb].color_tex;
 }
 
 void
-THE_FbDimensions(THE_Framebuffer fb, int *w, int *h)
+nyas_fb_size(nyas_framebuffer fb, int *w, int *h)
 {
-	THE__CHECK_HANDLE(framebuffer, fb);
-	THE_InternalFramebuffer *ifb = framebuffers + fb;
-	if (ifb->color_tex != THE_IGNORE) {
-		THE__CHECK_HANDLE(texture, ifb->color_tex);
-		THE_InternalTexture *itex = textures + ifb->color_tex;
+	NYAS__CHECK_HANDLE(framebuffer, fb);
+	nypx_ifb *ifb = framebuffers + fb;
+	if (ifb->color_tex != NYAS_IGNORE) {
+		NYAS__CHECK_HANDLE(texture, ifb->color_tex);
+		nypx_itex *itex = textures + ifb->color_tex;
 		*w = itex->width;
 		*h = itex->height;
-	} else if (ifb->depth_tex != THE_IGNORE) {
-		THE__CHECK_HANDLE(texture, ifb->depth_tex);
-		THE_InternalTexture *itex = textures + ifb->depth_tex;
+	} else if (ifb->depth_tex != NYAS_IGNORE) {
+		NYAS__CHECK_HANDLE(texture, ifb->depth_tex);
+		nypx_itex *itex = textures + ifb->depth_tex;
 		*w = itex->width;
 		*h = itex->height;
 	} else {
@@ -653,29 +656,29 @@ THE_FbDimensions(THE_Framebuffer fb, int *w, int *h)
 	}
 }
 
-THE_Material
-THE_MaterialDefault(void)
+nyas_mat
+nyas_mat_default(void)
 {
-	THE_Material ret = { .ptr = NULL,
-		                 .data_count = 0,
-		                 .tex_count = 0,
-		                 .cube_count = 0,
-		                 .shader = THE_INVALID };
+	nyas_mat ret = { .ptr = NULL,
+		             .data_count = 0,
+		             .tex_count = 0,
+		             .cube_count = 0,
+		             .shader = NYAS_INVALID };
 	return ret;
 }
 
 void *
-THE_MaterialAlloc(THE_Material *m)
+nyas_mat_alloc(nyas_mat *mat)
 {
-	int elements = m->data_count + m->tex_count + m->cube_count;
-	m->ptr = THE_Alloc(elements * sizeof(float));
-	return m->ptr;
+	int elements = mat->data_count + mat->tex_count + mat->cube_count;
+	mat->ptr = nyas_alloc(elements * sizeof(float));
+	return mat->ptr;
 }
 
 void *
-THE_MaterialAllocFrame(THE_Material *m)
+nyas_mat_alloc_frame(nyas_mat *m)
 {
 	int elements = m->data_count + m->tex_count + m->cube_count;
-	m->ptr = THE_AllocateFrameResource(elements * sizeof(float));
+	m->ptr = nyas_alloc_frame(elements * sizeof(float));
 	return m->ptr;
 }

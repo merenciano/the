@@ -1,59 +1,57 @@
-#include "core/thefinitions.h"
 #include "entity.h"
 #include "mathc.h"
 #include "render/rendercommands.h"
 
-#include <assert.h>
 #include <stdlib.h>
 
-static THE_Entity entities[256];
-static int32_t entities_last;
+static nyas_entity entities[256];
+static int entities_last;
 
-THE_Entity *
-THE_EntityCreate()
+nyas_entity *
+nyas_entity_create()
 {
 	mat4_identity(entities[entities_last].transform);
 	return entities + entities_last++;
 }
 
-THE_Entity *
-THE_GetEntities()
+nyas_entity *
+nyas_entities()
 {
 	return entities;
 }
 
-int32_t
-THE_EntitiesSize()
+int
+nyas_entity_count()
 {
 	return entities_last;
 }
 
 void
-THE_RenderEntities(THE_Entity *ntt, int32_t count)
+nyas_entity_draw(nyas_entity *ntt, int32_t count)
 {
 	if (!ntt) {
 		return;
 	}
 
-	THE_RenderCommand *command_list = THE_AllocateCommand();
-	THE_RenderCommand *prev = command_list;
+	nyas_cmd *command_list = nyas_cmd_alloc();
+	nyas_cmd *prev = command_list;
 	mat4_assign(ntt->mat.ptr, ntt->transform);
 	prev->data.draw.material = ntt->mat;
 	prev->data.draw.mesh = ntt->mesh;
-	prev->execute = THE_DrawExecute;
+	prev->execute = nyas_draw_fn;
 
 	for (int i = 1; i < count; ++i) {
-		THE_RenderCommand *com = THE_AllocateCommand();
+		nyas_cmd *com = nyas_cmd_alloc();
 
 		mat4_assign(ntt[i].mat.ptr, ntt[i].transform);
 		com->data.draw.material = ntt[i].mat;
 		com->data.draw.mesh = ntt[i].mesh;
 		com->next = NULL;
-		com->execute = THE_DrawExecute;
+		com->execute = nyas_draw_fn;
 
 		prev->next = com;
 		prev = com;
 	}
 
-	THE_AddCommands(command_list);
+	nyas_cmd_add(command_list);
 }

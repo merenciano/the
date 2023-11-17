@@ -6,23 +6,25 @@
 #include "GLFW/glfw3.h"
 
 static GLFWwindow *internal_window = NULL;
-static THE_InputState curr;
-static THE_InputState prev;
+static nyas_input_state curr;
+static nyas_input_state prev;
 static bool capture_kb;
 static bool capture_mouse;
 
-static int32_t Internal_ToGLFW_Map[THE_INPUT_COUNT] = {
+static int32_t nyas_io_to_glfw[NYAS_INPUT_COUNT] = {
 	GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_D, GLFW_KEY_S,
 	GLFW_KEY_SPACE, GLFW_KEY_2, GLFW_KEY_3, GLFW_KEY_LEFT_SHIFT,
 	GLFW_MOUSE_BUTTON_1, GLFW_MOUSE_BUTTON_2
 };
 
-static void ScrollCallback(GLFWwindow *window, double x_offset, double y_offset)
+static void
+scrollcallback(GLFWwindow *window, double x_offset, double y_offset)
 {
-	THE_InputSetScroll((float)y_offset);
+	nyas_input_set_scroll((float)y_offset);
 }
 
-bool THE_IOInit(const char *title, int width, int height, bool limit_framerate)
+bool
+nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 {
 	if (!glfwInit() || internal_window) { // glfwInit fail or window init already
 		return false;
@@ -34,7 +36,7 @@ bool THE_IOInit(const char *title, int width, int height, bool limit_framerate)
 		return false;
 	}
 
-	// I call this function here because THE only supports one window
+	// I call this function here because nyas only supports one window
 	glfwMakeContextCurrent(internal_window);
 	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 
@@ -42,11 +44,11 @@ bool THE_IOInit(const char *title, int width, int height, bool limit_framerate)
 		glfwSwapInterval(0);
 	}
 
-	glfwSetScrollCallback(internal_window, ScrollCallback);
-	//THE_UIToolsInit(internal_window);
+	glfwSetScrollCallback(internal_window, scrollcallback);
+	//nyas_UIToolsInit(internal_window);
 
-	curr.input_bitmap = 0;
-	prev.input_bitmap = 0;
+	curr.pressed = 0;
+	prev.pressed = 0;
 	curr.scroll = 0.0f;
 	prev.scroll = 0.0f;
 	curr.mouse_x = 0.0f;
@@ -59,43 +61,49 @@ bool THE_IOInit(const char *title, int width, int height, bool limit_framerate)
 	return true;
 }
 
-void THE_IOPollEvents()
+void
+nyas_io_poll()
 {
 	glfwPollEvents();
 }
 
 // OUTPUT  ------------------------------
 
-int THE_WindowShouldClose()
+int
+nyas_window_closed()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return glfwWindowShouldClose(internal_window);
 }
 
-void THE_WindowSwapBuffers()
+void
+nyas_window_swap()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSwapBuffers(internal_window);
 }
 
-int *THE_WindowSize(int *out)
+int *
+nyas_window_size(int *out)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalizedt");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwGetWindowSize(internal_window, out, out + 1);
 	return out;
 }
 
-int THE_WindowGetWidth()
+int
+nyas_window_width()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalizedt");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	int width;
 	glfwGetWindowSize(internal_window, &width, NULL);
 	return width;
 }
 
-int THE_WindowGetHeight()
+int
+nyas_window_height()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	int height;
 	glfwGetWindowSize(internal_window, NULL, &height);
 	return height;
@@ -103,81 +111,88 @@ int THE_WindowGetHeight()
 
 // INPUT ------------------------------
 
-void THE_InputSetScroll(float offset)
+void
+nyas_input_set_scroll(float offset)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	if (capture_mouse) {
 		curr.scroll = offset;
 	}
 }
 
-float THE_InputGetScroll()
+float
+nyas_input_scroll()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return prev.scroll;
 }
 
-bool THE_InputIsButtonPressed(enum THE_Input button)
+bool
+nyas_input_pressed(enum nyas_input button)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
-	THE_ASSERT(button != THE_INPUT_COUNT, "Invalid button");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	if (!capture_kb) {
 		return false;
 	}
 
-	return curr.input_bitmap & (1 << button);
+	return curr.pressed & (1 << button);
 }
 
-bool THE_InputIsButtonDown(enum THE_Input button)
+bool
+nyas_input_down(enum nyas_input button)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
-	THE_ASSERT(button != THE_INPUT_COUNT, "Invalid button");
-	if (!THE_InputIsButtonPressed(button)) {
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
+	if (!nyas_input_pressed(button)) {
 		return false;
 	}
 
-	return !(prev.input_bitmap & (1 << button));
+	return !(prev.pressed & (1 << button));
 }
 
-bool THE_InputIsButtonUp(enum THE_Input button)
+bool
+nyas_input_up(enum nyas_input button)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
-	THE_ASSERT(button != THE_INPUT_COUNT, "Invalid button");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 
 	if (!capture_kb) {
 		return false;
 	}
 
-	if (THE_InputIsButtonPressed(button)) {
+	if (nyas_input_pressed(button)) {
 		return false;
 	}
 
-	return prev.input_bitmap & (1 << button);
+	return prev.pressed & (1 << button);
 }
 
-float THE_InputGetMouseX()
+float
+nyas_input_mouse_x()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return curr.mouse_x;
 }
 
-float THE_InputGetMouseY()
+float
+nyas_input_mouse_y()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return curr.mouse_y;
 }
 
-void THE_InputUpdate()
+void
+nyas_input_read()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	prev = curr;
 	curr.scroll = 0.0f;
-	curr.input_bitmap = 0;
-	for (int32_t i = 0; i < THE_MOUSE_LEFT; ++i) {
-		curr.input_bitmap |= ((bool)glfwGetKey(internal_window, Internal_ToGLFW_Map[i]) << i);
+	curr.pressed = 0;
+	for (int32_t i = 0; i < NYAS_MOUSE_LEFT; ++i) {
+		curr.pressed |= ((bool)glfwGetKey(internal_window, nyas_io_to_glfw[i]) << i);
 	}
-	curr.input_bitmap |= ((bool)glfwGetMouseButton(internal_window, Internal_ToGLFW_Map[THE_MOUSE_LEFT]) << THE_MOUSE_LEFT);
-	curr.input_bitmap |= ((bool)glfwGetMouseButton(internal_window, Internal_ToGLFW_Map[THE_MOUSE_RIGHT]) << THE_MOUSE_RIGHT);
+	curr.pressed |= ((bool)glfwGetMouseButton(internal_window,
+	                                          nyas_io_to_glfw[NYAS_MOUSE_LEFT]) << NYAS_MOUSE_LEFT);
+	curr.pressed |= ((bool)glfwGetMouseButton(internal_window,
+	                            nyas_io_to_glfw[NYAS_MOUSE_RIGHT]) << NYAS_MOUSE_RIGHT);
 
 	double x, y;
 	glfwGetCursorPos(internal_window, &x, &y);
@@ -185,19 +200,22 @@ void THE_InputUpdate()
 	curr.mouse_y = (float)y;
 }
 
-void THE_InputDisableCursor()
+void
+nyas_input_cursor_disable()
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSetInputMode(internal_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void THE_InputEnableCursor()
+void
+nyas_input_cursor_mode(int mode)
 {
-	THE_ASSERT(internal_window, "The IO system is uninitalized");
+	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSetInputMode(internal_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
-void THE_InputCapture(bool mouse, bool kb)
+void
+nyas_input_capture(bool mouse, bool kb)
 {
 	capture_kb = kb;
 	capture_mouse = mouse;

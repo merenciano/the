@@ -1,17 +1,18 @@
 #include "hmap.h"
+#include "nyas_defs.h"
 
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 
-#define HMapGetHeader(HM) ((struct HMapHeader*)(HM) - 1)
-#define HMapGetCapacity(HM) (HMapGetHeader(HM)->capacity)
-#define HMapGetCount(HM) (HMapGetHeader(HM)->count)
-#define HMapGetNodeSize(HM) (HMapGetHeader(HM)->node_size)
-#define HMapGetValueSize(HM) (HMapGetHeader(HM)->value_size)
+#define hdr(HM) ((struct hm_hdr*)(HM) - 1)
+#define hmcap(HM) (hdr(HM)->capacity)
+#define hmcount(HM) (hdr(HM)->count)
+#define hmnodesz(HM) (hdr(HM)->node_size)
+#define hmvalsz(HM) (hdr(HM)->value_size)
 
-struct HMapHeader {
+struct hm_hdr {
 	uint32_t capacity;
 	uint32_t count;
 	uint32_t node_size;
@@ -23,14 +24,14 @@ typedef struct {
 		char name[8];
 		uint64_t hash;
 	};
-} HMapKey;
+} hm_key;
 
-typedef struct HMap {
-	HMapKey key;
+struct nyas_hmap {
+	hm_key key;
 	void *value;
-} HMap;
+};
 
-static inline uint32_t NextPow2(uint32_t v)
+static inline unsigned int next_pow2(unsigned int v)
 {
 	--v;
 	v |= v >> 1;
@@ -41,93 +42,100 @@ static inline uint32_t NextPow2(uint32_t v)
 	return v + 1;
 }
 
-static inline uint64_t HMapHash(const char *key)
+static inline uint64_t hm_hash(const char *key)
 {
-	HMapKey mk;
+	hm_key mk;
 	mk.hash = 0;
 	strncpy(mk.name, key, 8);
 	return mk.hash;
 }
 
-static inline HMap *GetNode(HMap *hm, uint32_t offset)
+static inline nyas_hmap *getnode(nyas_hmap *hm, unsigned int offset)
 {
-	return (HMap*)((uint8_t*)hm + HMapGetNodeSize(hm) * offset);
+	return (nyas_hmap *)((uint8_t*)hm + hmnodesz(hm) * offset);
 }
 
-HMap *THE_HMapCreate(uint32_t capacity, uint32_t value_size)
+nyas_hmap *
+nyas_hmap_create(unsigned int capacity, unsigned int value_size)
 {
-	assert(capacity <= (1 << 31));
-	capacity = NextPow2(capacity);
-	size_t map_size = (value_size + sizeof(HMapKey)) * capacity
-		+ sizeof(struct HMapHeader);
-	struct HMapHeader *hm = calloc(map_size, 1);
+	NYAS_ASSERT(capacity <= (1 << 31));
+	capacity = next_pow2(capacity);
+	size_t map_size = (value_size + sizeof(hm_key)) * capacity
+		+ sizeof(struct hm_hdr);
+	struct hm_hdr *hm = calloc(map_size, 1);
 
 	hm->capacity = capacity;
 	hm->count = 0;
-	hm->node_size = value_size + sizeof(HMapKey);
+	hm->node_size = value_size + sizeof(hm_key);
 	hm->value_size = value_size;
 
-	return (HMap*)(hm + 1);
+	return (nyas_hmap *)(hm + 1);
 }
 
-void THE_HMapDelete(HMap *hm)
+void
+nyas_hmap_destroy(nyas_hmap *hm)
 {
-	free((struct HMapHeader*)hm - 1);
+	free((struct hm_hdr *)hm - 1);
 }
 
-void THE_HMapInsert(HMap *hm, const char *key, void *value)
+void
+nyas_hmap_insert(nyas_hmap *hm, const char *key, void *value)
 {
-	assert(value);
-	assert(HMapGetCount(hm) < HMapGetCapacity(hm)); // Change this to 80% capacity
+	NYAS_ASSERT(value);
+	NYAS_ASSERT(hmcount(hm) < hmcap(hm)); // Change this to 80% capacity
 
-	HMapKey mk;
-	mk.hash = HMapHash(key);
-	uint32_t offset = mk.hash & (HMapGetCapacity(hm) - 1);
+	hm_key mk;
+	mk.hash = hm_hash(key);
+	uint32_t offset = mk.hash & (hmcap(hm) - 1);
 
-	HMap *node;
-	for (node = GetNode(hm, offset); node->key.hash != 0; node = GetNode(hm, offset)) {
+	nyas_hmap *node;
+	for (node = getnode(hm, offset); node->key.hash != 0; node = getnode(hm, offset)) {
 		if (node->key.hash == mk.hash) {
-			memcpy(&(node->value), value, (HMapGetValueSize(hm)));
-			printf("Key %s already here!\n", key);
+			memcpy(&(node->value), value, (hmvalsz(hm)));
+			NYAS_LOG("Key %s already here!\n", key);
 			return;
 		}
-		offset = (offset + 1) & (HMapGetCapacity(hm) - 1);
+		offset = (offset + 1) & (hmcap(hm) - 1);
 	}
 
 	node->key.hash = mk.hash;
-	memcpy(&(node->value), value, HMapGetValueSize(hm));
-	++HMapGetCount(hm);
+	memcpy(&(node->value), value, hmvalsz(hm));
+	++hmcount(hm);
 }
 
-void *THE_HMapGet(HMap *hm, const char *key)
+void *
+nyas_hmap_get(nyas_hmap *hm, const char *key)
 {
-	HMapKey mk;
-	mk.hash = HMapHash(key);
-	uint32_t offset = mk.hash & (HMapGetCapacity(hm) - 1);
+	hm_key mk;
+	mk.hash = hm_hash(key);
+	uint32_t offset = mk.hash & (hmcap(hm) - 1);
 
-	HMap *node;
-	for (node = GetNode(hm, offset); node->key.hash != mk.hash; node = GetNode(hm, offset)) {
+	nyas_hmap *node;
+	for (node = getnode(hm, offset); node->key.hash != mk.hash; node = getnode(hm, offset)) {
 		if (node->key.hash == 0) {
-			return THE_HMAP_INVALID_VALUE;
+			return NYAS_HMAP_INVALID_VALUE;
 		}
-		offset = (offset + 1) & (HMapGetCapacity(hm) - 1);
+		offset = (offset + 1) & (hmcap(hm) - 1);
 	}
 
 	return (void*)(&(node->value));
 }
 
-void THE_HMapClear(HMap *hm)
+void
+nyas_hmap_clear(nyas_hmap *hm)
 {
-	memset(hm, 0, HMapGetCapacity(hm) * HMapGetNodeSize(hm));
-	HMapGetCount(hm) = 0;
+	memset(hm, 0, hmcap(hm) * hmnodesz(hm));
+	hmcount(hm) = 0;
 }
 
-int32_t THE_HMapCount(HMap *hm)
+int
+nyas_hmap_count(nyas_hmap *hm)
 {
-	return HMapGetCount(hm);
+	return hmcount(hm);
 }
 
-int32_t THE_HMapCapacity(HMap *hm)
+int
+nyas_hmap_capacity(nyas_hmap *hm)
 {
-	return HMapGetCapacity(hm);
+	return hmcap(hm);
 }

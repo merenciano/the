@@ -4,10 +4,6 @@ set(CMAKE_DEBUG_POSTFIX _d)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-set(CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG}
-        -DNYAS_DEBUG
-)
-
 set(LIB_NAME nyas)
 
 project(Nyas VERSION 0.1.0)
@@ -19,6 +15,7 @@ set_target_properties(${LIB_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CU
 target_compile_definitions(${LIB_NAME} PUBLIC
 	_GLFW_X11
 	LUA_USE_POSIX
+    NYAS_DEBUG
 	)
 
 target_compile_options(${LIB_NAME} PUBLIC

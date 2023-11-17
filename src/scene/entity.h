@@ -1,19 +1,19 @@
 // TODO: Esta clase a la mierda
-#ifndef THE_ENTITY_H
-#define THE_ENTITY_H
+#ifndef NYAS_ENTITY_H
+#define NYAS_ENTITY_H
 
 #include "render/renderer.h"
 
-typedef struct THE_Entity {
+typedef struct nyas_entity {
 	float transform[16];
-	THE_Mesh mesh;
-	THE_Material mat;
-} THE_Entity;
+	nyas_mesh mesh;
+	nyas_mat mat;
+} nyas_entity;
 
-THE_Entity *THE_EntityCreate(void);
-THE_Entity *THE_GetEntities(void);
-int THE_EntitiesSize(void);
-void THE_RenderEntities(THE_Entity *ntt, int count);
+nyas_entity *nyas_entity_create(void);
+nyas_entity *nyas_entities(void);
+int nyas_entity_count(void);
+void nyas_entity_draw(nyas_entity *ntt, int count);
 
 #endif
 

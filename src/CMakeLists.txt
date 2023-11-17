@@ -1,8 +1,8 @@
 target_sources(${LIB_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/the.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/thefinitions.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_defs.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.h

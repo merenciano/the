@@ -1,10 +1,10 @@
-#ifndef THE_RENDER_RENDERER_H
-#define THE_RENDER_RENDERER_H
+#ifndef NYAS_PIXEL_RENDERER_H
+#define NYAS_PIXEL_RENDERER_H
 
 #include "config.h"
 #include <stdbool.h>
 
-struct THE_PbrData {
+struct nyas_pbr_desc_unit {
 	float model[16];
 	float color[3];
 	float use_albedo_map;
@@ -18,79 +18,71 @@ struct THE_PbrData {
 	float paddingg;
 };
 
-struct THE_PbrSceneData {
+struct nyas_pbr_desc_scene {
 	float view_projection[16];
 	float camera_position[3];
 	float padding;
 	float sunlight[4];
 };
 
-struct THE_EquirecToCubeData {
-	float vp[16];
+enum nyas_textype {
+	NYAS_TEX_NONE = 0,
+	NYAS_TEX_R,
+	NYAS_TEX_RGB,
+	NYAS_TEX_SRGB,
+	NYAS_TEX_DEPTH,
+	NYAS_TEX_SKYBOX,
+	NYAS_TEX_RGB_F16,
+	NYAS_TEX_RGBA_F16,
+	NYAS_TEX_LUT,
+	NYAS_TEX_ENVIRONMENT,
+	NYAS_TEX_PREFILTER_ENVIRONMENT,
 };
 
-struct THE_PrefilterEnvData {
-	float vp[16];
-	float roughness;
-	float padding[3];
-};
+typedef int nyas_mesh;
+typedef int nyas_tex;
+typedef int nyas_framebuffer;
+typedef int nyas_shader;
 
-enum THE_TexType {
-	THE_TEX_NONE = 0,
-	THE_TEX_R,
-	THE_TEX_RGB,
-	THE_TEX_SRGB,
-	THE_TEX_DEPTH,
-	THE_TEX_SKYBOX,
-	THE_TEX_RGB_F16,
-	THE_TEX_RGBA_F16,
-	THE_TEX_LUT,
-	THE_TEX_ENVIRONMENT,
-	THE_TEX_PREFILTER_ENVIRONMENT,
-};
-
-typedef int THE_Mesh;
-typedef int THE_Texture;
-typedef int THE_Framebuffer;
-typedef int THE_Shader;
-
-typedef struct THE_Material {
+typedef struct nyas_mat {
 	void *ptr;
 	int data_count;
 	int tex_count;
 	int cube_count;
-	THE_Shader shader;
-} THE_Material;
+	nyas_shader shader;
+} nyas_mat;
 
-extern THE_Mesh SPHERE_MESH;
-extern THE_Mesh CUBE_MESH;
-extern THE_Mesh QUAD_MESH;
+extern nyas_mesh SPHERE_MESH;
+extern nyas_mesh CUBE_MESH;
+extern nyas_mesh QUAD_MESH;
 
-void THE_InitRender(void);
-void THE_RenderFrame(void);
-void THE_RenderEndFrame(void);
-void *THE_AllocateFrameResource(unsigned int size);
+void nyas_px_init(void);
+void nyas_px_render(void);
+void nyas_frame_end(void);
+void *nyas_alloc_frame(unsigned int size);
 
-THE_Texture THE_CreateTextureFromFile(const char *path, enum THE_TexType t);
-THE_Texture THE_CreateEmptyTexture(int width, int height, enum THE_TexType t);
-int *THE_TexSize(THE_Texture tex, int *out);
-void THE_FreeTextureData(THE_Texture tex); // Frees the texture from RAM (not the VRAM)
+nyas_tex nyas_tex_load_img(const char *path, enum nyas_textype t);
+nyas_tex nyas_tex_create(int width, int height, enum nyas_textype t);
+int *nyas_tex_size(nyas_tex tex, int *out);
+void nyas_tex_freepix(nyas_tex tex); // From RAM
 
-THE_Mesh THE_CreateCubeMesh(void);
-THE_Mesh THE_CreateSphereMesh(int x_segments, int y_segments);
-THE_Mesh THE_CreateQuadMesh(void);
-THE_Mesh THE_CreateMeshFromFile_OBJ(const char *path);
+nyas_mesh nyas_mesh_create_cube(void);
+nyas_mesh nyas_mesh_create_sphere(int x_segments, int y_segments);
+nyas_mesh nyas_mesh_create_quad(void);
+nyas_mesh nyas_mesh_load_obj(const char *path);
 
-THE_Shader THE_CreateShader(const char *shader);
-THE_Framebuffer THE_CreateFramebuffer(int width, int height, bool color, bool depth);
-THE_Texture THE_GetFrameColor(THE_Framebuffer fb);
-void THE_FbDimensions(THE_Framebuffer, int *w, int *h);
+nyas_shader nyas_shader_create(const char *shader);
 
-THE_Material THE_MaterialDefault(void);
+// TODO: ints i soportar varios
+nyas_framebuffer nyas_fb_create(int width, int height, bool color, bool depth);
+nyas_tex nyas_fb_color(nyas_framebuffer fb);
+void nyas_fb_size(nyas_framebuffer fb, int *o_w, int *o_h);
+
+nyas_mat nyas_mat_default(void);
 /* MaterialAlloc does not initialize the shader value. */
-void *THE_MaterialAlloc(THE_Material *);
+void *nyas_mat_alloc(nyas_mat *mat);
 
 /* MaterialAllocFrame does not initialize the shader value. */
-void *THE_MaterialAllocFrame(THE_Material *);
+void *nyas_mat_alloc_frame(nyas_mat *mat);
 
-#endif
+#endif // NYAS_PIXEL_RENDERER_H

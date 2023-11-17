@@ -10,7 +10,7 @@ target_include_directories(${MATBALLS} PUBLIC
 	)
 
 target_link_libraries(${MATBALLS} PUBLIC
-	the
+	nyas
 	GL
 	X11
 	dl

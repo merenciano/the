@@ -1,50 +1,50 @@
-#ifndef THE_CORE_IO_H
-#define THE_CORE_IO_H
+#ifndef NYAS_CORE_IO_H
+#define NYAS_CORE_IO_H
 
-#include "thefinitions.h"
+#include "nyas_defs.h"
 #include <stdbool.h>
 
-enum THE_Input {
-	THE_KEY_UP = 0,
-	THE_KEY_LEFT,
-	THE_KEY_RIGHT,
-	THE_KEY_DOWN,
-	THE_KEY_1,
-	THE_KEY_2,
-	THE_KEY_3,
-	THE_KEY_4,
-	THE_MOUSE_LEFT,
-	THE_MOUSE_RIGHT,
-	THE_INPUT_COUNT
+enum nyas_input {
+	NYAS_KEY_UP = 0,
+	NYAS_KEY_LEFT,
+	NYAS_KEY_RIGHT,
+	NYAS_KEY_DOWN,
+	NYAS_KEY_1,
+	NYAS_KEY_2,
+	NYAS_KEY_3,
+	NYAS_KEY_4,
+	NYAS_MOUSE_LEFT,
+	NYAS_MOUSE_RIGHT,
+	NYAS_INPUT_COUNT
 };
 
 typedef struct {
 	float mouse_x;
 	float mouse_y;
 	float scroll;
-	unsigned int input_bitmap;
-} THE_InputState;
+	unsigned int pressed;
+} nyas_input_state;
 
-bool THE_IOInit(const char *title, int width, int height, bool limit_framerate);
-void THE_IOPollEvents(void);
+bool nyas_io_init(const char *title, int width, int height, bool limit_framerate);
+void nyas_io_poll(void);
 
-int THE_WindowShouldClose(void);
-void THE_WindowSwapBuffers(void);
-int *THE_WindowSize(int *out);
-int THE_WindowGetWidth(void);
-int THE_WindowGetHeight(void);
+int nyas_window_closed(void);
+void nyas_window_swap(void);
+int *nyas_window_size(int *out);
+int nyas_window_width(void); // TODO: DEPRECATED: nyas_window_size instead
+int nyas_window_height(void); // TODO: DEPRECATED: nyas_window_size instead
 
-void THE_InputUpdate(void);
-void THE_InputSetScroll(float offset);
-float THE_InputGetScroll(void);
-bool THE_InputIsButtonPressed(enum THE_Input button);
-bool THE_InputIsButtonDown(enum THE_Input button);
-bool THE_InputIsButtonUp(enum THE_Input button);
-float THE_InputGetMouseX(void);
-float THE_InputGetMouseY(void);
-void THE_InputDisableCursor(void);
-void THE_InputEnableCursor(void);
-void THE_InputCapture(bool mouse, bool kb);
+void nyas_input_read(void);
+void nyas_input_set_scroll(float offset); // TODO: update with other input
+float nyas_input_scroll(void);
+bool nyas_input_pressed(enum nyas_input button);
+bool nyas_input_down(enum nyas_input button);
+bool nyas_input_up(enum nyas_input button);
+float nyas_input_mouse_x(void); // TODO: Merge with y
+float nyas_input_mouse_y(void);
+void nyas_input_cursor_disable(void); // TODO: Merge with enable
+void nyas_input_cursor_enable(void); // TODO: flags for cursor mode and capture
+void nyas_input_capture(bool mouse, bool kb);
 
-#endif
+#endif // NYAS_CORE_IO_H
 
