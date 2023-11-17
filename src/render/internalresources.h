@@ -2,12 +2,13 @@
 #define NYAS_PIXEL_INTERNAL_RESOURCES_H
 
 #include "renderer.h"
+#include "utils/array.h"
 
 #ifdef NYAS_PIXEL_CHECKS
 #define NYAS__CHECK_HANDLE(TYPE, HANDLE)                            \
 	({                                                              \
 		NYAS_ASSERT(HANDLE >= 0 && "Bad resource state");             \
-		NYAS_ASSERT(HANDLE < TYPE##_count && "Out of bounds handle"); \
+		NYAS_ASSERT(HANDLE < nyas_arr_len(TYPE##_pool) && "Out of bounds handle"); \
 	})
 #endif // NYAS_PIXEL_CHECKS
 
@@ -75,13 +76,18 @@ typedef struct {
 
 bool nypx_resource_check(void *rsrc);
 
-extern nypx_imesh *meshes;
-extern nypx_itex *textures;
+//extern nypx_imesh *meshes;
+//extern nypx_itex *textures;
 extern nypx_ifb *framebuffers;
 extern nypx_ishd *shaders;
-extern int mesh_count;
+//extern int mesh_count;
 extern int texture_count;
 extern int framebuffer_count;
 extern int shader_count;
+
+extern nyas_arr mesh_pool;
+extern nyas_arr tex_pool;
+extern nyas_arr shader_pool;
+extern nyas_arr framebuffer_pool;
 
 #endif // NYAS_PIXEL_INTERNAL_RESOURCES_H

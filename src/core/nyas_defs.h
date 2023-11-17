@@ -28,6 +28,11 @@
 	NYAS_PRINT(__VA_ARGS__); \
 	NYAS_PRINT("\n")
 
+#define NYAS_ALLOC nyas_alloc
+#define NYAS_CALLOC nyas_calloc
+#define NYAS_REALLOC nyas_realloc
+#define NYAS_FREE nyas_free
+
 #define NYAS_UNINIT (-5000)
 #define NYAS_DELETED (-5001)
 #define NYAS_MARKED_FOR_DELETE (-5002)

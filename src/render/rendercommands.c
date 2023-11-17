@@ -144,7 +144,7 @@ nyas__gl_depth(nyas_depthfn_opt df)
 static void
 nyas__attach_to_fb(nyas_fbattach a)
 {
-	int id = textures[a.tex].res.id;
+	int id = ((nypx_itex*)nyas_arr_at(tex_pool, a.tex))->res.id;
 	GLenum target = a.side < 0 ? GL_TEXTURE_2D :
 								 GL_TEXTURE_CUBE_MAP_POSITIVE_X + a.side;
 
@@ -189,8 +189,8 @@ nyas__get_attrib_stride(int32_t attr_flags)
 static void
 nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
 {
-	nypx_imesh *m = meshes + mesh;
-	nypx_ishd *s = shaders + shader;
+	nypx_imesh *m = nyas_arr_at(mesh_pool, mesh);
+	nypx_ishd *s = nyas_arr_at(shader_pool, shader);
 
 	glGenVertexArrays(1, (GLuint *)&m->res.id);
 	glBindVertexArray(m->res.id);
@@ -217,7 +217,7 @@ nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(uint32_t),
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(IDX_T),
 	             (const void *)m->idx, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
@@ -236,7 +236,7 @@ static void
 nyas__create_cubemap(nyas_tex tex)
 {
 	nyas_texcube_cnfg config;
-	nypx_itex *t = textures + tex;
+	nypx_itex *t = nyas_arr_at(tex_pool, tex);
 
 	NYAS_ASSERT(tex < 62 && "Start thinking about the max textures");
 	NYAS_ASSERT(t->res.id == NYAS_UNINIT &&
@@ -316,7 +316,7 @@ static void
 nyas__create_texture(nyas_tex tex)
 {
 	nyas_tex_cnfg config;
-	nypx_itex *t = textures + tex;
+	nypx_itex *t = nyas_arr_at(tex_pool, tex);
 
 	NYAS_ASSERT(tex < 62 && "Max texture units"); // Tex unit is id + 1
 	NYAS_ASSERT(t->res.id == NYAS_UNINIT && "Texture already created on GPU");
@@ -390,7 +390,6 @@ nyas__create_texture(nyas_tex tex)
 	case NYAS_TEX_PREFILTER_ENVIRONMENT:
 		nyas__create_cubemap(tex);
 		return;
-		break;
 
 	default:
 		NYAS_LOG_ERR("Invalid format");
@@ -538,7 +537,7 @@ nyas__create_shader(nypx_ishd *shader)
 static void
 nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
 {
-	nypx_imesh *im = meshes + m;
+	nypx_imesh *im = nyas_arr_at(mesh_pool, m);
 	if (im->res.id == NYAS_UNINIT) {
 		nyas__create_mesh(m, s);
 	}
@@ -548,9 +547,9 @@ nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
 static nypx_itex *
 nyas__sync_gpu_tex(nyas_tex tex)
 {
-	NYAS__CHECK_HANDLE(texture, tex);
+	NYAS__CHECK_HANDLE(tex, tex);
 	nypx_itex *mutated = NULL;
-	nypx_itex *itex = textures + tex;
+	nypx_itex *itex = nyas_arr_at(tex_pool, tex);
 	if (itex->res.id == NYAS_UNINIT) {
 		nyas__create_texture(tex);
 		mutated = itex;
@@ -573,7 +572,7 @@ static void
 nyas__sync_gpu_fb(nyas_framebuffer fb, const nyas_fbattach *atta)
 {
 	NYAS_ASSERT(atta && "Null ptr arg.");
-	nypx_ifb *ifb = framebuffers + fb;
+	nypx_ifb *ifb = nyas_arr_at(framebuffer_pool, fb);
 	if (ifb->res.id == NYAS_UNINIT) {
 		glGenFramebuffers(1, (GLuint *)&(ifb->res.id));
 	}
@@ -581,13 +580,13 @@ nyas__sync_gpu_fb(nyas_framebuffer fb, const nyas_fbattach *atta)
 	glBindFramebuffer(GL_FRAMEBUFFER, ifb->res.id);
 	if (atta->slot == NYAS_ATTACH_DEPTH) {
 		// Change depth texture
-		NYAS__CHECK_HANDLE(texture, atta->tex);
+		NYAS__CHECK_HANDLE(tex, atta->tex);
 		ifb->depth_tex = atta->tex;
 		nyas__sync_gpu_tex(ifb->depth_tex);
 		nyas__attach_to_fb(*atta);
 	} else if (atta->slot == NYAS_ATTACH_COLOR) {
 		// Change color texture
-		NYAS__CHECK_HANDLE(texture, atta->tex);
+		NYAS__CHECK_HANDLE(tex, atta->tex);
 		ifb->color_tex = atta->tex;
 		nyas__sync_gpu_tex(ifb->color_tex);
 		nyas__attach_to_fb(*atta);
@@ -616,11 +615,12 @@ nyas__sync_gpu_fb(nyas_framebuffer fb, const nyas_fbattach *atta)
 static void
 nyas__set_shader_data(nyas_mat m, enum nypx_shdata_type group)
 {
-	nypx_ishd *s = shaders + m.shader;
+	nypx_ishd *s = nyas_arr_at(shader_pool, m.shader);
 	NYAS_ASSERT(nypx_resource_check(s) && "Invalid internal shader.");
 	nyas_tex *t = (nyas_tex *)m.ptr + m.data_count;
+	nypx_itex *itx = nyas_arr_at(tex_pool, *t);
 	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
-		if (nyas__is_dirty(textures + t[i])) {
+		if (nyas__is_dirty(itx + i)) {
 			nyas__sync_gpu_tex(t[i]);
 		}
 	}
@@ -634,7 +634,7 @@ void
 nyas_setshader_fn(nyas_cmdata *data)
 {
 	NYAS__CHECK_HANDLE(shader, data->mat.shader);
-	nypx_ishd *s = shaders + data->mat.shader;
+	nypx_ishd *s = nyas_arr_at(shader_pool, data->mat.shader);
 	if (nyas__is_dirty(s)) {
 		nyas__sync_gpu_shader(s);
 	}
@@ -664,17 +664,18 @@ void
 nyas_draw_fn(nyas_cmdata *data)
 {
 	nyas_mesh mesh = data->draw.mesh;
+	nypx_imesh *imsh = nyas_arr_at(mesh_pool, mesh);
 	NYAS__CHECK_HANDLE(mesh, mesh);
-	NYAS_ASSERT(meshes[mesh].elements &&
-	            "Attempt to draw an uninitialized mesh");
+	NYAS_ASSERT(imsh->elements &&
+				"Attempt to draw an uninitialized mesh");
 
-	if (nyas__is_dirty(meshes + mesh)) {
+	if (nyas__is_dirty(imsh)) {
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
 	}
 
-	glBindVertexArray(meshes[mesh].res.id);
+	glBindVertexArray(imsh->res.id);
 	nyas__set_shader_data(data->draw.material, NYAS_SHADER_DATA);
-	glDrawElements(GL_TRIANGLES, meshes[mesh].elements, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, imsh->elements, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
 

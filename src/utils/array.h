@@ -4,13 +4,13 @@
 #include <stddef.h>
 
 #ifndef NYAS_ARR_NO_HELPERS
-#define NYAS_arr_push(...) nyas_arr_npush(__VA_ARGS__, 1)
-#define NYAS_arr_pop(...) nyas_arr_npop(__VA_ARGS__, 1)
-#define NYAS_arr_cpy(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, 0)
-#define NYAS_arr_concat(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, -1)
-#define NYAS_arr_clear(...) nyas_arr_reset(__VA_ARGS__, 0)
-#define NYAS_arr_eq(...) (nyas_arr_cmp(__VA_ARGS__) == 0)
-#define NYAS_arr_empty(...) (nyas_arr_len(__VA_ARGS__) == 0)
+#define nyas_arr_push(...) nyas_arr_npush(__VA_ARGS__, 1)
+#define nyas_arr_pop(...) nyas_arr_npop(__VA_ARGS__, 1)
+#define nyas_arr_cpy(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, 0)
+#define nyas_arr_concat(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, -1)
+#define nyas_arr_clear(...) nyas_arr_reset(__VA_ARGS__, 0)
+#define nyas_arr_eq(...) (nyas_arr_cmp(__VA_ARGS__) == 0)
+#define nyas_arr_empty(...) (nyas_arr_len(__VA_ARGS__) == 0)
 #endif
 
 typedef void *nyas_arr;  //!< Pointer to array type.
