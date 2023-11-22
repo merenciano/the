@@ -4,25 +4,24 @@
 #define NYAS_ASSERT(X) (assert(X))
 #define NYAS_PRINT printf
 
-#define NYAS__LOG_PREFIX(LL) NYAS_PRINT("Nyas [LL] ")
 #define NYAS__LOG_LOC NYAS_PRINT("%s(%u)", __FILE__, __LINE__)
 
 #define NYAS_LOG(...)        \
-	NYAS__LOG_PREFIX(Log);   \
+	NYAS_PRINT("Nyas [Log] ");   \
 	NYAS__LOG_LOC;           \
 	NYAS_PRINT(":\n\t");     \
 	NYAS_PRINT(__VA_ARGS__); \
 	NYAS_PRINT("\n")
 
 #define NYAS_LOG_WARN(...)     \
-	NYAS__LOG_PREFIX(Warning); \
+	NYAS_PRINT("Nyas [Warning] "); \
 	NYAS__LOG_LOC;             \
 	NYAS_PRINT(":\n\t");       \
 	NYAS_PRINT(__VA_ARGS__);   \
 	NYAS_PRINT("\n")
 
 #define NYAS_LOG_ERR(...)    \
-	NYAS__LOG_PREFIX(Error); \
+	NYAS_PRINT("Nyas [Error] "); \
 	NYAS__LOG_LOC;           \
 	NYAS_PRINT(":\n\t");     \
 	NYAS_PRINT(__VA_ARGS__); \

@@ -46,5 +46,7 @@ void nyas_input_cursor_disable(void); // TODO: Merge with enable
 void nyas_input_cursor_enable(void); // TODO: flags for cursor mode and capture
 void nyas_input_capture(bool mouse, bool kb);
 
-#endif // NYAS_CORE_IO_H
+//TODO: Revisar como exponer las variables internas
+extern void *internal_window;
 
+#endif // NYAS_CORE_IO_H

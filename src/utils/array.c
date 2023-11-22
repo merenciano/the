@@ -1,9 +1,10 @@
 #include "array.h"
-#include "core/nyas_defs.h"
 #include "core/mem.h"
+#include "core/nyas_defs.h"
 
-#include <string.h>
+#include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #if !defined(NYAS_ALLOC) && !defined(NYAS_FREE)
 #include <stdlib.h>
@@ -45,17 +46,18 @@ new_cap(size_t min)
 static void *
 check_resize(void **arr, size_t needed_cap)
 {
-	if (hdr(*arr)->cap > needed_cap) {
+	if (hdr(*arr)->cap >= needed_cap) {
 		return *arr;
 	}
 
 	size_t sz = new_cap(needed_cap * hdr(*arr)->esz + sizeof(struct hdr));
 	struct hdr *tmp = NYAS_ALLOC(sz);
-	NYAS_LOG("Array realloc **arr = %lx", (size_t)arr);
 	ERR_IF(!tmp);
 	tmp->len = hdr(*arr)->len;
 	tmp->esz = hdr(*arr)->esz;
 	tmp->cap = (sz - sizeof(struct hdr)) / hdr(*arr)->esz;
+	NYAS_LOG("Array realloc **arr = %lx! From %lu to %lu element capacity",
+	         (size_t)arr, hdr(*arr)->cap, tmp->cap);
 	memcpy(tmp->buf, *arr, hdr(*arr)->len * hdr(*arr)->esz);
 	NYAS_FREE(hdr(*arr));
 	*arr = tmp->buf;

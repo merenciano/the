@@ -4,6 +4,7 @@
 #include "execution.h"
 #include "render/renderer.h"
 #include "scene/camera.h"
+#include "tools/imgui.h"
 
 // #define MTR_ENABLED
 #include "minitrace.h"
@@ -23,6 +24,7 @@ nyas_app_start(struct nyas_config *config)
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, nyas_window_width(),
 	                 nyas_window_height());
+	nyas_imgui_init();
 	MTR_END("NYAS", "Init");
 
 	config->init_func(config->context);
@@ -41,6 +43,7 @@ nyas_app_start(struct nyas_config *config)
 		MTR_BEGIN("NYAS", "Render");
 		nyas_px_render();
 		MTR_END("NYAS", "Render");
+		nyas_imgui_draw();
 
 		MTR_BEGIN("NYAS", "Swap_Buffers");
 		nyas_window_swap();

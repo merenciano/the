@@ -1,8 +1,8 @@
 target_sources(${LIB_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_defs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_defs.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.h
@@ -27,4 +27,6 @@ target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.c
 	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.h
 	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/imgui.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/imgui.c
 	)

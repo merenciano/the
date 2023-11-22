@@ -1,7 +1,7 @@
 #ifndef NYAS_PIXEL_INTERNAL_RESOURCES_H
 #define NYAS_PIXEL_INTERNAL_RESOURCES_H
 
-#include "renderer.h"
+#include "rendercommands.h"
 #include "utils/array.h"
 
 #ifdef NYAS_PIXEL_CHECKS
@@ -76,18 +76,18 @@ typedef struct {
 
 bool nypx_resource_check(void *rsrc);
 
-//extern nypx_imesh *meshes;
-//extern nypx_itex *textures;
-extern nypx_ifb *framebuffers;
-extern nypx_ishd *shaders;
-//extern int mesh_count;
-extern int texture_count;
-extern int framebuffer_count;
-extern int shader_count;
-
 extern nyas_arr mesh_pool;
 extern nyas_arr tex_pool;
 extern nyas_arr shader_pool;
 extern nyas_arr framebuffer_pool;
+
+typedef struct nyas_cmd_queue {
+	nyas_cmd *curr;
+	nyas_cmd *curr_last;
+	nyas_cmd *next;
+	nyas_cmd *next_last;
+} nyas_cmd_queue;
+
+extern nyas_cmd_queue render_queue;
 
 #endif // NYAS_PIXEL_INTERNAL_RESOURCES_H

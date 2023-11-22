@@ -4,6 +4,11 @@
 #include "config.h"
 #include <stdbool.h>
 
+typedef int nyas_mesh;
+typedef int nyas_tex;
+typedef int nyas_framebuffer;
+typedef int nyas_shader;
+
 struct nyas_pbr_desc_unit {
 	float model[16];
 	float color[3];
@@ -38,11 +43,6 @@ enum nyas_textype {
 	NYAS_TEX_ENVIRONMENT,
 	NYAS_TEX_PREFILTER_ENVIRONMENT,
 };
-
-typedef int nyas_mesh;
-typedef int nyas_tex;
-typedef int nyas_framebuffer;
-typedef int nyas_shader;
 
 typedef struct nyas_mat {
 	void *ptr;

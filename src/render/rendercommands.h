@@ -98,13 +98,6 @@ typedef struct nyas_cmd {
 void nyas_cmd_add(nyas_cmd *rc);
 nyas_cmd *nyas_cmd_alloc(void);
 
-typedef struct nyas_cmd_queue {
-	nyas_cmd *curr;
-	nyas_cmd *curr_last;
-	nyas_cmd *next;
-	nyas_cmd *next_last;
-} nyas_cmd_queue;
-
 extern void nyas_clear_fn(nyas_cmdata *data);
 extern void nyas_draw_fn(nyas_cmdata *data);
 extern void nyas_rops_fn(nyas_cmdata *data);

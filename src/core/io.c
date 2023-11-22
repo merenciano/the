@@ -5,7 +5,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
-static GLFWwindow *internal_window = NULL;
+void *internal_window = NULL;
 static nyas_input_state curr;
 static nyas_input_state prev;
 static bool capture_kb;

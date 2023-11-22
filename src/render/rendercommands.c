@@ -617,10 +617,10 @@ nyas__set_shader_data(nyas_mat m, enum nypx_shdata_type group)
 {
 	nypx_ishd *s = nyas_arr_at(shader_pool, m.shader);
 	NYAS_ASSERT(nypx_resource_check(s) && "Invalid internal shader.");
-	nyas_tex *t = (nyas_tex *)m.ptr + m.data_count;
-	nypx_itex *itx = nyas_arr_at(tex_pool, *t);
+	nyas_tex *t = (nyas_tex*)((float*)m.ptr) + m.data_count;
 	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
-		if (nyas__is_dirty(itx + i)) {
+		nypx_itex *itx = nyas_arr_at(tex_pool, t[i]);
+		if (nyas__is_dirty(itx)) {
 			nyas__sync_gpu_tex(t[i]);
 		}
 	}
@@ -721,15 +721,16 @@ nyas_setfb_fn(nyas_cmdata *data)
 		return;
 	}
 
+	nypx_ifb *ifb = nyas_arr_at(framebuffer_pool, d->fb);
 	if (d->attachment.slot != NYAS_IGNORE) {
-		framebuffers[d->fb].res.flags |= RF_DIRTY;
+		ifb->res.flags |= RF_DIRTY;
 	}
 
 	NYAS__CHECK_HANDLE(framebuffer, d->fb);
-	if (nyas__is_dirty(framebuffers + d->fb)) {
+	if (nyas__is_dirty(ifb)) {
 		nyas__sync_gpu_fb(d->fb, &d->attachment);
 	} else {
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[d->fb].res.id);
+		glBindFramebuffer(GL_FRAMEBUFFER, ifb->res.id);
 	}
 	if (d->vp_x > 0) {
 		nyas__set_viewport(d->vp_x, d->vp_y);

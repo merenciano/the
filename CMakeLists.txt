@@ -29,4 +29,4 @@ target_include_directories(${LIB_NAME} PUBLIC
 
 add_subdirectory(src)
 add_subdirectory(extern)
-add_subdirectory(examples)
+add_subdirectory(demos)
