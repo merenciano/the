@@ -64,7 +64,6 @@ void *nyas_alloc_frame(unsigned int size);
 nyas_tex nyas_tex_load_img(const char *path, enum nyas_textype t);
 nyas_tex nyas_tex_create(int width, int height, enum nyas_textype t);
 int *nyas_tex_size(nyas_tex tex, int *out);
-void nyas_tex_freepix(nyas_tex tex); // From RAM
 
 nyas_mesh nyas_mesh_create_cube(void);
 nyas_mesh nyas_mesh_create_sphere(int x_segments, int y_segments);

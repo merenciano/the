@@ -328,18 +328,6 @@ nyas_tex_size(nyas_tex tex, int *out)
 	return out;
 }
 
-void
-nyas_tex_freepix(nyas_tex tex)
-{
-	nypx_itex *itx = nyas_arr_at(tex_pool, tex);
-	for (int face = 0; face < 6; ++face) {
-		if (itx->pix[face]) {
-			stbi_image_free(itx->pix[face]);
-			itx->pix[face] = NULL;
-		}
-	}
-}
-
 nyas_shader
 nyas_shader_create(const char *shader)
 {
