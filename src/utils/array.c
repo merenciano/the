@@ -13,7 +13,7 @@
 #endif
 
 #define BUFSZ 1024
-#define ELEM(A, I) (&(hdr(A)->buf[I * hdr(A)->esz]))
+#define ELEM(A, I) (&(hdr(A)->buf[(I) * hdr(A)->esz]))
 #define ERR_IF(X) \
 	if (X)        \
 	return NULL

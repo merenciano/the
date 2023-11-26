@@ -18,8 +18,8 @@
 #include <nuklear.h>
 #include <nuklear_glfw_gl3.h>
 
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
+#define MAX_VERTEX_BUFFER (512 * 1024)
+#define MAX_ELEMENT_BUFFER (128 * 1024)
 
 struct nk_glfw glfw = { 0 };
 struct nk_context *ctx;
