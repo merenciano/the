@@ -2,7 +2,7 @@
 #define NYAS_TOOLS_RESOURCE_MAP_H
 
 #include "core/hmap.h"
-#include "render/renderer.h"
+#include "render/pixels.h"
 
 typedef struct {
 	nyas_hmap *meshes;
