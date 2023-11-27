@@ -5,7 +5,6 @@ build/
 lib/*.a
 lib/*.so
 cmake-build**/
-extern/cimgui/*.so
-examples/*/imgui.ini
-examples/matball/matballs
-examples/hello/hello
+demos/*/imgui.ini
+demos/pbr/pbr
+demos/hello/hello

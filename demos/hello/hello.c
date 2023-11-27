@@ -18,12 +18,14 @@ typedef struct HelloCtx {
 	nyas_mat fs_mat;
 	nyas_mat skymat;
 	nyas_entity *e;
+	nyas_chrono chrono;
 } HelloCtx;
 
 void
 Init(void *context)
 {
 	HelloCtx *ctx = context;
+	ctx->chrono = nyas_time();
 	ctx->fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
 	                         true);
 	ctx->hellomat = nyas_shader_create("hello");
@@ -63,12 +65,16 @@ Init(void *context)
 	*mat_data = ctx->hello_mat;
 }
 
-bool
+void
 Update(void *context)
 {
 	HelloCtx *ctx = context;
+	float dt = nyas_time_sec(nyas_elapsed(ctx->chrono));
+	ctx->chrono = nyas_time();
+
+	nyas_io_poll();
 	nyas_input_read();
-	nyas_camera_control(&camera, deltatime);
+	nyas_camera_control(&camera, dt);
 
 	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = ctx->fb;
@@ -163,25 +169,32 @@ Update(void *context)
 	draw->next = NULL;
 
 	nyas_cmd_add(rops);
+}
 
-	return true;
+void Render(void)
+{
+	nyas_px_render();
+	nyas_imgui_draw();
+	nyas_window_swap();
+	nyas_frame_end();
 }
 
 int
 main(int argc, char **argv)
 {
-	HelloCtx ctx;
-	struct nyas_config cnfg = { .init_func = Init,
-		                        .update_func = Update,
-		                        .context = &ctx,
-		                        .heap_size = NYAS_GB(1U),
-		                        .window_title = "nyas_Hello",
-		                        .window_width = 1280,
-		                        .window_height = 720,
-		                        .vsync = true };
+	nyas_mem_init(NYAS_GB(1));
+	nyas_io_init("NYAS HelloWorld", 1920, 1080, true);
+	nyas_px_init();
+	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
+	nyas_imgui_init();
 
-	nyas_app_start(&cnfg);
-	nyas_app_end();
+	HelloCtx ctx;
+	Init(&ctx);
+
+	while (!nyas_window_closed()) {
+		Update(&ctx);
+		Render();
+	}
 
 	return 0;
 }

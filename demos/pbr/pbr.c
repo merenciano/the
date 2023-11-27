@@ -240,7 +240,7 @@ GeneratePbrEnv(void)
 }
 
 void
-Init(void *context)
+Init(void)
 {
 	g_fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
 	                      true);
@@ -591,11 +591,15 @@ Init(void *context)
 	skytex[sky_common.data_count] = nyas_resourcemap_tex(rm, "Skybox");
 }
 
-bool
-Update(void *context)
+void
+Update(nyas_chrono chrono)
 {
+	float dt = nyas_time_sec(nyas_elapsed(chrono));
+	chrono = nyas_time();
+
+	nyas_io_poll();
 	nyas_input_read();
-	nyas_camera_control(&camera, deltatime);
+	nyas_camera_control(&camera, dt);
 
 	/* PBR common shader data. */
 	struct nyas_pbr_desc_scene *common_pbr = pbr_common.ptr;
@@ -695,24 +699,31 @@ Update(void *context)
 	draw->next = NULL;
 
 	nyas_cmd_add(rops);
+}
 
-	return true;
+void Render(void)
+{
+	nyas_px_render();
+	nyas_imgui_draw();
+	nyas_window_swap();
+	nyas_frame_end();
 }
 
 int
 main(int argc, char **argv)
 {
-	struct nyas_config cnfg = { .init_func = Init,
-		                        .update_func = Update,
-		                        .heap_size = NYAS_GB(1),
-		                        .window_title = "NYAS Material Demo",
-		                        .window_width = 1280,
-		                        .window_height = 720,
-		                        .vsync = true };
+	nyas_mem_init(NYAS_GB(1));
+	nyas_io_init("NYAS Material", 1920, 1080, true);
+	nyas_px_init();
+	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
+	nyas_imgui_init();
+	Init();
 
-	nyas_app_start(&cnfg);
-
-	nyas_app_end();
+	nyas_chrono frame_chrono = nyas_time();
+	while (!nyas_window_closed()) {
+		Update(frame_chrono);
+		Render();
+	}
 
 	return 0;
 }
