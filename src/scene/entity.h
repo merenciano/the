@@ -2,7 +2,7 @@
 #ifndef NYAS_ENTITY_H
 #define NYAS_ENTITY_H
 
-#include "render/renderer.h"
+#include "render/pixels.h"
 
 typedef struct nyas_entity {
 	float transform[16];

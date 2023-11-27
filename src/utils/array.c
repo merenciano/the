@@ -1,19 +1,11 @@
 #include "array.h"
 #include "core/mem.h"
-#include "core/nyas_defs.h"
+#include "core/log.h"
 
-#include <assert.h>
-#include <stdio.h>
 #include <string.h>
 
-#if !defined(NYAS_ALLOC) && !defined(NYAS_FREE)
-#include <stdlib.h>
-#define NYAS_ALLOC malloc
-#define NYAS_FREE free
-#endif
-
 #define BUFSZ 1024
-#define ELEM(A, I) (&(hdr(A)->buf[I * hdr(A)->esz]))
+#define ELEM(A, I) ((A) + (I) * hdr(A)->esz)
 #define ERR_IF(X) \
 	if (X)        \
 	return NULL
@@ -117,6 +109,11 @@ size_t
 nyas_arr_len(void *arr)
 {
 	return hdr(arr)->len;
+}
+
+size_t nyas_arr_cap(nyas_arr arr)
+{
+	return hdr(arr)->cap;
 }
 
 ptrdiff_t

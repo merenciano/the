@@ -1,8 +1,16 @@
 #ifndef NYAS_CORE_MEM_H
 #define NYAS_CORE_MEM_H
 
-#include "nyas_defs.h"
-#include <stdlib.h>
+#include <stddef.h>
+
+#define NYAS_ALLOC nyas_alloc
+#define NYAS_CALLOC nyas_calloc
+#define NYAS_REALLOC nyas_realloc
+#define NYAS_FREE nyas_free
+
+#define NYAS_KB(X) ((X)*1024)
+#define NYAS_MB(X) (NYAS_KB(X) * 1024)
+#define NYAS_GB(X) (NYAS_MB((size_t)X) * 1024)
 
 void *nyas_mem_reserve(size_t size);
 void *nyas_alloc(size_t size);

@@ -1,17 +1,8 @@
 #ifndef NYAS_UTILS_ARRAY_H
 #define NYAS_UTILS_ARRAY_H
 
+#include <stdbool.h>
 #include <stddef.h>
-
-#ifndef NYAS_ARR_NO_HELPERS
-#define nyas_arr_push(...) nyas_arr_npush(__VA_ARGS__, 1)
-#define nyas_arr_pop(...) nyas_arr_npop(__VA_ARGS__, 1)
-#define nyas_arr_cpy(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, 0)
-#define nyas_arr_concat(...) nyas_arr_cpyfta(__VA_ARGS__, 0, 0, -1)
-#define nyas_arr_clear(...) nyas_arr_reset(__VA_ARGS__, 0)
-#define nyas_arr_eq(...) (nyas_arr_cmp(__VA_ARGS__) == 0)
-#define nyas_arr_empty(...) (nyas_arr_len(__VA_ARGS__) == 0)
-#endif
 
 typedef void *nyas_arr;  //!< Pointer to array type.
 typedef void *nyas_elem; //!< Pointer to array element type.
@@ -64,6 +55,13 @@ extern nyas_elem nyas_arr_at(nyas_arr arr, size_t idx);
  * @return Current number of elements.
  */
 extern size_t nyas_arr_len(nyas_arr arr);
+
+/**
+ * Gets the capacity of the current allocation.
+ * @param arr Array instance.
+ * @return Allocation capacity.
+ */
+extern size_t nyas_arr_cap(nyas_arr arr);
 
 /**
  * Compares two arrays.
@@ -135,5 +133,87 @@ extern nyas_elem nyas_arr_cpyfta(nyas_arr *dst,
  * @param elem_size New element size, for keeping the previous use 0.
  */
 extern void nyas_arr_reset(nyas_arr arr, size_t elem_size);
+
+/**
+ * Adds an element at the array's tail.
+ * @param arr Reference to an array's instance.
+ * @return Pointer to the pushed element.
+ */
+static inline nyas_elem
+nyas_arr_push(nyas_arr *arr)
+{
+	return nyas_arr_npush(arr, 1);
+}
+
+/**
+ * Removes an element from the array's tail.
+ * This operation reduces the length of the array but not its capacity.
+ * The returned pointer gets invalidated when the array grows back.
+ * @param arr Array instance.
+ * @return Volatile pointer to the element removed.
+ */
+static inline nyas_elem
+nyas_arr_pop(nyas_arr arr)
+{
+	return nyas_arr_npop(arr, 1);
+}
+
+/**
+ * Checks if array is empty.
+ * @param arr Array instance.
+ * @return True if empty.
+ */
+static inline bool
+nyas_arr_empty(nyas_arr arr)
+{
+	return !nyas_arr_len(arr);
+}
+
+/**
+ * Compares if two arrays are equal.
+ * @param a One array instance.
+ * @param b Another array instance.
+ * @return True if equal.
+ */
+static inline bool
+nyas_arr_eq(nyas_arr a, nyas_arr b)
+{
+	return !nyas_arr_cmp(a, b);
+}
+
+/**
+ * Copy elements from src to dst.
+ * @param dst Reference to an array's instance to copy elements to.
+ * @param src Array instance to copy elements from.
+ * @return Reference to the first copied element from src array.
+ */
+static inline nyas_elem
+nyas_arr_cpy(nyas_arr *dst, nyas_arr src)
+{
+	return nyas_arr_cpyfta(dst, src, 0, 0, 0);
+}
+
+/**
+ * Concatenates elements from src at dst.
+ * @param dst Reference to an array's instance to copy elements to.
+ * @param src Array instance to copy elements from.
+ * @return Reference to the first copied element from src array.
+ */
+static inline nyas_elem
+nyas_arr_concat(nyas_arr *dst, nyas_arr src)
+{
+	return nyas_arr_cpyfta(dst, src, 0, 0, -1);
+}
+
+/**
+ * Clears the array.
+ * The array is left in empty state. The previous allocation remains unchanged.
+ * @param arr Array instance.
+ */
+static inline void
+nyas_arr_clear(nyas_arr arr)
+{
+	nyas_arr_reset(arr, 0);
+}
 
 #endif // NYAS_UTILS_ARRAY_H

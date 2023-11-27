@@ -14,13 +14,11 @@ target_sources(${LIB_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/string.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/config.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
+	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_extra.h
+	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_commands.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h

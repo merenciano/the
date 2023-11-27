@@ -1,10 +1,9 @@
 #include "hmap.h"
-#include "nyas_defs.h"
+#include "log.h"
+#include "mem.h"
 
-#include <stdlib.h>
-#include <assert.h>
+#include <stddef.h>
 #include <string.h>
-#include <stdio.h>
 
 #define hdr(HM) ((struct hm_hdr*)(HM) - 1)
 #define hmcap(HM) (hdr(HM)->capacity)
@@ -62,7 +61,7 @@ nyas_hmap_create(unsigned int capacity, unsigned int value_size)
 	capacity = next_pow2(capacity);
 	size_t map_size = (value_size + sizeof(hm_key)) * capacity
 		+ sizeof(struct hm_hdr);
-	struct hm_hdr *hm = calloc(map_size, 1);
+	struct hm_hdr *hm = NYAS_CALLOC(map_size, 1);
 
 	hm->capacity = capacity;
 	hm->count = 0;
@@ -75,7 +74,7 @@ nyas_hmap_create(unsigned int capacity, unsigned int value_size)
 void
 nyas_hmap_destroy(nyas_hmap *hm)
 {
-	free((struct hm_hdr *)hm - 1);
+	NYAS_FREE((struct hm_hdr *)hm - 1);
 }
 
 void

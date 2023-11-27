@@ -2,7 +2,7 @@
 #include "core/io.h"
 #include "core/mem.h"
 #include "execution.h"
-#include "render/renderer.h"
+#include "render/pixels.h"
 #include "scene/camera.h"
 #include "tools/imgui.h"
 

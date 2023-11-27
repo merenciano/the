@@ -1,9 +1,6 @@
 #include "resource-map.h"
 
-#include "core/nyas_defs.h"
-#include "render/renderer.h"
-
-#include <assert.h>
+#include <core/log.h>
 
 void
 nyas_resourcemap_mesh_file(nyas_resourcemap *rm,
