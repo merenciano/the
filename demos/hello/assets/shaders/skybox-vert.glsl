@@ -1,6 +1,6 @@
 #version 330
 
-uniform vec4 u_scene_data[4];
+uniform vec4 u_common_data[4];
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -10,7 +10,7 @@ out vec3 position;
 
 void main()
 {
-    mat4 vp = mat4(u_scene_data[0], u_scene_data[1], u_scene_data[2], u_scene_data[3]);
+    mat4 vp = mat4(u_common_data[0], u_common_data[1], u_common_data[2], u_common_data[3]);
     position = a_position;
     gl_Position = vec4(vp * vec4(position, 1.0)).xyww;
 }

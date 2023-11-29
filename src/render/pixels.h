@@ -77,9 +77,22 @@ nyas_mesh nyas_mesh_create_quad(void);
 nyas_mesh nyas_mesh_load_obj(const char *path);
 
 nyas_shader nyas_shader_create(const char *shader);
-nyas_mat nyas_mat_default(void);
-void *nyas_mat_alloc(nyas_mat *mat); /* MaterialAlloc does not initialize the shader value. */
-void *nyas_mat_alloc_frame(nyas_mat *mat); /* MaterialAllocFrame does not initialize the shader value. */
+void nyas_shader_reload(nyas_shader shader);
+/* Creates a new material and alloc persistent memory for its data */
+nyas_mat nyas_mat_pers(nyas_shader shader,
+                       int data_count,
+                       int tex_count,
+                       int cube_count);
+
+/* Creates a new material and alloc frame-scoped memory for its data */
+nyas_mat nyas_mat_tmp(nyas_shader shader,
+                       int data_count,
+                       int tex_count,
+                       int cube_count);
+nyas_mat nyas_mat_dft(nyas_shader shader);
+/* MaterialAlloc does not initialize the shader value. */
+void *nyas_mat_alloc(nyas_mat *mat);
+nyas_tex *nyas_mat_tex(nyas_mat *mat); // Ptr to first texture.
 
 extern nyas_mesh SPHERE_MESH;
 extern nyas_mesh CUBE_MESH;

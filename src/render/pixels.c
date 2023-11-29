@@ -1,8 +1,8 @@
 #include "pixels.h"
 
 #include "core/io.h"
-#include "core/mem.h"
 #include "core/log.h"
+#include "core/mem.h"
 #include "pixels_internal.h"
 
 #include <math.h>
@@ -344,7 +344,15 @@ nyas_shader_create(const char *shader)
 	shdr->shader_name = shader;
 	shdr->res.id = NYAS_UNINIT;
 	shdr->res.flags = RF_DIRTY;
+	shdr->vert = NYAS_UNINIT;
+	shdr->frag = NYAS_UNINIT;
 	return ret;
+}
+
+void nyas_shader_reload(nyas_shader shader)
+{
+	r_shader *shdr = nyas_arr_at(shader_pool, shader);
+	shdr->res.flags |= RF_DIRTY;
 }
 
 nyas_mesh
@@ -656,13 +664,42 @@ nyas_fb_size(nyas_framebuffer fb, int *w, int *h)
 }
 
 nyas_mat
-nyas_mat_default(void)
+nyas_mat_dft(nyas_shader shader)
 {
 	nyas_mat ret = { .ptr = NULL,
 		             .data_count = 0,
 		             .tex_count = 0,
 		             .cube_count = 0,
-		             .shader = NYAS_INVALID };
+		             .shader = shader };
+	return ret;
+}
+
+nyas_mat
+nyas_mat_pers(nyas_shader shader,
+              int data_count,
+              int tex_count,
+              int cube_count)
+{
+	nyas_mat ret = { .ptr = NULL,
+		             .data_count = data_count,
+		             .tex_count = tex_count,
+		             .cube_count = cube_count,
+		             .shader = shader };
+	int elements = data_count + tex_count + cube_count;
+	ret.ptr = nyas_alloc(elements * sizeof(float));
+	return ret;
+}
+
+nyas_mat
+nyas_mat_tmp(nyas_shader shader, int data_count, int tex_count, int cube_count)
+{
+	nyas_mat ret = { .ptr = NULL,
+		             .data_count = data_count,
+		             .tex_count = tex_count,
+		             .cube_count = cube_count,
+		             .shader = shader };
+	int elements = data_count + tex_count + cube_count;
+	ret.ptr = nyas_alloc_frame(elements * sizeof(float));
 	return ret;
 }
 
@@ -674,10 +711,7 @@ nyas_mat_alloc(nyas_mat *mat)
 	return mat->ptr;
 }
 
-void *
-nyas_mat_alloc_frame(nyas_mat *m)
+nyas_tex *nyas_mat_tex(nyas_mat *mat)
 {
-	int elements = m->data_count + m->tex_count + m->cube_count;
-	m->ptr = nyas_alloc_frame(elements * sizeof(float));
-	return m->ptr;
+	return (nyas_tex*)mat->ptr + mat->data_count;
 }

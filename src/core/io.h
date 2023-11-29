@@ -30,7 +30,7 @@ void nyas_io_poll(void);
 
 int nyas_window_closed(void);
 void nyas_window_swap(void);
-int *nyas_window_size(int *out);
+nyas_v2i nyas_window_size(void);
 int nyas_window_width(void); // TODO: DEPRECATED: nyas_window_size instead
 int nyas_window_height(void); // TODO: DEPRECATED: nyas_window_size instead
 

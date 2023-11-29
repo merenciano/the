@@ -4,6 +4,8 @@
  *  - Strings
  *  - Scene graph
  *  - Memory tracking
+ *  - Load shaders source from logic thread
+ *
  */
 
 #include "core/io.h"

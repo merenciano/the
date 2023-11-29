@@ -72,6 +72,8 @@ typedef struct {
 	r_resource res;
 	const char *shader_name;
 	shadata_loc data_loc[2];
+	unsigned int vert;
+	unsigned int frag;
 } r_shader;
 
 extern nyas_arr mesh_pool;

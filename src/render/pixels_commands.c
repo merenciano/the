@@ -1,8 +1,8 @@
 #include "pixels_internal.h"
 
 #include "core/io.h"
-#include "core/mem.h"
 #include "core/log.h"
+#include "core/mem.h"
 
 #include <string.h>
 
@@ -11,20 +11,20 @@
 #include <glad/glad.h>
 
 typedef struct {
-	GLenum internal_format;
+	GLint internal_format;
 	GLenum format;
 	GLenum type;
-	GLenum wrap;
-	GLenum min_filter;
-	GLenum mag_filter;
+	GLint wrap;
+	GLint min_filter;
+	GLint mag_filter;
 } nyas_texcube_cnfg;
 
 typedef struct {
-	GLenum internal_format;
+	GLint internal_format;
 	GLenum format;
 	GLenum type;
-	GLenum wrap;
-	GLenum filter;
+	GLint wrap;
+	GLint filter;
 	int channels;
 } nyas_tex_cnfg;
 
@@ -169,9 +169,8 @@ static void
 nyas__set_viewport(int x, int y)
 {
 	if (x < 0) {
-		int win_size[2];
-		nyas_window_size(win_size);
-		glViewport(0, 0, win_size[0], win_size[1]);
+		nyas_v2i win_size = nyas_window_size();
+		glViewport(0, 0, win_size.x, win_size.y);
 	} else {
 		glViewport(0, 0, x, y);
 	}
@@ -452,13 +451,9 @@ nyas__load_text_file(const char *path, char *buffer, size_t buffsize)
 }
 
 static enum nyas_defs
-nyas__create_shader(r_shader *shader)
+nyas__compile_program(r_shader *shader)
 {
 #define SHADER_BUFFSIZE 8192
-	NYAS_ASSERT(shader->res.id == NYAS_UNINIT &&
-	            "The material must be uninitialized.");
-	NYAS_ASSERT(shader->shader_name && "Empty shader name");
-
 	char vert[SHADER_BUFFSIZE] = { '\0' };
 	char frag[SHADER_BUFFSIZE] = { '\0' };
 	char vert_path[256] = { '\0' };
@@ -483,56 +478,73 @@ nyas__create_shader(r_shader *shader)
 
 	GLint err;
 	GLchar output_log[512];
-	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
 	const GLchar *shader_src = &vert[0];
-	glShaderSource(vert_shader, 1, &shader_src, NULL);
-	glCompileShader(vert_shader);
-	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &err);
+	glShaderSource(shader->vert, 1, &shader_src, NULL);
+	glCompileShader(shader->vert);
+	glGetShaderiv(shader->vert, GL_COMPILE_STATUS, &err);
 	if (!err) {
-		glGetShaderInfoLog(vert_shader, 512, NULL, output_log);
+		glGetShaderInfoLog(shader->vert, 512, NULL, output_log);
 		NYAS_LOG_ERR("%s vertex shader compilation failed:\n%s\n",
 		             shader->shader_name, output_log);
 		return NYAS_EC_FAIL;
 	}
-	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
 	shader_src = &frag[0];
-	glShaderSource(frag_shader, 1, &shader_src, NULL);
-	glCompileShader(frag_shader);
-	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &err);
+	glShaderSource(shader->frag, 1, &shader_src, NULL);
+	glCompileShader(shader->frag);
+	glGetShaderiv(shader->frag, GL_COMPILE_STATUS, &err);
 	if (!err) {
-		glGetShaderInfoLog(frag_shader, 512, NULL, output_log);
+		glGetShaderInfoLog(shader->frag, 512, NULL, output_log);
 		NYAS_LOG_ERR("%s fragment shader compilation failed:\n%s\n",
 		             shader->shader_name, output_log);
 		return NYAS_EC_FAIL;
 	}
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vert_shader);
-	glAttachShader(program, frag_shader);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &err);
+	glAttachShader(shader->res.id, shader->vert);
+	glAttachShader(shader->res.id, shader->frag);
+	glLinkProgram(shader->res.id);
+	glGetProgramiv(shader->res.id, GL_LINK_STATUS, &err);
 	if (!err) {
-		glGetProgramInfoLog(program, 512, NULL, output_log);
+		glGetProgramInfoLog(shader->res.id, 512, NULL, output_log);
 		NYAS_LOG_ERR("%s program error:\n%s\n", shader->shader_name,
 		             output_log);
 		return NYAS_EC_FAIL;
 	}
 
-	shader->res.id = program;
-	// TODO: Cambiar el nombre de los uniforms de scene quitando scene.
 	shader->data_loc[SHADATA_COMMON].data =
-	  glGetUniformLocation(shader->res.id, "u_scene_data");
+	  glGetUniformLocation(shader->res.id, "u_common_data");
 	shader->data_loc[SHADATA_COMMON].tex =
-	  glGetUniformLocation(shader->res.id, "u_scene_tex");
+	  glGetUniformLocation(shader->res.id, "u_common_tex");
 	shader->data_loc[SHADATA_COMMON].cubemap =
-	  glGetUniformLocation(shader->res.id, "u_scene_cube");
-	shader->data_loc[SHADATA_UNIT].data =
-	  glGetUniformLocation(shader->res.id, "u_entity_data");
-	shader->data_loc[SHADATA_UNIT].tex =
-	  glGetUniformLocation(shader->res.id, "u_entity_tex");
+	  glGetUniformLocation(shader->res.id, "u_common_cube");
+	shader->data_loc[SHADATA_UNIT].data = glGetUniformLocation(shader->res.id,
+	                                                           "u_data");
+	shader->data_loc[SHADATA_UNIT].tex = glGetUniformLocation(shader->res.id,
+	                                                          "u_tex");
 	shader->data_loc[SHADATA_UNIT].cubemap =
-	  glGetUniformLocation(shader->res.id, "u_entity_cube");
+	  glGetUniformLocation(shader->res.id, "u_cube");
 
 	return NYAS_OK;
+}
+
+static enum nyas_defs
+nyas__create_shader(r_shader *shader)
+{
+	NYAS_ASSERT(shader->res.id == NYAS_UNINIT &&
+	            "Shader must be uninitialized.");
+	NYAS_ASSERT(shader->vert == NYAS_UNINIT &&
+	            "Vert shader must be uninitialized.");
+	NYAS_ASSERT(shader->frag == NYAS_UNINIT &&
+	            "Frag shader must be uninitialized.");
+	NYAS_ASSERT(shader->shader_name && "Empty shader name");
+
+	shader->vert = glCreateShader(GL_VERTEX_SHADER);
+	shader->frag = glCreateShader(GL_FRAGMENT_SHADER);
+	shader->res.id = glCreateProgram();
+
+	nypx__resource_check(shader);
+	nypx__resource_check(&shader->vert);
+	nypx__resource_check(&shader->frag);
+
+	return nyas__compile_program(shader);
 }
 
 static void
@@ -564,6 +576,8 @@ nyas__sync_gpu_shader(r_shader *is)
 {
 	if (is->res.id == NYAS_UNINIT) {
 		nyas__create_shader(is);
+	} else if (is->res.flags & RF_DIRTY) {
+		nyas__compile_program(is);
 	}
 	is->res.flags = 0;
 	NYAS_ASSERT(nypx__resource_check(is) && "Error creating internal shader.");
@@ -618,7 +632,7 @@ nyas__set_shader_data(nyas_mat m, enum shadata_type group)
 {
 	r_shader *s = nyas_arr_at(shader_pool, m.shader);
 	NYAS_ASSERT(nypx__resource_check(s) && "Invalid internal shader.");
-	nyas_tex *t = (nyas_tex*)((float*)m.ptr) + m.data_count;
+	nyas_tex *t = (nyas_tex *)((float *)m.ptr) + m.data_count;
 	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
 		r_tex *itx = nyas_arr_at(tex_pool, t[i]);
 		if (nyas__is_dirty(itx)) {
@@ -667,8 +681,7 @@ nyas_draw_fn(nyas_cmdata *data)
 	nyas_mesh mesh = data->draw.mesh;
 	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
 	CHECK_HANDLE(mesh, mesh);
-	NYAS_ASSERT(imsh->elements &&
-	            "Attempt to draw an uninitialized mesh");
+	NYAS_ASSERT(imsh->elements && "Attempt to draw an uninitialized mesh");
 
 	if (nyas__is_dirty(imsh)) {
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);

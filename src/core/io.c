@@ -82,12 +82,13 @@ nyas_window_swap()
 	glfwSwapBuffers(internal_window);
 }
 
-int *
-nyas_window_size(int *out)
+nyas_v2i
+nyas_window_size()
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
-	glfwGetWindowSize(internal_window, out, out + 1);
-	return out;
+	nyas_v2i sz;
+	glfwGetWindowSize(internal_window, &sz.x, &sz.y);
+	return sz;
 }
 
 int

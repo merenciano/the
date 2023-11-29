@@ -15,4 +15,18 @@ enum nyas_defs {
 	NYAS_IGNORE = -5006
 };
 
+typedef struct nyas_v2i {
+	int x, y;
+} nyas_v2i;
+
+static inline float *
+nyas_set_color(float *out, float r, float g, float b, float a)
+{
+	out[0] = r;
+	out[1] = g;
+	out[2] = b;
+	out[3] = a;
+	return out;
+}
+
 #endif // NYAS_CORE_DEFS_H

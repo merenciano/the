@@ -26,32 +26,20 @@ Init(void *context)
 {
 	HelloCtx *ctx = context;
 	ctx->chrono = nyas_time();
-	ctx->fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
-	                         true);
+	nyas_v2i sz = nyas_window_size();
+	ctx->fb = nyas_fb_create(sz.x, sz.y, true, true);
 	ctx->hellomat = nyas_shader_create("hello");
 	ctx->fs_img = nyas_shader_create("fullscreen-img");
 	ctx->skybox = nyas_shader_create("skybox");
-	ctx->fs_mat.data_count = 0;
-	ctx->fs_mat.tex_count = 1;
-	ctx->fs_mat.cube_count = 0;
-	nyas_tex *t = nyas_mat_alloc(&ctx->fs_mat);
-	*t = nyas_fb_color(ctx->fb);
-	ctx->fs_mat.shader = ctx->fs_img;
+	ctx->fs_mat = nyas_mat_pers(ctx->fs_img, 0, 1, 0);
+	*(nyas_tex *)ctx->fs_mat.ptr = nyas_fb_color(ctx->fb);
 
 	ctx->skycube = nyas_tex_load_img("./assets/tex/Xcave.png",
 	                                 NYAS_TEX_SKYBOX);
+	ctx->skymat = nyas_mat_pers(ctx->skybox, 16, 0, 1);
+	*nyas_mat_tex(&ctx->skymat) = ctx->skycube;
 
-	ctx->skymat.data_count = 16;
-	ctx->skymat.tex_count = 0;
-	ctx->skymat.cube_count = 1;
-	ctx->skymat.shader = ctx->skybox;
-	nyas_tex *cube = nyas_mat_alloc(&ctx->skymat);
-	cube[ctx->skymat.data_count] = ctx->skycube;
-
-	ctx->hello_mat.color[0] = 1.0f;
-	ctx->hello_mat.color[1] = 1.0f;
-	ctx->hello_mat.color[2] = 0.0f;
-	ctx->hello_mat.color[3] = 1.0f;
+	nyas_set_color(ctx->hello_mat.color, 1.0f, 0.0f, 1.0f, 1.0f);
 
 	ctx->e = nyas_entity_create();
 	float pos[3] = { 0.0f, 0.0f, -4.0f };
@@ -63,6 +51,9 @@ Init(void *context)
 	HelloMatData *mat_data = nyas_mat_alloc(&ctx->e->mat);
 	ctx->e->mat.shader = ctx->hellomat;
 	*mat_data = ctx->hello_mat;
+
+	ctx->e->mat = nyas_mat_pers(ctx->hellomat, sizeof(HelloMatData) / 4, 0, 0);
+	*(HelloMatData *)ctx->e->mat.ptr = ctx->hello_mat;
 }
 
 void
@@ -99,15 +90,11 @@ Update(void *context)
 	clear->data.clear.color_buffer = true;
 	clear->data.clear.depth_buffer = true;
 	clear->data.clear.stencil_buffer = false;
-	clear->data.clear.color[0] = 0.2f;
-	clear->data.clear.color[1] = 0.2f;
-	clear->data.clear.color[2] = 0.2f;
-	clear->data.clear.color[3] = 1.0f;
+	nyas_set_color(clear->data.clear.color, 0.2f, 0.2f, 0.2f, 1.0f);
 	clear->execute = nyas_clear_fn;
 
 	nyas_cmd *usemat = nyas_cmd_alloc();
-	usemat->data.mat = nyas_mat_default();
-	usemat->data.mat.shader = ctx->hellomat;
+	usemat->data.mat = nyas_mat_dft(ctx->hellomat);
 	usemat->execute = nyas_setshader_fn;
 	clear->next = usemat;
 	usemat->next = NULL;
@@ -129,8 +116,7 @@ Update(void *context)
 
 	nyas_cmd *draw_sky = nyas_cmd_alloc();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material = nyas_mat_default();
-	draw_sky->data.draw.material.shader = ctx->skybox;
+	draw_sky->data.draw.material = nyas_mat_dft(ctx->skybox);
 	draw_sky->execute = nyas_draw_fn;
 	use_sky_shader->next = draw_sky;
 
@@ -149,10 +135,7 @@ Update(void *context)
 	clear2->data.clear.color_buffer = true;
 	clear2->data.clear.depth_buffer = false;
 	clear2->data.clear.stencil_buffer = false;
-	clear2->data.clear.color[0] = 0.0f;
-	clear2->data.clear.color[1] = 1.0f;
-	clear2->data.clear.color[2] = 1.0f;
-	clear2->data.clear.color[3] = 1.0f;
+	nyas_set_color(clear2->data.clear.color, 0.0f, 1.0f, 1.0f, 1.0f);
 	clear2->execute = nyas_clear_fn;
 	rops2->next = clear2;
 
@@ -171,7 +154,8 @@ Update(void *context)
 	nyas_cmd_add(rops);
 }
 
-void Render(void)
+void
+Render(void)
 {
 	nyas_px_render();
 	nyas_imgui_draw();

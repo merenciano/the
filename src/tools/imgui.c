@@ -3,8 +3,8 @@
 #include "core/io.h"
 #include "render/pixels_internal.h"
 
-#include <stdio.h>
 #include <glad/glad.h>
+#include <stdio.h>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -30,14 +30,14 @@ nyas_imgui_init(void)
 {
 	ctx = nk_glfw3_init(&glfw, internal_window, NK_GLFW3_INSTALL_CALLBACKS);
 	struct nk_font_atlas *atlas;
-    nk_glfw3_font_stash_begin(&glfw, &atlas);
-    nk_glfw3_font_stash_end(&glfw);
+	nk_glfw3_font_stash_begin(&glfw, &atlas);
+	nk_glfw3_font_stash_end(&glfw);
 }
 
 void
 nyas_imgui_draw(void)
 {
-	struct nk_colorf bg = {1.0f, 0.0f, 0.0f, 1.0f};
+	struct nk_colorf bg = { 1.0f, 0.0f, 0.0f, 1.0f };
 	nk_glfw3_new_frame(&glfw);
 
 	if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
@@ -73,10 +73,27 @@ nyas_imgui_draw(void)
 		}
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
-			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %lu / %lu (%lu Bytes)", nyas_arr_len(tex_pool), nyas_arr_cap(tex_pool), sizeof(r_tex));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %lu / %lu (%lu Bytes)", nyas_arr_len(mesh_pool), nyas_arr_cap(mesh_pool), sizeof(r_mesh));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %lu / %lu (%lu Bytes)", nyas_arr_len(framebuffer_pool), nyas_arr_cap(framebuffer_pool), sizeof(r_fb));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Shaders: %lu / %lu (%lu Bytes)", nyas_arr_len(shader_pool), nyas_arr_cap(shader_pool), sizeof(r_shader));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %lu / %lu (%lu Bytes)",
+			          nyas_arr_len(tex_pool), nyas_arr_cap(tex_pool),
+			          sizeof(r_tex));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %lu / %lu (%lu Bytes)",
+			          nyas_arr_len(mesh_pool), nyas_arr_cap(mesh_pool),
+			          sizeof(r_mesh));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %lu / %lu (%lu Bytes)",
+			          nyas_arr_len(framebuffer_pool),
+			          nyas_arr_cap(framebuffer_pool), sizeof(r_fb));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Shaders: %lu / %lu (%lu Bytes)",
+			          nyas_arr_len(shader_pool), nyas_arr_cap(shader_pool),
+			          sizeof(r_shader));
+			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
+				for (int i = 0; i < nyas_arr_len(shader_pool); ++i) {
+					nk_label(ctx, ((r_shader*)shader_pool)[i].shader_name, NK_TEXT_LEFT);
+					if (nk_button_label(ctx, "Reload")) {
+						((r_shader*)shader_pool)[i].res.flags |= RF_DIRTY;
+					}
+				}
+				nk_tree_pop(ctx);
+			}
 			nk_tree_pop(ctx);
 		}
 	}

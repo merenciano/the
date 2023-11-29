@@ -1,10 +1,10 @@
 #version 330 core
 
-#define TILING_X u_entity_data[5].y
-#define TILING_Y u_entity_data[5].z
+#define TILING_X u_data[5].y
+#define TILING_Y u_data[5].z
 
-uniform vec4 u_entity_data[7];
-uniform vec4 u_scene_data[6];
+uniform vec4 u_data[7];
+uniform vec4 u_common_data[6];
 
 layout(location=0) in vec3 a_position;
 layout(location=1) in vec3 a_normal;
@@ -21,10 +21,10 @@ out Vertex
 
 void main()
 {
-    mat4 model = mat4(u_entity_data[0], u_entity_data[1],
-                        u_entity_data[2], u_entity_data[3]);
-    mat4 vp = mat4(u_scene_data[0], u_scene_data[1],
-                    u_scene_data[2], u_scene_data[3]);
+    mat4 model = mat4(u_data[0], u_data[1],
+                        u_data[2], u_data[3]);
+    mat4 vp = mat4(u_common_data[0], u_common_data[1],
+                    u_common_data[2], u_common_data[3]);
 
     v_out.position = vec3(model * vec4(a_position, 1.0));
     v_out.uv = vec2(a_uv.x * TILING_X, a_uv.y * TILING_Y);

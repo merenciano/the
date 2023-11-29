@@ -2,7 +2,7 @@
 #include <mathc.h>
 #include <string.h>
 
-struct Materials {
+struct Shaders {
 	nyas_shader fullscreen_img;
 	nyas_shader skybox;
 	nyas_shader eqr_to_cube;
@@ -11,7 +11,7 @@ struct Materials {
 	nyas_shader pbr;
 };
 
-struct Materials g_mats;
+struct Shaders g_shaders;
 static nyas_resourcemap g_resources;
 nyas_framebuffer g_fb;
 
@@ -19,7 +19,7 @@ nyas_mat pbr_common;
 nyas_mat sky_common;
 nyas_mat fulls;
 
-static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 1.0f };
+static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 0.0f };
 
 static nyas_mat
 GenerateRenderToCubeMat(void)
@@ -42,12 +42,9 @@ GenerateRenderToCubeMat(void)
 		              svec3(0.0f, -1.0f, 0.0f)),
 	};
 
-	nyas_mat mat_tocube = { .shader = g_mats.eqr_to_cube,
-		                    .data_count = 16 * 6,
-		                    .tex_count = 0,
-		                    .cube_count = 0 };
+	nyas_mat mat_tocube = nyas_mat_tmp(g_shaders.eqr_to_cube, 16 * 6, 0, 0);
+	float *vp = mat_tocube.ptr;
 
-	float *vp = nyas_mat_alloc_frame(&mat_tocube);
 	for (int i = 0; i < 6; ++i) {
 		float *view = (float *)&views[i];
 		mat4_multiply(vp + 16 * i, proj, view);
@@ -63,12 +60,8 @@ ConvertEqrToCubeCommandList(nyas_tex tex_in,
                             nyas_cmd *last_command)
 {
 	nyas_cmd *use_tocube = nyas_cmd_alloc();
-	use_tocube->data.mat.shader = g_mats.eqr_to_cube;
-	use_tocube->data.mat.data_count = 0;
-	use_tocube->data.mat.tex_count = 1;
-	use_tocube->data.mat.cube_count = 0;
-	nyas_tex *eqr = nyas_mat_alloc_frame(&use_tocube->data.mat);
-	*eqr = tex_in;
+	use_tocube->data.mat = nyas_mat_tmp(g_shaders.eqr_to_cube, 0, 1, 0);
+	*(nyas_tex *)use_tocube->data.mat.ptr = tex_in;
 	use_tocube->execute = nyas_setshader_fn;
 	last_command->next = use_tocube;
 
@@ -107,12 +100,8 @@ GeneratePrefilterCommandList(nyas_tex tex_in,
                              nyas_cmd *last_command)
 {
 	nyas_cmd *use_pref = nyas_cmd_alloc();
-	use_pref->data.mat.shader = g_mats.prefilter_env;
-	use_pref->data.mat.data_count = 0;
-	use_pref->data.mat.tex_count = 0;
-	use_pref->data.mat.cube_count = 1;
-	nyas_tex *sky_tex = nyas_mat_alloc_frame(&use_pref->data.mat);
-	*sky_tex = tex_in;
+	use_pref->data.mat = nyas_mat_tmp(g_shaders.prefilter_env, 0, 0, 1);
+	*(nyas_tex *)use_pref->data.mat.ptr = tex_in;
 	use_pref->execute = nyas_setshader_fn;
 	last_command->next = use_pref;
 	last_command = use_pref;
@@ -145,12 +134,10 @@ GeneratePrefilterCommandList(nyas_tex tex_in,
 
 			nyas_cmd *draw_comm = nyas_cmd_alloc();
 			draw_comm->data.draw.mesh = CUBE_MESH;
-			draw_comm->data.draw.material.shader = g_mats.prefilter_env;
-			draw_comm->data.draw.material.data_count = sizeof(struct mat4) /
-			  sizeof(float);
-			draw_comm->data.draw.material.tex_count = 0;
-			draw_comm->data.draw.material.cube_count = 0;
-			float *vp = nyas_mat_alloc_frame(&draw_comm->data.draw.material);
+			draw_comm->data.draw.material =
+			  nyas_mat_tmp(g_shaders.prefilter_env,
+			               1 + sizeof(struct mat4) / sizeof(float), 0, 0);
+			float *vp = draw_comm->data.draw.material.ptr;
 			mat4_assign(vp, (float *)mat.ptr + 16 * side);
 			vp[16] = roughness;
 			draw_comm->execute = nyas_draw_fn;
@@ -184,9 +171,7 @@ GenerateLutCommandlist(nyas_framebuffer fb, nyas_cmd *last_command)
 	clear_comm->execute = nyas_clear_fn;
 	set_init_fb->next = clear_comm;
 
-	nyas_mat lutmat = nyas_mat_default();
-	lutmat.shader = g_mats.lut_gen;
-
+	nyas_mat lutmat = nyas_mat_dft(g_shaders.lut_gen);
 	nyas_cmd *set_lut = nyas_cmd_alloc();
 	set_lut->data.mat = lutmat;
 	set_lut->execute = nyas_setshader_fn;
@@ -247,19 +232,15 @@ Init(void)
 	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
 	g_resources.textures = nyas_hmap_create(64, sizeof(nyas_tex));
 
-	g_mats.fullscreen_img = nyas_shader_create("fullscreen-img");
-	g_mats.skybox = nyas_shader_create("skybox");
-	g_mats.eqr_to_cube = nyas_shader_create("eqr-to-cube");
-	g_mats.prefilter_env = nyas_shader_create("prefilter-env");
-	g_mats.lut_gen = nyas_shader_create("lut-gen");
-	g_mats.pbr = nyas_shader_create("pbr");
+	g_shaders.fullscreen_img = nyas_shader_create("fullscreen-img");
+	g_shaders.skybox = nyas_shader_create("skybox");
+	g_shaders.eqr_to_cube = nyas_shader_create("eqr-to-cube");
+	g_shaders.prefilter_env = nyas_shader_create("prefilter-env");
+	g_shaders.lut_gen = nyas_shader_create("lut-gen");
+	g_shaders.pbr = nyas_shader_create("pbr");
 
-	fulls.shader = g_mats.fullscreen_img;
-	fulls.data_count = 0;
-	fulls.tex_count = 1;
-	fulls.cube_count = 0;
-	nyas_tex *fst = nyas_mat_alloc(&fulls);
-	*fst = nyas_fb_color(g_fb);
+	fulls = nyas_mat_pers(g_shaders.fullscreen_img, 0, 1, 0);
+	*(nyas_tex *)fulls.ptr = nyas_fb_color(g_fb);
 
 	nyas_resourcemap *rm = &g_resources;
 
@@ -374,19 +355,16 @@ Init(void)
 	pbr.normal_map_intensity = 1.0f;
 
 	float position[3] = { -2.0f, 0.0f, 0.0f };
+	int pbr_data_count = sizeof(nyas_pbr_desc_unit) / 4;
 
 	// CelticGold
 	{
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Gold_A");
 		t[1] = nyas_resourcemap_tex(rm, "Gold_M");
 		t[2] = nyas_resourcemap_tex(rm, "Gold_R");
@@ -402,13 +380,9 @@ Init(void)
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Shore_A");
 		t[1] = nyas_resourcemap_tex(rm, "Shore_M");
 		t[2] = nyas_resourcemap_tex(rm, "Shore_R");
@@ -424,13 +398,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Peel_A");
 		t[1] = nyas_resourcemap_tex(rm, "Peel_M");
 		t[2] = nyas_resourcemap_tex(rm, "Peel_R");
@@ -447,13 +417,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Rust_A");
 		t[1] = nyas_resourcemap_tex(rm, "Rust_M");
 		t[2] = nyas_resourcemap_tex(rm, "Rust_R");
@@ -469,13 +435,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Tiles_A");
 		t[1] = nyas_resourcemap_tex(rm, "Tiles_M");
 		t[2] = nyas_resourcemap_tex(rm, "Tiles_R");
@@ -491,13 +453,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Future_A");
 		t[1] = nyas_resourcemap_tex(rm, "Future_M");
 		t[2] = nyas_resourcemap_tex(rm, "Future_R");
@@ -514,13 +472,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Cliff_A");
 		t[1] = nyas_resourcemap_tex(rm, "Cliff_M");
 		t[2] = nyas_resourcemap_tex(rm, "Cliff_R");
@@ -536,13 +490,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Granit_A");
 		t[1] = nyas_resourcemap_tex(rm, "Granit_M");
 		t[2] = nyas_resourcemap_tex(rm, "Granit_R");
@@ -558,13 +508,9 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat.data_count = sizeof(struct nyas_pbr_desc_unit) / 4;
-		e->mat.tex_count = 4;
-		e->mat.cube_count = 0;
-		e->mat.shader = g_mats.pbr;
-		struct nyas_pbr_desc_unit *d = nyas_mat_alloc(&e->mat);
-		*d = pbr;
-		nyas_tex *t = (nyas_tex *)d + e->mat.data_count;
+		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = nyas_resourcemap_tex(rm, "Foam_A");
 		t[1] = nyas_resourcemap_tex(rm, "Foam_M");
 		t[2] = nyas_resourcemap_tex(rm, "Foam_R");
@@ -573,29 +519,22 @@ Init(void)
 
 	GeneratePbrEnv();
 
-	pbr_common.data_count = sizeof(struct nyas_pbr_desc_scene) / sizeof(float);
-	pbr_common.tex_count = 1;
-	pbr_common.cube_count = 2;
-	pbr_common.shader = g_mats.pbr;
-	nyas_tex *pbr_scene_tex = nyas_mat_alloc(&pbr_common);
-	pbr_scene_tex += pbr_common.data_count;
+	int pbr_cmn_data_count = sizeof(nyas_pbr_desc_scene) / sizeof(float);
+	pbr_common = nyas_mat_pers(g_shaders.pbr, pbr_cmn_data_count, 1, 2);
+	nyas_tex *pbr_scene_tex = nyas_mat_tex(&pbr_common);
 	pbr_scene_tex[0] = nyas_resourcemap_tex(rm, "LutMap");
 	pbr_scene_tex[1] = nyas_resourcemap_tex(rm, "Irradian");
 	pbr_scene_tex[2] = nyas_resourcemap_tex(rm, "Prefilte");
 
-	sky_common.data_count = 16;
-	sky_common.tex_count = 0;
-	sky_common.cube_count = 1;
-	sky_common.shader = g_mats.skybox;
-	nyas_tex *skytex = nyas_mat_alloc(&sky_common);
-	skytex[sky_common.data_count] = nyas_resourcemap_tex(rm, "Skybox");
+	sky_common = nyas_mat_pers(g_shaders.skybox, 16, 0, 1);
+	*nyas_mat_tex(&sky_common) = nyas_resourcemap_tex(rm, "Skybox");
 }
 
 void
-Update(nyas_chrono chrono)
+Update(nyas_chrono *chrono)
 {
-	float dt = nyas_time_sec(nyas_elapsed(chrono));
-	chrono = nyas_time();
+	float dt = nyas_time_sec(nyas_elapsed(*chrono));
+	*chrono = nyas_time();
 
 	nyas_io_poll();
 	nyas_input_read();
@@ -628,10 +567,7 @@ Update(nyas_chrono chrono)
 	clear->data.clear.color_buffer = true;
 	clear->data.clear.depth_buffer = true;
 	clear->data.clear.stencil_buffer = false;
-	clear->data.clear.color[0] = 0.2f;
-	clear->data.clear.color[1] = 0.2f;
-	clear->data.clear.color[2] = 0.2f;
-	clear->data.clear.color[3] = 1.0f;
+	nyas_set_color(clear->data.clear.color, 0.2f, 0.2f, 0.2f, 1.0f);
 	clear->execute = nyas_clear_fn;
 	rops->next = clear;
 
@@ -679,10 +615,7 @@ Update(nyas_chrono chrono)
 	clear->data.clear.color_buffer = true;
 	clear->data.clear.depth_buffer = false;
 	clear->data.clear.stencil_buffer = false;
-	clear->data.clear.color[0] = 1.0f;
-	clear->data.clear.color[1] = 0.0f;
-	clear->data.clear.color[2] = 0.0f;
-	clear->data.clear.color[3] = 1.0f;
+	nyas_set_color(clear->data.clear.color, 1.0f, 0.0f, 0.0f, 1.0f);
 	clear->execute = nyas_clear_fn;
 	rops2->next = clear;
 
@@ -701,7 +634,8 @@ Update(nyas_chrono chrono)
 	nyas_cmd_add(rops);
 }
 
-void Render(void)
+void
+Render(void)
 {
 	nyas_px_render();
 	nyas_imgui_draw();
@@ -713,7 +647,7 @@ int
 main(int argc, char **argv)
 {
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS Material", 1920, 1080, true);
+	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 	nyas_imgui_init();
@@ -721,7 +655,7 @@ main(int argc, char **argv)
 
 	nyas_chrono frame_chrono = nyas_time();
 	while (!nyas_window_closed()) {
-		Update(frame_chrono);
+		Update(&frame_chrono);
 		Render();
 	}
 
