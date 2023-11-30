@@ -8,7 +8,8 @@
 #define NORMAL_MAP_INTENSITY u_data[6].z
 
 #define LIGHT_DIRECTION      u_common_data[5].xyz
-#define LIGHT_INTENSITY      u_common_data[5].w
+//#define LIGHT_INTENSITY      u_common_data[5].w
+#define LIGHT_INTENSITY 1.0
 #define CAMERA_POSITION      u_common_data[4].xyz
 
 #define ALBEDO_MAP           u_tex[0]
@@ -63,6 +64,18 @@ vec3 Fresnel(vec3 f0, float u)
     return f + f0 * (1.0 - f);
 }
 
+float SpecularAA(vec3 n, float a)
+{
+    const float SIGMA2 = 0.25; // squared std dev of pixel filter kernel (in pixels)
+    const float KAPPA  = 0.18; // clamping threshold
+
+    vec3 dndu = dFdx(n);
+    vec3 dndv = dFdy(n);
+    float variance = SIGMA2 * (dot(dndu, dndu) + dot(dndv, dndv));
+    float kernelRoughness2 = min(2.0 * variance, KAPPA);
+    return clamp(a + kernelRoughness2, 0.0, 1.0);
+}
+
 void main()
 {
     vec3 albedo = texture(ALBEDO_MAP, v_in.uv).rgb;
@@ -90,7 +103,9 @@ void main()
     float noh = clamp(dot(normal, hlv), 0.0, 1.0);
     float voh = clamp(dot(view, hlv), 0.0, 1.0);
 
+    roughness = roughness * roughness;
     roughness = max(roughness, 0.01);
+    roughness = SpecularAA(normal, roughness);
     vec3  f = Fresnel(f0, voh);
     float d = NormalDistribution(noh, roughness);
     float g = GeometricAttenuation(nol, nov, roughness);
@@ -101,7 +116,8 @@ void main()
 
     // Specular
     vec3 specular_brdf = ((d * g) * f) / max(kEpsilon, 4.0 * nol * nov);
-    vec3 direct_lighting = (diffuse_brdf + specular_brdf) * LIGHT_INTENSITY * nol;
+    //vec3 direct_lighting = (diffuse_brdf + specular_brdf) * LIGHT_INTENSITY * nol;
+    vec3 direct_lighting = (diffuse_brdf + specular_brdf) * 0.2 * nol;
 
     // IBL
     vec3 irradiance = texture(IRRADIANCE_MAP, normal).rgb;
@@ -113,7 +129,8 @@ void main()
     vec3 specular_irradiance = textureLod(PREFILTER_MAP, r, roughness * kMaxPrefilterLod).rgb;
     vec2 specular_brdf_ibl = texture(LUT_MAP, vec2(nov, roughness)).rg;
     vec3 specular_ibl = (f0 * specular_brdf_ibl.x + specular_brdf_ibl.y) * specular_irradiance;
-    vec3 ambient_lighting = diffuse_ibl + specular_ibl;
+    //vec3 ambient_lighting = diffuse_ibl + specular_ibl;
+    vec3 ambient_lighting = vec3(0.0);
 
     FragColor = vec4(direct_lighting + ambient_lighting, 1.0);
 }
