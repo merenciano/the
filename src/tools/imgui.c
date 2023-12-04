@@ -2,6 +2,7 @@
 
 #include "core/io.h"
 #include "render/pixels_internal.h"
+#include "scene/entity.h"
 
 #include <glad/glad.h>
 #include <stdio.h>
@@ -37,6 +38,7 @@ nyas_imgui_init(void)
 void
 nyas_imgui_draw(void)
 {
+	static char mesh_path[512] = {0};
 	struct nk_colorf bg = { 1.0f, 0.0f, 0.0f, 1.0f };
 	nk_glfw3_new_frame(&glfw);
 
@@ -48,14 +50,16 @@ nyas_imgui_draw(void)
 		static int op = EASY;
 		static int property = 20;
 		nk_layout_row_static(ctx, 30, 80, 1);
-		if (nk_button_label(ctx, "button"))
-			fprintf(stdout, "button pressed\n");
-
 		nk_layout_row_dynamic(ctx, 30, 2);
-		if (nk_option_label(ctx, "easy", op == EASY))
-			op = EASY;
-		if (nk_option_label(ctx, "hard", op == HARD))
-			op = HARD;
+
+		for (int i = 0; i < nyas_entity_count(); ++i)
+		{
+			nyas_entity *e = nyas_entities() + i;
+			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);
+			if (nk_button_label(ctx, "Reload")) {
+				nyas_mesh_set_obj(e->mesh, mesh_path);
+			}
+		}
 
 		nk_layout_row_dynamic(ctx, 25, 1);
 		nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);

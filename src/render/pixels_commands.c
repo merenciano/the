@@ -189,15 +189,12 @@ nyas__get_attrib_stride(int32_t attr_flags)
 }
 
 static void
-nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
+nyas__mesh_update(nyas_mesh mesh, nyas_shader shader)
 {
 	r_mesh *m = nyas_arr_at(mesh_pool, mesh);
 	r_shader *s = nyas_arr_at(shader_pool, shader);
 
-	glGenVertexArrays(1, (GLuint *)&m->res.id);
 	glBindVertexArray(m->res.id);
-	glGenBuffers(2, m->internal_buffers_id);
-
 	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
 	glBufferData(GL_ARRAY_BUFFER, m->vtx_size, m->vtx, GL_STATIC_DRAW);
 
@@ -232,6 +229,16 @@ nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
 		nyas_free(m->idx);
 		m->idx = NULL;
 	}
+}
+
+static void
+nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
+{
+	r_mesh *m = nyas_arr_at(mesh_pool, mesh);
+
+	glGenVertexArrays(1, (GLuint *)&m->res.id);
+	glGenBuffers(2, m->internal_buffers_id);
+	nyas__mesh_update(mesh, shader);
 }
 
 static void
@@ -553,6 +560,8 @@ nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
 	r_mesh *im = nyas_arr_at(mesh_pool, m);
 	if (im->res.id == NYAS_UNINIT) {
 		nyas__create_mesh(m, s);
+	} else if (im->res.flags & RF_DIRTY) {
+		nyas__mesh_update(m, s);
 	}
 	im->res.flags = 0;
 }

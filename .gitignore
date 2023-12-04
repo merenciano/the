@@ -8,3 +8,4 @@ cmake-build**/
 demos/*/imgui.ini
 demos/pbr/pbr
 demos/hello/hello
+demos/test/test

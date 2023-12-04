@@ -485,8 +485,8 @@ nyas_mesh_create_quad(void)
 	return mesh;
 }
 
-nyas_mesh
-nyas_mesh_load_obj(const char *path)
+void
+nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
 {
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t *shapes = NULL;
@@ -501,7 +501,6 @@ nyas_mesh_load_obj(const char *path)
 	NYAS_ASSERT(result == TINYOBJ_SUCCESS && "Obj loader failed.");
 	if (result != TINYOBJ_SUCCESS) {
 		NYAS_LOG_ERR("Error loading obj. Err: %d", result);
-		return CUBE_MESH;
 	}
 
 	size_t tri_count = attrib.num_face_num_verts;
@@ -605,7 +604,6 @@ nyas_mesh_load_obj(const char *path)
 		}
 	}
 
-	nyas_mesh mesh = nyas__new_mesh();
 	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
 	imsh->res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
 	imsh->attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_TANGENT) |
@@ -614,6 +612,13 @@ nyas_mesh_load_obj(const char *path)
 	imsh->idx = indices;
 	imsh->vtx_size = vertices_count * sizeof(imsh->vtx[0]);
 	imsh->elements = indices_count;
+}
+
+nyas_mesh
+nyas_mesh_load_obj(const char *path)
+{
+	nyas_mesh mesh = nyas__new_mesh();
+	nyas_mesh_set_obj(mesh, path);
 
 	return mesh;
 }

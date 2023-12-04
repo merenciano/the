@@ -71,10 +71,13 @@ nyas_framebuffer nyas_fb_create(int width, int height, bool color, bool depth);
 nyas_tex nyas_fb_color(nyas_framebuffer fb);
 void nyas_fb_size(nyas_framebuffer fb, int *o_w, int *o_h);
 
+// TODO: Borrar vector siempre al cargar datos
+// TODO: Cambiar nombre al load_obj que crea la mesh y ponserselo a set_obj
 nyas_mesh nyas_mesh_create_cube(void);
 nyas_mesh nyas_mesh_create_sphere(int x_segments, int y_segments);
 nyas_mesh nyas_mesh_create_quad(void);
 nyas_mesh nyas_mesh_load_obj(const char *path);
+void nyas_mesh_set_obj(nyas_mesh mesh, const char *path);
 
 nyas_shader nyas_shader_create(const char *shader);
 void nyas_shader_reload(nyas_shader shader);
