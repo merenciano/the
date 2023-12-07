@@ -349,7 +349,8 @@ nyas_shader_create(const char *shader)
 	return ret;
 }
 
-void nyas_shader_reload(nyas_shader shader)
+void
+nyas_shader_reload(nyas_shader shader)
 {
 	r_shader *shdr = nyas_arr_at(shader_pool, shader);
 	shdr->res.flags |= RF_DIRTY;
@@ -391,7 +392,7 @@ nyas_mesh_create_cube(void)
 		-0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
 	};
 
-	static uint32_t INDICES[] = {
+	static nyas_idx INDICES[] = {
 		0,  2,  1,  2,  0,  3,  4,  5,  6,  6,  7,  4,  8,  9,  10, 10, 11, 8,
 		13, 12, 14, 12, 15, 14, 16, 17, 18, 18, 19, 16, 23, 22, 20, 22, 21, 20,
 	};
@@ -424,7 +425,7 @@ nyas_mesh_create_sphere(int y_segments, int x_segments)
 	imsh->vtx_size = y_segments * x_segments * 8 * sizeof(float);
 	imsh->elements = y_segments * x_segments * 6;
 	imsh->vtx = nyas_alloc(imsh->vtx_size);
-	imsh->idx = nyas_alloc(imsh->elements * sizeof(IDX_T));
+	imsh->idx = nyas_alloc(imsh->elements * sizeof(nyas_idx));
 
 	float *v = imsh->vtx;
 	for (int y = 0; y < x_segments; ++y) {
@@ -446,7 +447,7 @@ nyas_mesh_create_sphere(int y_segments, int x_segments)
 		}
 	}
 
-	IDX_T *i = imsh->idx;
+	nyas_idx *i = imsh->idx;
 	for (int y = 0; y < x_segments; ++y) {
 		for (int x = 0; x < y_segments; ++x) {
 			*i++ = y * y_segments + x;
@@ -471,7 +472,7 @@ nyas_mesh_create_quad(void)
 		-1.0f, 1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
 	};
 
-	static unsigned int INDICES[] = { 0, 1, 2, 0, 2, 3 };
+	static nyas_idx INDICES[] = { 0, 1, 2, 0, 2, 3 };
 
 	nyas_mesh mesh = nyas__new_mesh();
 	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
@@ -485,8 +486,23 @@ nyas_mesh_create_quad(void)
 	return mesh;
 }
 
+static nyas_idx
+check_vertex(float *v, float *end, float *newvtx)
+{
+	nyas_idx i = 0;
+	for (; v < end; ++i, v += 14) {
+		if ((v[0] == newvtx[0]) && (v[1] == newvtx[1]) &&
+		  (v[2] == newvtx[2]) && (v[3] == newvtx[3]) && (v[4] == newvtx[4]) &&
+		  (v[5] == newvtx[5]) && (v[12] == newvtx[12]) &&
+		  (v[13] == newvtx[13])) {
+			return i;
+		}
+	}
+	return i;
+}
+
 void
-nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
+nyas_mesh_load_obj(nyas_mesh mesh, const char *path)
 {
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t *shapes = NULL;
@@ -503,18 +519,16 @@ nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
 		NYAS_LOG_ERR("Error loading obj. Err: %d", result);
 	}
 
-	size_t tri_count = attrib.num_face_num_verts;
-	size_t vertices_count = tri_count * 3 * 14;
-	size_t indices_count = tri_count * 3;
-	float *vertices = nyas_alloc(vertices_count * sizeof(*vertices));
-	IDX_T *indices = nyas_alloc(indices_count * sizeof(*indices));
+	size_t vertex_count = attrib.num_face_num_verts * 3;
+	size_t indices_count = vertex_count;
+	float *vertices = nyas_alloc(vertex_count * 14 * sizeof(float));
+	nyas_idx *indices = nyas_alloc(indices_count * sizeof(*indices));
 	float *vit = vertices;
-	size_t ii = 0; // TODO: Indices right.
 
 	size_t index_offset = 0;
 	for (size_t i = 0; i < attrib.num_face_num_verts; ++i) {
 		for (size_t f = 0; f < attrib.face_num_verts[i] / 3; ++f) {
-			tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset++];
+			tinyobj_vertex_index_t idx = attrib.faces[3 * f + index_offset];
 			float v1[14], v2[14], v3[14];
 
 			v1[0] = attrib.vertices[3 * idx.v_idx + 0];
@@ -526,7 +540,7 @@ nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
 			v1[12] = attrib.texcoords[2 * idx.vt_idx + 0];
 			v1[13] = attrib.texcoords[2 * idx.vt_idx + 1];
 
-			idx = attrib.faces[3 * f + index_offset++];
+			idx = attrib.faces[3 * f + index_offset + 1];
 			v2[0] = attrib.vertices[3 * idx.v_idx + 0];
 			v2[1] = attrib.vertices[3 * idx.v_idx + 1];
 			v2[2] = attrib.vertices[3 * idx.v_idx + 2];
@@ -536,7 +550,7 @@ nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
 			v2[12] = attrib.texcoords[2 * idx.vt_idx + 0];
 			v2[13] = attrib.texcoords[2 * idx.vt_idx + 1];
 
-			idx = attrib.faces[3 * f + index_offset++];
+			idx = attrib.faces[3 * f + index_offset + 2];
 			v3[0] = attrib.vertices[3 * idx.v_idx + 0];
 			v3[1] = attrib.vertices[3 * idx.v_idx + 1];
 			v3[2] = attrib.vertices[3 * idx.v_idx + 2];
@@ -547,80 +561,122 @@ nyas_mesh_set_obj(nyas_mesh mesh, const char *path)
 			v3[13] = attrib.texcoords[2 * idx.vt_idx + 1];
 
 			// Calculate tangent and bitangent
-			struct vec3 delta_p1 = svec3_subtract(svec3(v2[0], v2[1], v2[2]),
-			                                      svec3(v1[0], v1[1], v1[2]));
-			struct vec3 delta_p2 = svec3_subtract(svec3(v3[0], v3[1], v3[2]),
-			                                      svec3(v1[0], v1[1], v1[2]));
-			struct vec2 delta_uv1 = svec2_subtract(svec2(v2[12], v2[13]),
-			                                       svec2(v1[12], v1[13]));
-			struct vec2 delta_uv2 = svec2_subtract(svec2(v3[12], v3[13]),
-			                                       svec2(v1[12], v1[13]));
+			float delta_p1[3], delta_p2[3], delta_uv1[2], delta_uv2[2];
+			vec3_subtract(delta_p1, v2, v1);
+			vec3_subtract(delta_p2, v3, v1);
+			vec2_subtract(delta_uv1, &v2[12], &v1[12]);
+			vec2_subtract(delta_uv2, &v3[12], &v1[12]);
 			float r = 1.0f /
-			  (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
-			struct vec3 tan = svec3_multiply_f(
-			  svec3_subtract(svec3_multiply_f(delta_p1, delta_uv2.y),
-			                 svec3_multiply_f(delta_p2, delta_uv1.y)),
-			  r);
-			struct vec3 bitan = svec3_multiply_f(
-			  svec3_subtract(svec3_multiply_f(delta_p2, delta_uv1.x),
-			                 svec3_multiply_f(delta_p1, delta_uv2.x)),
-			  r);
+			  (delta_uv1[0] * delta_uv2[1] - delta_uv1[1] * delta_uv2[0]);
 
-			v1[6] = tan.x;
-			v1[7] = tan.y;
-			v1[8] = tan.z;
-			v2[6] = tan.x;
-			v2[7] = tan.y;
-			v2[8] = tan.z;
-			v3[6] = tan.x;
-			v3[7] = tan.y;
-			v3[8] = tan.z;
+			float tn[3], bitn[3], tmp[3];
+			vec3_multiply_f(tn, delta_p1, delta_uv2[1]);
+			vec3_multiply_f(tmp, delta_p2, delta_uv1[1]);
+			vec3_multiply_f(tn, vec3_subtract(tn, tn, tmp), r);
 
-			v1[9] = bitan.x;
-			v1[10] = bitan.y;
-			v1[11] = bitan.z;
-			v2[9] = bitan.x;
-			v2[10] = bitan.y;
-			v2[11] = bitan.z;
-			v3[9] = bitan.x;
-			v3[10] = bitan.y;
-			v3[11] = bitan.z;
+			vec3_multiply_f(bitn, delta_p2, delta_uv1[0]);
+			vec3_multiply_f(tmp, delta_p1, delta_uv2[0]);
+			vec3_multiply_f(bitn, vec3_subtract(bitn, bitn, tmp), r);
 
-			for (int j = 0; j < 14; ++j) {
-				*vit++ = v1[j];
+			v1[6] = tn[0];
+			v1[7] = tn[1];
+			v1[8] = tn[2];
+			v2[6] = tn[0];
+			v2[7] = tn[1];
+			v2[8] = tn[2];
+			v3[6] = tn[0];
+			v3[7] = tn[1];
+			v3[8] = tn[2];
+
+			v1[9] = bitn[0];
+			v1[10] = bitn[1];
+			v1[11] = bitn[2];
+			v2[9] = bitn[0];
+			v2[10] = bitn[1];
+			v2[11] = bitn[2];
+			v3[9] = bitn[0];
+			v3[10] = bitn[1];
+			v3[11] = bitn[2];
+
+			// Check vertex rep
+			nyas_idx nxt_idx = check_vertex(vertices, vit, v1);
+			indices[index_offset++] = nxt_idx;
+			if (nxt_idx * 14 == (vit - vertices)) {
+			    for (int j = 0; j < 14; ++j) {
+			        *vit++ = v1[j];
+			    }
 			}
 
-			for (int j = 0; j < 14; ++j) {
-				*vit++ = v2[j];
+			nxt_idx = check_vertex(vertices, vit, v2);
+			indices[index_offset++] = nxt_idx;
+			if (nxt_idx * 14 == (vit - vertices)) {
+				for (int j = 0; j < 14; ++j) {
+					*vit++ = v2[j];
+				}
 			}
 
-			for (int j = 0; j < 14; ++j) {
-				*vit++ = v3[j];
-			}
-
-			for (int j = 0; j < 3; ++j, ++ii) {
-				indices[ii] = ii;
+			nxt_idx = check_vertex(vertices, vit, v3);
+			indices[index_offset++] = nxt_idx;
+			if (nxt_idx * 14 == (vit - vertices)) {
+				for (int j = 0; j < 14; ++j) {
+					*vit++ = v3[j];
+				}
 			}
 		}
 	}
 
-	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
-	imsh->res.flags = RF_DIRTY | RF_FREE_AFTER_LOAD;
-	imsh->attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_TANGENT) |
+	int attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_TANGENT) |
 	  (1 << A_BITANGENT) | (1 << A_UV);
-	imsh->vtx = vertices;
+	nyas_mesh_set_vertices(mesh, vertices, (vit - vertices) * sizeof(float),
+	                       attr_flags);
+	nyas_mesh_set_indices(mesh, indices, indices_count);
+
+	tinyobj_attrib_free(&attrib);
+	tinyobj_shapes_free(shapes, shape_count);
+	tinyobj_materials_free(mats, mats_count);
+}
+
+void
+nyas_mesh_load_msh(nyas_mesh mesh, const char *path)
+{
+	int attr_flags = (1 << A_POSITION) | (1 << A_NORMAL) | (1 << A_TANGENT) |
+	                 (1 << A_BITANGENT) | (1 << A_UV);
+	char *data;
+	size_t sz;
+	nyas__file_reader(NULL, path, 0, NULL, &data, &sz);
+	size_t vsz = *(size_t*)data;
+	data += sizeof(size_t);
+	nyas_mesh_set_vertices(mesh, (void*)data, vsz, attr_flags);
+	data += vsz;
+
+	size_t isz = *(size_t*)data;
+	data += sizeof(size_t);
+	nyas_mesh_set_indices(mesh, (void*)data, isz / sizeof(nyas_idx));
+}
+
+void
+nyas_mesh_set_vertices(nyas_mesh mesh, float *v, size_t size, int vattr)
+{
+	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
+	imsh->res.flags = RF_DIRTY; //| RF_FREE_AFTER_LOAD;
+	imsh->attr_flags = vattr;
+	imsh->vtx = v;
+	imsh->vtx_size = size;
+}
+
+void
+nyas_mesh_set_indices(nyas_mesh mesh, nyas_idx *indices, size_t elements)
+{
+	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
+	imsh->res.flags = RF_DIRTY;
 	imsh->idx = indices;
-	imsh->vtx_size = vertices_count * sizeof(imsh->vtx[0]);
-	imsh->elements = indices_count;
+	imsh->elements = elements;
 }
 
 nyas_mesh
-nyas_mesh_load_obj(const char *path)
+nyas_mesh_create(void)
 {
-	nyas_mesh mesh = nyas__new_mesh();
-	nyas_mesh_set_obj(mesh, path);
-
-	return mesh;
+	return nyas__new_mesh();
 }
 
 nyas_framebuffer
@@ -716,7 +772,8 @@ nyas_mat_alloc(nyas_mat *mat)
 	return mat->ptr;
 }
 
-nyas_tex *nyas_mat_tex(nyas_mat *mat)
+nyas_tex *
+nyas_mat_tex(nyas_mat *mat)
 {
-	return (nyas_tex*)mat->ptr + mat->data_count;
+	return (nyas_tex *)mat->ptr + mat->data_count;
 }

@@ -10,6 +10,12 @@
 #ifdef NYAS_OPENGL
 #include <glad/glad.h>
 
+#ifdef NYAS_ELEM_SIZE_16
+#define ELEMENT_TYPE GL_UNSIGNED_SHORT
+#else
+#define ELEMENT_TYPE GL_UNSIGNED_INT
+#endif
+
 typedef struct {
 	GLint internal_format;
 	GLenum format;
@@ -216,7 +222,7 @@ nyas__mesh_update(nyas_mesh mesh, nyas_shader shader)
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(IDX_T),
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(nyas_idx),
 	             (const void *)m->idx, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
@@ -224,10 +230,14 @@ nyas__mesh_update(nyas_mesh mesh, nyas_shader shader)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	if (m->res.flags & RF_FREE_AFTER_LOAD) {
-		nyas_free(m->vtx);
-		m->vtx = NULL;
-		nyas_free(m->idx);
-		m->idx = NULL;
+		if (m->vtx) {
+			nyas_free(m->vtx);
+			m->vtx = NULL;
+		}
+		if (m->idx) {
+			nyas_free(m->idx);
+			m->idx = NULL;
+		}
 	}
 }
 
@@ -698,7 +708,7 @@ nyas_draw_fn(nyas_cmdata *data)
 
 	glBindVertexArray(imsh->res.id);
 	nyas__set_shader_data(data->draw.material, SHADATA_UNIT);
-	glDrawElements(GL_TRIANGLES, imsh->elements, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, imsh->elements, ELEMENT_TYPE, 0);
 	glBindVertexArray(0);
 }
 

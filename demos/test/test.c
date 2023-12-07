@@ -28,7 +28,7 @@ nyas_tex skybox_tex;
 nyas_mat skyb_cmmn;
 nyas_mat fs_mat;
 
-void Init()
+void Init(void)
 {
 	fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
 	                      true);
@@ -46,10 +46,10 @@ void Init()
 	e.env = nyas_tex_load_img("assets/tex/env/helipad-env.hdr", NYAS_TEX_RGB_F16);
 	e.envirr = nyas_tex_load_img("assets/tex/env/helipad-dif.hdr", NYAS_TEX_RGB_F16);
 
-	e.albedo = nyas_tex_load_img("assets/tex/granite/granite_A.png", NYAS_TEX_SRGB);
-	e.normal = nyas_tex_load_img("assets/tex/granite/granite_N.png", NYAS_TEX_RGB);
-	e.roughness = nyas_tex_load_img("assets/tex/granite/granite_R.png", NYAS_TEX_R);
-	e.metalness = nyas_tex_load_img("assets/tex/granite/granite_M.png", NYAS_TEX_R);
+	e.albedo = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_A.png", NYAS_TEX_SRGB);
+	e.normal = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_N.png", NYAS_TEX_RGB);
+	e.roughness = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_R.png", NYAS_TEX_R);
+	e.metalness = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_M.png", NYAS_TEX_R);
 
 	fs_mat = nyas_mat_pers(fs_sh, 0, 1, 0);
 	*(nyas_tex *)fs_mat.ptr = nyas_fb_color(fb);
@@ -58,12 +58,13 @@ void Init()
 	e.upbr.use_albedo_map = 1.0f;
 	e.upbr.normal_map_intensity = 1.0f;
 	e.upbr.use_pbr_maps = 1.0f;
-	e.upbr.tiling_x = 1.0f;
-	e.upbr.tiling_y = 1.0f;
+	e.upbr.tiling_x = 4.0f;
+	e.upbr.tiling_y = 4.0f;
 	e.e = nyas_entity_create();
 	float position[3] = {0.0f, 0.0f, 0.0f};
 	mat4_translation(e.e->transform, e.e->transform, position);
-	e.e->mesh = nyas_mesh_load_obj("assets/obj/matball-n.obj");
+	e.e->mesh = nyas_mesh_create();
+	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball-n.obj");
 	e.e->mat = nyas_mat_pers(shader, sizeof(e.upbr) / sizeof(float), 4, 0);
 	*(nyas_pbr_desc_unit*)e.e->mat.ptr = e.upbr;
 	nyas_tex *t = (nyas_tex*)e.e->mat.ptr + (sizeof(e.upbr) / sizeof(float));
@@ -202,7 +203,7 @@ void Update(nyas_chrono *dt)
 	nyas_cmd_add(rops);
 }
 
-void Render()
+void Render(void)
 {
 	nyas_px_render();
 	nyas_imgui_draw();

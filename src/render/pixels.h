@@ -3,19 +3,16 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 /*
  * nyaspix config
  */
 
-#ifdef NYAS_ELEM_ARRAY_32
-#define IDX_T unsigned int
-#elif defined(NYAS_ELEM_ARRAY_16)
-#include <stdint.h>
-#define IDX_T uint16_t
+#ifdef NYAS_ELEM_SIZE_16
+typedef uint16_t nyas_idx;
 #else
-#define NYAS_ELEM_ARRAY_32
-#define IDX_T unsigned int
+typedef uint32_t nyas_idx;
 #endif
 
 #define NYAS_PIXEL_CHECKS
@@ -76,8 +73,11 @@ void nyas_fb_size(nyas_framebuffer fb, int *o_w, int *o_h);
 nyas_mesh nyas_mesh_create_cube(void);
 nyas_mesh nyas_mesh_create_sphere(int x_segments, int y_segments);
 nyas_mesh nyas_mesh_create_quad(void);
-nyas_mesh nyas_mesh_load_obj(const char *path);
-void nyas_mesh_set_obj(nyas_mesh mesh, const char *path);
+nyas_mesh nyas_mesh_create(void);
+void nyas_mesh_load_obj(nyas_mesh mesh, const char *path);
+void nyas_mesh_load_msh(nyas_mesh mesh, const char *path);
+void nyas_mesh_set_vertices(nyas_mesh mesh, float *v, size_t size, int vattr);
+void nyas_mesh_set_indices(nyas_mesh mesh, nyas_idx *indices, size_t elements);
 
 nyas_shader nyas_shader_create(const char *shader);
 void nyas_shader_reload(nyas_shader shader);

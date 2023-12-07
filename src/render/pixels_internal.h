@@ -37,7 +37,7 @@ typedef struct resource {
 typedef struct {
 	r_resource res;
 	float *vtx;
-	IDX_T *idx;
+	nyas_idx *idx;
 	unsigned int vtx_size;
 	unsigned int elements;
 	int attr_flags;

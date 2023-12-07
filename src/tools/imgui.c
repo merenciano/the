@@ -46,8 +46,6 @@ nyas_imgui_draw(void)
 	             NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 	               NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
 
-		enum { EASY, HARD };
-		static int op = EASY;
 		static int property = 20;
 		nk_layout_row_static(ctx, 30, 80, 1);
 		nk_layout_row_dynamic(ctx, 30, 2);
@@ -56,8 +54,11 @@ nyas_imgui_draw(void)
 		{
 			nyas_entity *e = nyas_entities() + i;
 			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);
-			if (nk_button_label(ctx, "Reload")) {
-				nyas_mesh_set_obj(e->mesh, mesh_path);
+			if (nk_button_label(ctx, "Load OBJ")) {
+				nyas_mesh_load_obj(e->mesh, mesh_path);
+			}
+			if (nk_button_label(ctx, "Load MSH")) {
+				nyas_mesh_load_msh(e->mesh, mesh_path);
 			}
 		}
 

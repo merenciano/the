@@ -14,18 +14,19 @@ set_target_properties(${LIB_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CU
 
 target_compile_definitions(${LIB_NAME} PUBLIC
 	_GLFW_X11
-	LUA_USE_POSIX
-    NYAS_DEBUG
-	)
+	NYAS_DEBUG
+	NYAS_OPENGL
+	NYAS_ELEM_SIZE_16
+)
 
 target_compile_options(${LIB_NAME} PUBLIC
-		-Wall
-	)
+	-Wall
+)
 
 target_include_directories(${LIB_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/src
 	${CMAKE_CURRENT_SOURCE_DIR}/extern/include
-	)
+)
 
 add_subdirectory(src)
 add_subdirectory(extern)
