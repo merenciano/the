@@ -21,6 +21,8 @@ target_compile_definitions(${LIB_NAME} PUBLIC
 
 target_compile_options(${LIB_NAME} PUBLIC
 	-Wall
+	-Wextra
+	-Wpedantic
 )
 
 target_include_directories(${LIB_NAME} PUBLIC

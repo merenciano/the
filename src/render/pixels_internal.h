@@ -5,15 +5,18 @@
 #include "utils/array.h"
 
 #ifdef NYAS_PIXEL_CHECKS
-#define CHECK_HANDLE(TYPE, HANDLE)                  \
-	({                                                    \
-		NYAS_ASSERT(HANDLE >= 0 && "Bad resource state"); \
-		NYAS_ASSERT(HANDLE < nyas_arr_len(TYPE##_pool) && \
-		            "Out of bounds handle");              \
-	})
+#define CHECK_HANDLE(TYPE, HANDLE) nypx__check_handle((HANDLE), (TYPE##_pool))
 #else
 #define CHECK_HANDLE(TYPE, HANDLE) (void)
 #endif // NYAS_PIXEL_CHECKS
+
+#include "core/log.h" // assert
+static void nypx__check_handle(int h, void *arr)
+{
+	NYAS_ASSERT(h >= 0 && "Bad resource state");
+	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_len(arr) && \
+	            "Out of bounds handle");
+}
 
 enum vtxattr {
 	A_POSITION = 0,

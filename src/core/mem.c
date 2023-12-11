@@ -57,25 +57,25 @@ nyas_mem_init(size_t size)
 }
 
 void
-nyas_mem_freeall()
+nyas_mem_freeall(void)
 {
 	free(mem);
 	mem = NULL;
 }
 
 float
-nyas_mem_mega_used()
+nyas_mem_mega_used(void)
 {
 	return nyas_mem_bytes_used() / (1024.0f * 1024.0f);
 }
 
-size_t nyas_mem_bytes_used()
+size_t nyas_mem_bytes_used(void)
 {
 	return offset;
 }
 
 size_t
-nyas_mem_capacity()
+nyas_mem_capacity(void)
 {
 	return capacity;
 }

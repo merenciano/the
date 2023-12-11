@@ -6,7 +6,6 @@
 
 #include <string.h>
 
-#define NYAS_OPENGL // Hardcoded until another backend is implemented.
 #ifdef NYAS_OPENGL
 #include <glad/glad.h>
 

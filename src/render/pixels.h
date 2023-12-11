@@ -28,10 +28,11 @@ typedef uint32_t nyas_idx;
  * nyaspix resources
  */
 
-typedef int nyas_mesh;
-typedef int nyas_tex;
-typedef int nyas_framebuffer;
-typedef int nyas_shader;
+typedef int nyas_resource_handle;
+typedef nyas_resource_handle nyas_mesh;
+typedef nyas_resource_handle nyas_tex;
+typedef nyas_resource_handle nyas_framebuffer;
+typedef nyas_resource_handle nyas_shader;
 
 enum nyas_textype {
 	NYAS_TEX_NONE = 0,

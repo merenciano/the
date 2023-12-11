@@ -19,6 +19,8 @@ static int32_t nyas_io_to_glfw[NYAS_INPUT_COUNT] = {
 static void
 scrollcallback(GLFWwindow *window, double x_offset, double y_offset)
 {
+	(void)window; // Unused
+	(void)x_offset; // Unused
 	nyas_input_set_scroll((float)y_offset);
 }
 
@@ -61,7 +63,7 @@ nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 }
 
 void
-nyas_io_poll()
+nyas_io_poll(void)
 {
 	glfwPollEvents();
 }
@@ -69,21 +71,21 @@ nyas_io_poll()
 // OUTPUT  ------------------------------
 
 int
-nyas_window_closed()
+nyas_window_closed(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return glfwWindowShouldClose(internal_window);
 }
 
 void
-nyas_window_swap()
+nyas_window_swap(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSwapBuffers(internal_window);
 }
 
 nyas_v2i
-nyas_window_size()
+nyas_window_size(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	nyas_v2i sz;
@@ -92,7 +94,7 @@ nyas_window_size()
 }
 
 int
-nyas_window_width()
+nyas_window_width(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	int width;
@@ -101,7 +103,7 @@ nyas_window_width()
 }
 
 int
-nyas_window_height()
+nyas_window_height(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	int height;
@@ -121,7 +123,7 @@ nyas_input_set_scroll(float offset)
 }
 
 float
-nyas_input_scroll()
+nyas_input_scroll(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return prev.scroll;
@@ -166,21 +168,21 @@ nyas_input_up(enum nyas_input button)
 }
 
 float
-nyas_input_mouse_x()
+nyas_input_mouse_x(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return curr.mouse_x;
 }
 
 float
-nyas_input_mouse_y()
+nyas_input_mouse_y(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	return curr.mouse_y;
 }
 
 void
-nyas_input_read()
+nyas_input_read(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	prev = curr;
@@ -201,7 +203,7 @@ nyas_input_read()
 }
 
 void
-nyas_input_cursor_disable()
+nyas_input_cursor_disable(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSetInputMode(internal_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
