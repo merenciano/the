@@ -1,5 +1,6 @@
 #include "io.h"
 #include "log.h"
+#include "mem.h"
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
@@ -37,7 +38,6 @@ nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 		return false;
 	}
 
-	// I call this function here because nyas only supports one window
 	glfwMakeContextCurrent(internal_window);
 	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 
@@ -46,7 +46,6 @@ nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 	}
 
 	glfwSetScrollCallback(internal_window, scrollcallback);
-	//nyas_UIToolsInit(internal_window);
 
 	curr.pressed = 0;
 	prev.pressed = 0;
@@ -60,6 +59,38 @@ nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 	capture_mouse = true;
 
 	return true;
+}
+
+int
+nyas_file_read(const char *path, char **dst, size_t *size)
+{
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		NYAS_LOG_ERR("File open failed for %s.", path);
+		return NYAS_ERR_FILE;
+	}
+
+	fseek(f, 0L, SEEK_END);
+	*size = ftell(f) + 1;
+	rewind(f);
+
+	*dst = nyas_alloc(*size);
+	if (!*dst) {
+		NYAS_LOG_ERR("Alloc (%lu bytes) failed.", *size);
+		fclose(f);
+		return NYAS_ERR_ALLOC;
+	}
+
+	if (fread(*dst, *size - 1, 1, f) != 1) {
+		NYAS_LOG_ERR("File read failed for %s.", path);
+		nyas_free(*dst);
+		fclose(f);
+		return NYAS_ERR_FILE;
+	}
+
+	fclose(f);
+	(*dst)[*size - 1] = '\0';
+	return NYAS_OK;
 }
 
 void
@@ -212,6 +243,7 @@ nyas_input_cursor_disable(void)
 void
 nyas_input_cursor_mode(int mode)
 {
+	(void)mode;
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	glfwSetInputMode(internal_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }

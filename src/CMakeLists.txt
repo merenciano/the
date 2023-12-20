@@ -17,6 +17,8 @@ target_sources(${LIB_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_extra.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_commands.c
+	${CMAKE_CURRENT_SOURCE_DIR}/render/nyaspix.h
+	${CMAKE_CURRENT_SOURCE_DIR}/render/nyaspix.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h

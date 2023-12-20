@@ -1,27 +1,24 @@
 #include "entity.h"
 #include "mathc.h"
-#include "render/pixels_extra.h"
-
-#include <stdlib.h>
 
 static nyas_entity entities[256];
 static int entities_last;
 
 nyas_entity *
-nyas_entity_create()
+nyas_entity_create(void)
 {
 	mat4_identity(entities[entities_last].transform);
 	return entities + entities_last++;
 }
 
 nyas_entity *
-nyas_entities()
+nyas_entities(void)
 {
 	return entities;
 }
 
 int
-nyas_entity_count()
+nyas_entity_count(void)
 {
 	return entities_last;
 }

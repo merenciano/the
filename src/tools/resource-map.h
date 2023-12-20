@@ -16,15 +16,9 @@ void nyas_resourcemap_mesh_add(nyas_resourcemap *rm,
                                const char *name,
                                nyas_mesh mesh);
 nyas_mesh nyas_resourcemap_mesh(nyas_resourcemap *rm, const char *name);
-void nyas_resourcemap_tex_file(nyas_resourcemap *rm,
-                               const char *name,
-                               const char *path,
-                               enum nyas_textype t);
 void nyas_resourcemap_tex_add(nyas_resourcemap *rm,
                               const char *name,
-                              int width,
-                              int height,
-                              enum nyas_textype t);
+                              nyas_tex tex);
 nyas_tex nyas_resourcemap_tex(nyas_resourcemap *rm, const char *name);
 
 #endif // NYAS_TOOLS_RESOURCE_MAP_H

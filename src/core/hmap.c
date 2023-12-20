@@ -57,7 +57,7 @@ static inline nyas_hmap *getnode(nyas_hmap *hm, unsigned int offset)
 nyas_hmap *
 nyas_hmap_create(unsigned int capacity, unsigned int value_size)
 {
-	NYAS_ASSERT(capacity <= (1 << 31));
+	NYAS_ASSERT(capacity <= (1U << 31));
 	capacity = next_pow2(capacity);
 	size_t map_size = (value_size + sizeof(hm_key)) * capacity
 		+ sizeof(struct hm_hdr);

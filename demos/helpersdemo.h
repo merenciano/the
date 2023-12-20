@@ -13,8 +13,8 @@ typedef struct GenEnv {
 	nyas_tex lut;
 } GenEnv;
 
-static nyas_mat
-GenerateRenderToCubeMat(nyas_shader eqr_sh)
+static float *
+GenerateRenderToCubeVP(void)
 {
 	float proj[16] = { 0.0f };
 	mat4_perspective(proj, to_radians(90.0f), 1.0f, 0.1f, 10.0f);
@@ -34,15 +34,13 @@ GenerateRenderToCubeMat(nyas_shader eqr_sh)
 		              svec3(0.0f, -1.0f, 0.0f)),
 	};
 
-	nyas_mat mat_tocube = nyas_mat_tmp(eqr_sh, 16 * 6, 0, 0);
-	float *vp = mat_tocube.ptr;
-
+	float *vp = nyas_alloc_frame(16 * 6 * sizeof(float));
 	for (int i = 0; i < 6; ++i) {
 		float *view = (float *)&views[i];
 		mat4_multiply(vp + 16 * i, proj, view);
 	}
 
-	return mat_tocube;
+	return vp;
 }
 
 static nyas_cmd *
@@ -52,8 +50,8 @@ ConvertEqrToCubeCommandList(nyas_shader eqr_sh, nyas_tex tex_in,
                             nyas_cmd *last_command)
 {
 	nyas_cmd *use_tocube = nyas_cmd_alloc();
-	use_tocube->data.mat = nyas_mat_tmp(eqr_sh, 0, 1, 0);
-	*(nyas_tex *)use_tocube->data.mat.ptr = tex_in;
+	*nyas_shader_tex(eqr_sh) = tex_in;
+	use_tocube->data.mat = nyas_mat_from_shader(eqr_sh);
 	use_tocube->execute = nyas_setshader_fn;
 	last_command->next = use_tocube;
 
@@ -62,7 +60,7 @@ ConvertEqrToCubeCommandList(nyas_shader eqr_sh, nyas_tex tex_in,
 		                   .level = 0 };
 
 	nyas_cmd *last = use_tocube;
-	nyas_mat draw_tocube = GenerateRenderToCubeMat(eqr_sh);
+	float *vp = GenerateRenderToCubeVP();
 	for (int i = 0; i < 6; ++i) {
 		nyas_cmd *cube_fb = nyas_cmd_alloc();
 		cube_fb->data.set_fb.fb = fb;
@@ -74,9 +72,8 @@ ConvertEqrToCubeCommandList(nyas_shader eqr_sh, nyas_tex tex_in,
 
 		nyas_cmd *draw_cube = nyas_cmd_alloc();
 		draw_cube->data.draw.mesh = CUBE_MESH;
-		draw_cube->data.draw.material = draw_tocube;
-		draw_cube->data.draw.material.data_count = 16;
-		draw_cube->data.draw.material.ptr = (float *)draw_tocube.ptr + 16 * i;
+		draw_cube->data.draw.material = nyas_mat_tmp(eqr_sh);
+		mat4_assign(draw_cube->data.draw.material.ptr, vp + 16 * i);
 		draw_cube->execute = nyas_draw_fn;
 		cube_fb->next = draw_cube;
 		last = draw_cube;
@@ -91,13 +88,14 @@ GeneratePrefilterCommandList(GenEnv *env,
                              nyas_cmd *last_command)
 {
 	nyas_cmd *use_pref = nyas_cmd_alloc();
-	use_pref->data.mat = nyas_mat_tmp(env->pref_sh, 0, 0, 1);
-	*(nyas_tex *)use_pref->data.mat.ptr = env->eqr_out;
+	*nyas_shader_cubemap(env->pref_sh) = env->eqr_out;
+	use_pref->data.mat = nyas_mat_from_shader(env->pref_sh);
 	use_pref->execute = nyas_setshader_fn;
 	last_command->next = use_pref;
 	last_command = use_pref;
+	float clearcolor[] = {0.0f, 0.0f, 1.0f, 1.0f};
 
-	nyas_mat mat = GenerateRenderToCubeMat(env->eqr_sh);
+	float *vp = GenerateRenderToCubeVP();
 	int tex_size[2];
 	float tex_width = (float)nyas_tex_size(env->pref_out, tex_size)[0];
 	for (int i = 0; i < 5; ++i) {
@@ -117,6 +115,10 @@ GeneratePrefilterCommandList(GenEnv *env,
 			last_command->next = fb_comm;
 
 			nyas_cmd *clear_comm = nyas_cmd_alloc();
+			clear_comm->data.clear.color[0] = clearcolor[0];
+			clear_comm->data.clear.color[1] = clearcolor[1];
+			clear_comm->data.clear.color[2] = clearcolor[2];
+			clear_comm->data.clear.color[3] = clearcolor[3];
 			clear_comm->data.clear.color_buffer = true;
 			clear_comm->data.clear.depth_buffer = false;
 			clear_comm->data.clear.stencil_buffer = false;
@@ -125,12 +127,9 @@ GeneratePrefilterCommandList(GenEnv *env,
 
 			nyas_cmd *draw_comm = nyas_cmd_alloc();
 			draw_comm->data.draw.mesh = CUBE_MESH;
-			draw_comm->data.draw.material =
-			  nyas_mat_tmp(env->pref_sh,
-			               1 + sizeof(struct mat4) / sizeof(float), 0, 0);
-			float *vp = draw_comm->data.draw.material.ptr;
-			mat4_assign(vp, (float *)mat.ptr + 16 * side);
-			vp[16] = roughness;
+			draw_comm->data.draw.material = nyas_mat_tmp(env->pref_sh);
+			mat4_assign(draw_comm->data.draw.material.ptr, vp + 16 * side);
+			((float*)draw_comm->data.draw.material.ptr)[16] = roughness;
 			draw_comm->execute = nyas_draw_fn;
 			clear_comm->next = draw_comm;
 			draw_comm->next = NULL;
@@ -161,15 +160,14 @@ GenerateLutCommandlist(nyas_framebuffer fb, nyas_cmd *last_command, GenEnv *env)
 	clear_comm->execute = nyas_clear_fn;
 	set_init_fb->next = clear_comm;
 
-	nyas_mat lutmat = nyas_mat_dft(env->lut_sh);
 	nyas_cmd *set_lut = nyas_cmd_alloc();
-	set_lut->data.mat = lutmat;
+	set_lut->data.mat.shader = env->lut_sh;
 	set_lut->execute = nyas_setshader_fn;
 	clear_comm->next = set_lut;
 
 	nyas_cmd *draw_lut = nyas_cmd_alloc();
 	draw_lut->data.draw.mesh = QUAD_MESH;
-	draw_lut->data.draw.material = lutmat;
+	draw_lut->data.draw.material.shader = env->lut_sh;
 	draw_lut->execute = nyas_draw_fn;
 	set_lut->next = draw_lut;
 	draw_lut->next = NULL;

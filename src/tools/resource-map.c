@@ -29,25 +29,8 @@ nyas_resourcemap_mesh(nyas_resourcemap *rm, const char *name)
 }
 
 void
-nyas_resourcemap_tex_file(nyas_resourcemap *rm,
-                          const char *name,
-                          const char *path,
-                          enum nyas_textype t)
+nyas_resourcemap_tex_add(nyas_resourcemap *rm, const char *name, nyas_tex tex)
 {
-	NYAS_ASSERT(path && "Null path");
-	nyas_tex tex = nyas_tex_load_img(path, t);
-	nyas_hmap_insert(rm->textures, name, &tex);
-}
-
-void
-nyas_resourcemap_tex_add(nyas_resourcemap *rm,
-                         const char *name,
-                         int width,
-                         int height,
-                         enum nyas_textype t)
-{
-	NYAS_ASSERT(width > 0 && height > 0 && "0,0 size texture is no texture");
-	nyas_tex tex = nyas_tex_create(width, height, t);
 	nyas_hmap_insert(rm->textures, name, &tex);
 }
 

@@ -6,7 +6,6 @@
 typedef struct entt {
 	nyas_entity *e;
 	nyas_pbr_desc_unit upbr;
-	nyas_mat scene_mat;
 	nyas_tex albedo;
 	nyas_tex normal;
 	nyas_tex roughness;
@@ -25,8 +24,6 @@ nyas_shader eqr_sh;
 nyas_shader lut_sh;
 nyas_shader pref_sh;
 nyas_tex skybox_tex;
-nyas_mat skyb_cmmn;
-nyas_mat fs_mat;
 
 void Init(void)
 {
@@ -36,25 +33,88 @@ void Init(void)
 	e.light[1] = -1.0f;
 	e.light[2] = 1.0f;
 	e.light[3] = 1.0f;
-	shader = nyas_shader_create("pbr");
-	skybox_sh = nyas_shader_create("skybox");
-	fs_sh = nyas_shader_create("fullscreen-img");
-	eqr_sh = nyas_shader_create("eqr-to-cube");
-	pref_sh = nyas_shader_create("prefilter-env");
-	lut_sh = nyas_shader_create("lut-gen");
+	nyas_shader_desc pbr_descriptor = {
+		.name = "pbr",
+		.data_count = 7 * 4, // 7 vec4
+		.tex_count = 4,
+		.cubemap_count = 0,
+		.common_data_count = 6 * 4, // 6 vec4
+		.common_tex_count = 1,
+		.common_cubemap_count = 2
+	};
+	shader = nyas_shader_create(&pbr_descriptor);
 
-	e.env = nyas_tex_load_img("assets/tex/env/helipad-env.hdr", NYAS_TEX_RGB_F16);
-	e.envirr = nyas_tex_load_img("assets/tex/env/helipad-dif.hdr", NYAS_TEX_RGB_F16);
+	nyas_shader_desc sky_descriptor = {
+	  .name = "skybox",
+	  .data_count = 0,
+	  .tex_count = 0,
+	  .cubemap_count = 0,
+	  .common_data_count = 4 * 4, // mat4
+	  .common_tex_count = 0,
+	  .common_cubemap_count = 1
+	};
+	skybox_sh = nyas_shader_create(&sky_descriptor);
 
-	e.albedo = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_A.png", NYAS_TEX_SRGB);
-	e.normal = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_N.png", NYAS_TEX_RGB);
-	e.roughness = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_R.png", NYAS_TEX_R);
-	e.metalness = nyas_tex_load_img("../pbr/assets/tex/cliff/cliff_M.png", NYAS_TEX_R);
+	nyas_shader_desc img_descriptor = {
+	  .name = "fullscreen-img", // fullscreen quad with texture
+	  .data_count = 0,
+	  .tex_count = 0,
+	  .cubemap_count = 0,
+	  .common_data_count = 0,
+	  .common_tex_count = 1,
+	  .common_cubemap_count = 0
+	};
+	fs_sh = nyas_shader_create(&img_descriptor);
 
-	fs_mat = nyas_mat_pers(fs_sh, 0, 1, 0);
-	*(nyas_tex *)fs_mat.ptr = nyas_fb_color(fb);
+	nyas_shader_desc eqr_descriptor = {
+	  .name = "eqr-to-cube", // environment image to cubemap
+	  .data_count = 4 * 4,
+	  .tex_count = 0,
+	  .cubemap_count = 0,
+	  .common_data_count = 0,
+	  .common_tex_count = 1,
+	  .common_cubemap_count = 0
+	};
+	eqr_sh = nyas_shader_create(&eqr_descriptor);
 
-	skybox_tex = nyas_tex_create(1024, 1024, NYAS_TEX_ENVIRONMENT);
+	nyas_shader_desc pref_descriptor = {
+	  .name = "prefilter-env", // environment prefilter
+	  .data_count = 5 * 4,
+	  .tex_count = 0,
+	  .cubemap_count = 0,
+	  .common_data_count = 0,
+	  .common_tex_count = 0,
+	  .common_cubemap_count = 1
+	};
+	pref_sh = nyas_shader_create(&pref_descriptor);
+
+	nyas_shader_desc lut_descriptor = {
+	  .name = "lut-gen", // look-up table
+	  .data_count = 0,
+	  .tex_count = 0,
+	  .cubemap_count = 0,
+	  .common_data_count = 0,
+	  .common_tex_count = 0,
+	  .common_cubemap_count = 0
+	};
+	lut_sh = nyas_shader_create(&lut_descriptor);
+
+	int envflags = nyas_tex_flags(3, true, true, false, false, false, false);
+	e.env = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, envflags);
+	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, envflags);
+
+	int alb = nyas_tex_flags(3, false, false, false, false, true, true);
+	e.albedo = nyas_tex_load("../pbr/assets/tex/cliff/cliff_A.png", 1, alb);
+	int n = nyas_tex_flags(3, false, true, false, false, true, true);
+	e.normal = nyas_tex_load("../pbr/assets/tex/cliff/cliff_N.png", 1, n);
+	int r_m = nyas_tex_flags(1, false, true, false, false, true, true);
+	e.roughness = nyas_tex_load("../pbr/assets/tex/cliff/cliff_R.png", 1, r_m);
+	e.metalness = nyas_tex_load("../pbr/assets/tex/cliff/cliff_M.png", 1, r_m);
+
+	*nyas_shader_tex(fs_sh) = nyas_fb_color(fb);
+
+	int sky_flags = nyas_tex_flags(3, true, true, true, false, false, false);
+	skybox_tex = nyas_tex_empty(1024, 1024, sky_flags);
 	e.upbr.use_albedo_map = 1.0f;
 	e.upbr.normal_map_intensity = 1.0f;
 	e.upbr.use_pbr_maps = 1.0f;
@@ -65,27 +125,27 @@ void Init(void)
 	mat4_translation(e.e->transform, e.e->transform, position);
 	e.e->mesh = nyas_mesh_create();
 	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball-n.obj");
-	e.e->mat = nyas_mat_pers(shader, sizeof(e.upbr) / sizeof(float), 4, 0);
+	e.e->mat = nyas_mat_pers(shader);
 	*(nyas_pbr_desc_unit*)e.e->mat.ptr = e.upbr;
-	nyas_tex *t = (nyas_tex*)e.e->mat.ptr + (sizeof(e.upbr) / sizeof(float));
+	nyas_tex *t = nyas_mat_tex(&e.e->mat);
 	t[0] = e.albedo;
 	t[1] = e.metalness;
 	t[2] = e.roughness;
 	t[3] = e.normal;
 
-	nyas_tex lut = nyas_tex_create(512, 512, NYAS_TEX_LUT);
-	nyas_tex irr = nyas_tex_create(1024, 1024, NYAS_TEX_ENVIRONMENT);
-	nyas_tex pref = nyas_tex_create(128, 128, NYAS_TEX_PREFILTER_ENVIRONMENT);
+	int lutflgs = nyas_tex_flags(2, true, true, false, false, false, false);
+	nyas_tex lut = nyas_tex_empty(512, 512, lutflgs);
+	int irrflgs = nyas_tex_flags(3, true, true, true, false, false, false);
+	nyas_tex irr = nyas_tex_empty(1024, 1024, irrflgs);
+	int preflgs = nyas_tex_flags(3, true, true, true, false, false, true);
+	nyas_tex pref = nyas_tex_empty(128, 128, preflgs);
 
-	int scene_dcount = sizeof(nyas_pbr_desc_scene) / sizeof(float);
-	e.scene_mat = nyas_mat_pers(shader, scene_dcount, 1, 2);
-	nyas_tex *pbr_scene_tex = nyas_mat_tex(&e.scene_mat);
+	nyas_tex *pbr_scene_tex = nyas_shader_tex(shader);
 	pbr_scene_tex[0] = lut;
 	pbr_scene_tex[1] = irr;
 	pbr_scene_tex[2] = pref;
 
-	skyb_cmmn = nyas_mat_pers(skybox_sh, 16, 0, 1);
-	*nyas_mat_tex(&skyb_cmmn) = skybox_tex;
+	*nyas_shader_tex(skybox_sh) = skybox_tex;
 
 	GenEnv env = {
 		.eqr_sh = eqr_sh,
@@ -110,7 +170,7 @@ void Update(nyas_chrono *dt)
 	nyas_input_read();
 	nyas_camera_control(&camera, delta); 
 
-	nyas_pbr_desc_scene *common_pbr = e.scene_mat.ptr;
+	nyas_pbr_desc_scene *common_pbr = nyas_shader_data(shader);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	nyas_camera_pos(common_pbr->camera_position, &camera);
 	vec4_assign(common_pbr->sunlight, e.light);
@@ -141,7 +201,7 @@ void Update(nyas_chrono *dt)
 	rops->next = clear;
 
 	nyas_cmd *use_pbr = nyas_cmd_alloc();
-	use_pbr->data.mat = e.scene_mat;
+	use_pbr->data.mat = nyas_mat_from_shader(shader);
 	use_pbr->execute = nyas_setshader_fn;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -156,15 +216,15 @@ void Update(nyas_chrono *dt)
 	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
-	nyas_camera_static_vp(skyb_cmmn.ptr, &camera);
+	nyas_camera_static_vp(nyas_shader_data(skybox_sh), &camera);
 	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = skyb_cmmn;
+	use_sky_shader->data.mat = nyas_mat_from_shader(skybox_sh);
 	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
 	nyas_cmd *draw_sky = nyas_cmd_alloc();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material = skyb_cmmn;
+	draw_sky->data.draw.material.shader = skybox_sh;
 	draw_sky->execute = nyas_draw_fn;
 	use_sky_shader->next = draw_sky;
 
@@ -189,13 +249,13 @@ void Update(nyas_chrono *dt)
 	rops2->next = clear;
 
 	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = fs_mat;
+	usefullscreen->data.mat = nyas_mat_from_shader(fs_sh);
 	usefullscreen->execute = nyas_setshader_fn;
 	clear->next = usefullscreen;
 
 	nyas_cmd *draw = nyas_cmd_alloc();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.material = fs_mat;
+	draw->data.draw.material.shader = fs_sh;
 	draw->execute = nyas_draw_fn;
 	usefullscreen->next = draw;
 	draw->next = NULL;
@@ -213,6 +273,7 @@ void Render(void)
 
 int main(int argc, char **argv)
 {
+	(void)argc; (void)argv;
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("NYAS Asset Inspector", 1920, 1080, true);
 	nyas_px_init();

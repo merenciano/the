@@ -2,8 +2,8 @@
 #define NYAS_PIXELS_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * nyaspix config
@@ -14,8 +14,6 @@ typedef uint16_t nyas_idx;
 #else
 typedef uint32_t nyas_idx;
 #endif
-
-#define NYAS_PIXEL_CHECKS
 
 #define NYAS_RENDER_QUEUE_CAPACITY 1024
 #define NYAS_FRAME_POOL_SIZE (16 * 1024 * 1024)
@@ -34,36 +32,36 @@ typedef nyas_resource_handle nyas_tex;
 typedef nyas_resource_handle nyas_framebuffer;
 typedef nyas_resource_handle nyas_shader;
 
-enum nyas_textype {
-	NYAS_TEX_NONE = 0,
-	NYAS_TEX_R,
-	NYAS_TEX_RGB,
-	NYAS_TEX_SRGB,
-	NYAS_TEX_DEPTH,
-	NYAS_TEX_SKYBOX,
-	NYAS_TEX_RGB_F16,
-	NYAS_TEX_RGBA_F16,
-	NYAS_TEX_LUT,
-	NYAS_TEX_ENVIRONMENT,
-	NYAS_TEX_PREFILTER_ENVIRONMENT,
-};
-
 typedef struct nyas_mat {
 	void *ptr;
-	int data_count;
-	int tex_count;
-	int cube_count;
 	nyas_shader shader;
 } nyas_mat;
+
+typedef struct nyas_shader_desc {
+	const char *name;
+	int data_count;
+	int tex_count;
+	int cubemap_count;
+	int common_data_count;
+	int common_tex_count;
+	int common_cubemap_count;
+} nyas_shader_desc;
 
 void nyas_px_init(void);
 void nyas_px_render(void);
 void nyas_frame_end(void);
 void *nyas_alloc_frame(unsigned int size);
 
-nyas_tex nyas_tex_create(int width, int height, enum nyas_textype t);
-nyas_tex nyas_tex_load_img(const char *path, enum nyas_textype t);
-int *nyas_tex_size(nyas_tex tex, int *out);
+int nyas_tex_flags(int nchann,
+                   bool fp,
+                   bool linear,
+                   bool cube,
+                   bool depth,
+                   bool tile,
+                   bool mipmap);
+nyas_tex nyas_tex_empty(int width, int height, int tex_flags);
+nyas_tex nyas_tex_load(const char *path, int flip, int tex_flags);
+int *nyas_tex_size(nyas_tex tex, int *out_vec2i);
 
 nyas_framebuffer nyas_fb_create(int width, int height, bool color, bool depth);
 nyas_tex nyas_fb_color(nyas_framebuffer fb);
@@ -80,20 +78,20 @@ void nyas_mesh_load_msh(nyas_mesh mesh, const char *path);
 void nyas_mesh_set_vertices(nyas_mesh mesh, float *v, size_t size, int vattr);
 void nyas_mesh_set_indices(nyas_mesh mesh, nyas_idx *indices, size_t elements);
 
-nyas_shader nyas_shader_create(const char *shader);
+nyas_shader nyas_shader_create(nyas_shader_desc *desc);
+void *nyas_shader_data(nyas_shader shader);
+nyas_tex *nyas_shader_tex(nyas_shader shader);
+nyas_tex *nyas_shader_cubemap(nyas_shader shader);
 void nyas_shader_reload(nyas_shader shader);
+
 /* Creates a new material and alloc persistent memory for its data */
-nyas_mat nyas_mat_pers(nyas_shader shader,
-                       int data_count,
-                       int tex_count,
-                       int cube_count);
+nyas_mat nyas_mat_pers(nyas_shader shader);
 
 /* Creates a new material and alloc frame-scoped memory for its data */
-nyas_mat nyas_mat_tmp(nyas_shader shader,
-                       int data_count,
-                       int tex_count,
-                       int cube_count);
+nyas_mat nyas_mat_tmp(nyas_shader shader);
 nyas_mat nyas_mat_dft(nyas_shader shader);
+nyas_mat nyas_mat_from_shader(nyas_shader shader);
+
 /* MaterialAlloc does not initialize the shader value. */
 void *nyas_mat_alloc(nyas_mat *mat);
 nyas_tex *nyas_mat_tex(nyas_mat *mat); // Ptr to first texture.

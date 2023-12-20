@@ -1,6 +1,7 @@
 #ifndef NYAS_PIXELS_INTERNAL_H
 #define NYAS_PIXELS_INTERNAL_H
 
+#include "nyaspix.h"
 #include "pixels.h"
 #include "utils/array.h"
 
@@ -11,10 +12,14 @@
 #endif // NYAS_PIXEL_CHECKS
 
 #include "core/log.h" // assert
-static void nypx__check_handle(int h, void *arr)
+
+#define NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA (8)
+
+static void
+nypx__check_handle(int h, void *arr)
 {
 	NYAS_ASSERT(h >= 0 && "Bad resource state");
-	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_len(arr) && \
+	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_len(arr) &&
 	            "Out of bounds handle");
 }
 
@@ -47,13 +52,42 @@ typedef struct {
 	unsigned int internal_buffers_id[2];
 } r_mesh;
 
-typedef struct {
+enum nyas_internal_resource_flags {
+	NYAS_IRF_DIRTY = 1U << 3,
+	NYAS_IRF_CREATED = 1U << 4,
+	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
+};
+
+struct nyas_internal_resource {
+	uint32_t id;
+	int flags;
+};
+
+/*typedef struct {
 	r_resource res;
 	void *pix[6];
 	int width;
 	int height;
 	int type;
-} r_tex;
+} r_tex;*/
+
+
+struct nyas_internal_texture {
+	struct nyas_internal_resource res;
+	void *pix[6];
+	int width;
+	int height;
+	int type;
+};
+
+struct nyas_internal_shader {
+	struct nyas_internal_resource res;
+	const char *name;
+	struct {
+		int data, tex, cubemap;
+	} loc[2], count[2]; // 0: unit, 1: common
+	void *common;
+};
 
 typedef struct {
 	r_resource res;
@@ -62,22 +96,6 @@ typedef struct {
 	nyas_tex color_tex;
 	nyas_tex depth_tex;
 } r_fb;
-
-enum shadata_type { SHADATA_COMMON = 0, SHADATA_UNIT = 1 };
-
-typedef struct {
-	int data;
-	int tex;
-	int cubemap;
-} shadata_loc;
-
-typedef struct {
-	r_resource res;
-	const char *shader_name;
-	shadata_loc data_loc[2];
-	unsigned int vert;
-	unsigned int frag;
-} r_shader;
 
 extern nyas_arr mesh_pool;
 extern nyas_arr tex_pool;

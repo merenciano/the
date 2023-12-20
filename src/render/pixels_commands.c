@@ -15,6 +15,9 @@
 #define ELEMENT_TYPE GL_UNSIGNED_INT
 #endif
 
+typedef struct nyas_internal_shader shdr_t;
+typedef struct nyas_internal_texture tex_t;
+
 typedef struct {
 	GLint internal_format;
 	GLenum format;
@@ -152,7 +155,7 @@ nyas__gl_depth(nyas_depthfn_opt df)
 static void
 nyas__attach_to_fb(nyas_fbattach a)
 {
-	int id = ((r_tex *)nyas_arr_at(tex_pool, a.tex))->res.id;
+	int id = ((tex_t *)nyas_arr_at(tex_pool, a.tex))->res.id;
 	GLenum target = a.side < 0 ? GL_TEXTURE_2D :
 								 GL_TEXTURE_CUBE_MAP_POSITIVE_X + a.side;
 
@@ -197,7 +200,7 @@ static void
 nyas__mesh_update(nyas_mesh mesh, nyas_shader shader)
 {
 	r_mesh *m = nyas_arr_at(mesh_pool, mesh);
-	r_shader *s = nyas_arr_at(shader_pool, shader);
+	shdr_t *s = nyas_arr_at(shader_pool, shader);
 
 	glBindVertexArray(m->res.id);
 	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
@@ -251,319 +254,6 @@ nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
 }
 
 static void
-nyas__create_cubemap(nyas_tex tex)
-{
-	nyas_texcube_cnfg config;
-	r_tex *t = nyas_arr_at(tex_pool, tex);
-
-	NYAS_ASSERT(tex < 62 && "Start thinking about the max textures");
-	NYAS_ASSERT(t->res.id == NYAS_UNINIT &&
-	            "Texture already created in the gpu");
-
-	switch (t->type) {
-	case NYAS_TEX_SKYBOX:
-		config.format = GL_RGB;
-		config.internal_format = GL_SRGB;
-		config.type = GL_UNSIGNED_BYTE;
-		config.min_filter = GL_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	case NYAS_TEX_ENVIRONMENT:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB16F;
-		config.type = GL_FLOAT;
-		config.min_filter = GL_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	case NYAS_TEX_PREFILTER_ENVIRONMENT:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB16F;
-		config.type = GL_FLOAT;
-		config.min_filter = GL_LINEAR_MIPMAP_LINEAR;
-		config.mag_filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		break;
-
-	default:
-		NYAS_LOG_ERR("Trying to create a cubemap with an invalid format");
-		return;
-	}
-
-	glGenTextures(1, (GLuint *)&(t->res.id));
-	glActiveTexture(GL_TEXTURE0 + tex);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, t->res.id);
-
-	if (t->type == NYAS_TEX_SKYBOX) {
-		for (int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-			             config.internal_format, t->width, t->height, 0,
-			             config.format, config.type, t->pix[i]);
-
-			if (t->res.flags & RF_FREE_AFTER_LOAD) {
-				nyas_free(t->pix[i]);
-				t->pix[i] = NULL;
-			}
-		}
-	} else {
-		NYAS_ASSERT(t->width > 0 && t->height > 0 && "Invalid size");
-		for (int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-			             config.internal_format, t->width, t->height, 0,
-			             config.format, config.type, 0);
-		}
-	}
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, config.wrap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
-	                config.min_filter);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER,
-	                config.mag_filter);
-	if (t->type == NYAS_TEX_PREFILTER_ENVIRONMENT) {
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	}
-	t->res.flags = 0;
-}
-
-static void
-nyas__create_texture(nyas_tex tex)
-{
-	nyas_tex_cnfg config;
-	r_tex *t = nyas_arr_at(tex_pool, tex);
-
-	NYAS_ASSERT(tex < 62 && "Max texture units"); // Tex unit is id + 1
-	NYAS_ASSERT(t->res.id == NYAS_UNINIT && "Texture already created on GPU");
-
-	switch (t->type) {
-	case NYAS_TEX_R:
-		config.format = GL_RED;
-		config.internal_format = GL_R8;
-		config.type = GL_UNSIGNED_BYTE;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_REPEAT;
-		config.channels = 1;
-		break;
-
-	case NYAS_TEX_LUT:
-		config.format = GL_RG;
-		config.internal_format = GL_RG16F;
-		config.type = GL_FLOAT;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		config.channels = 2;
-		break;
-
-	case NYAS_TEX_RGB:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB;
-		config.type = GL_UNSIGNED_BYTE;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_REPEAT;
-		config.channels = 3;
-		break;
-
-	case NYAS_TEX_SRGB:
-		config.format = GL_RGB;
-		config.internal_format = GL_SRGB;
-		config.type = GL_UNSIGNED_BYTE;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_REPEAT;
-		config.channels = 3;
-		break;
-
-	case NYAS_TEX_RGBA_F16:
-		config.format = GL_RGBA;
-		config.internal_format = GL_RGBA16F;
-		config.type = GL_FLOAT;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		config.channels = 4;
-		break;
-
-	case NYAS_TEX_DEPTH:
-		config.format = GL_DEPTH_COMPONENT;
-		config.internal_format = GL_DEPTH_COMPONENT;
-		config.type = GL_FLOAT;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_BORDER;
-		config.channels = 1;
-		break;
-
-	case NYAS_TEX_RGB_F16:
-		config.format = GL_RGB;
-		config.internal_format = GL_RGB16F;
-		config.type = GL_FLOAT;
-		config.filter = GL_LINEAR;
-		config.wrap = GL_CLAMP_TO_EDGE;
-		config.channels = 3;
-		break;
-
-	case NYAS_TEX_SKYBOX:
-	case NYAS_TEX_ENVIRONMENT:
-	case NYAS_TEX_PREFILTER_ENVIRONMENT:
-		nyas__create_cubemap(tex);
-		return;
-
-	default:
-		NYAS_LOG_ERR("Invalid format");
-		config.format = GL_INVALID_ENUM;
-		config.internal_format = GL_INVALID_ENUM;
-		config.type = GL_INVALID_ENUM;
-		config.filter = GL_INVALID_ENUM;
-		config.wrap = GL_INVALID_ENUM;
-		config.channels = 0;
-		break;
-	}
-
-	glGenTextures(1, (GLuint *)&(t->res.id));
-	glActiveTexture(GL_TEXTURE0 + tex);
-	glBindTexture(GL_TEXTURE_2D, t->res.id);
-	glTexImage2D(GL_TEXTURE_2D, 0, config.internal_format, t->width, t->height,
-	             0, config.format, config.type, t->pix[0]);
-	if (t->pix[0]) {
-		if (t->type == GL_UNSIGNED_BYTE) {
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-
-		if (t->res.flags & RF_FREE_AFTER_LOAD) {
-			nyas_free(t->pix[0]);
-			t->pix[0] = NULL;
-		}
-	}
-	// No shadows outside shadow maps
-	float border_color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border_color);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, config.filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, config.filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, config.wrap);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, config.wrap);
-	t->res.flags = 0;
-}
-
-static enum nyas_defs
-nyas__load_text_file(const char *path, char *buffer, size_t buffsize)
-{
-	FILE *fp = fopen(path, "r");
-
-	if (!fp) {
-		NYAS_LOG_ERR("File %s couldn't be opened.", path);
-		return NYAS_ERR_FILE;
-	}
-
-	fread((void *)buffer, 1, buffsize - 1, fp);
-	fclose(fp);
-
-	if (buffer[buffsize - 1] != '\0') {
-		NYAS_LOG_ERR("File %s bigger than buffer size.", path);
-		return NYAS_ERR_ALLOC;
-	}
-
-	return NYAS_OK;
-}
-
-static enum nyas_defs
-nyas__compile_program(r_shader *shader)
-{
-#define SHADER_BUFFSIZE 8192
-	char vert[SHADER_BUFFSIZE] = { '\0' };
-	char frag[SHADER_BUFFSIZE] = { '\0' };
-	char vert_path[256] = { '\0' };
-	char frag_path[256] = { '\0' };
-	strcpy(frag_path, "assets/shaders/");
-	strcat(frag_path, shader->shader_name);
-	strcpy(vert_path, frag_path);
-	strcat(vert_path, "-vert.glsl");
-	strcat(frag_path, "-frag.glsl");
-
-	if (nyas__load_text_file(vert_path, vert, SHADER_BUFFSIZE) != NYAS_OK) {
-		return NYAS_ERR_FILE;
-	}
-
-	if (nyas__load_text_file(frag_path, frag, SHADER_BUFFSIZE) != NYAS_OK) {
-		if (frag[SHADER_BUFFSIZE - 1] != '\0') {
-			NYAS_LOG_ERR("File %s bigger than buffer size.", frag_path);
-		}
-		return NYAS_ERR_FILE;
-	}
-#undef SHADER_BUFFSIZE
-
-	GLint err;
-	GLchar output_log[512];
-	const GLchar *shader_src = &vert[0];
-	glShaderSource(shader->vert, 1, &shader_src, NULL);
-	glCompileShader(shader->vert);
-	glGetShaderiv(shader->vert, GL_COMPILE_STATUS, &err);
-	if (!err) {
-		glGetShaderInfoLog(shader->vert, 512, NULL, output_log);
-		NYAS_LOG_ERR("%s vertex shader compilation failed:\n%s\n",
-		             shader->shader_name, output_log);
-		return NYAS_EC_FAIL;
-	}
-	shader_src = &frag[0];
-	glShaderSource(shader->frag, 1, &shader_src, NULL);
-	glCompileShader(shader->frag);
-	glGetShaderiv(shader->frag, GL_COMPILE_STATUS, &err);
-	if (!err) {
-		glGetShaderInfoLog(shader->frag, 512, NULL, output_log);
-		NYAS_LOG_ERR("%s fragment shader compilation failed:\n%s\n",
-		             shader->shader_name, output_log);
-		return NYAS_EC_FAIL;
-	}
-	glAttachShader(shader->res.id, shader->vert);
-	glAttachShader(shader->res.id, shader->frag);
-	glLinkProgram(shader->res.id);
-	glGetProgramiv(shader->res.id, GL_LINK_STATUS, &err);
-	if (!err) {
-		glGetProgramInfoLog(shader->res.id, 512, NULL, output_log);
-		NYAS_LOG_ERR("%s program error:\n%s\n", shader->shader_name,
-		             output_log);
-		return NYAS_EC_FAIL;
-	}
-
-	shader->data_loc[SHADATA_COMMON].data =
-	  glGetUniformLocation(shader->res.id, "u_common_data");
-	shader->data_loc[SHADATA_COMMON].tex =
-	  glGetUniformLocation(shader->res.id, "u_common_tex");
-	shader->data_loc[SHADATA_COMMON].cubemap =
-	  glGetUniformLocation(shader->res.id, "u_common_cube");
-	shader->data_loc[SHADATA_UNIT].data = glGetUniformLocation(shader->res.id,
-	                                                           "u_data");
-	shader->data_loc[SHADATA_UNIT].tex = glGetUniformLocation(shader->res.id,
-	                                                          "u_tex");
-	shader->data_loc[SHADATA_UNIT].cubemap =
-	  glGetUniformLocation(shader->res.id, "u_cube");
-
-	return NYAS_OK;
-}
-
-static enum nyas_defs
-nyas__create_shader(r_shader *shader)
-{
-	NYAS_ASSERT(shader->res.id == NYAS_UNINIT &&
-	            "Shader must be uninitialized.");
-	NYAS_ASSERT(shader->vert == NYAS_UNINIT &&
-	            "Vert shader must be uninitialized.");
-	NYAS_ASSERT(shader->frag == NYAS_UNINIT &&
-	            "Frag shader must be uninitialized.");
-	NYAS_ASSERT(shader->shader_name && "Empty shader name");
-
-	shader->vert = glCreateShader(GL_VERTEX_SHADER);
-	shader->frag = glCreateShader(GL_FRAGMENT_SHADER);
-	shader->res.id = glCreateProgram();
-
-	nypx__resource_check(shader);
-	nypx__resource_check(&shader->vert);
-	nypx__resource_check(&shader->frag);
-
-	return nyas__compile_program(shader);
-}
-
-static void
 nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
 {
 	r_mesh *im = nyas_arr_at(mesh_pool, m);
@@ -575,30 +265,21 @@ nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
 	im->res.flags = 0;
 }
 
-static r_tex *
+static void
 nyas__sync_gpu_tex(nyas_tex tex)
 {
 	CHECK_HANDLE(tex, tex);
-	r_tex *mutated = NULL;
-	r_tex *itex = nyas_arr_at(tex_pool, tex);
-	if (itex->res.id == NYAS_UNINIT) {
-		nyas__create_texture(tex);
-		mutated = itex;
+	tex_t *t = nyas_arr_at(tex_pool, tex);
+	if (!(t->res.flags & NYAS_IRF_CREATED)) {
+		nypx_tex_create(&t->res.id, t->type);
+		t->res.flags |= NYAS_IRF_DIRTY;
 	}
-	NYAS_ASSERT(nypx__resource_check(itex) && "Invalid internal resource.");
-	return mutated;
-}
 
-static void
-nyas__sync_gpu_shader(r_shader *is)
-{
-	if (is->res.id == NYAS_UNINIT) {
-		nyas__create_shader(is);
-	} else if (is->res.flags & RF_DIRTY) {
-		nyas__compile_program(is);
+	if (t->res.flags & NYAS_IRF_DIRTY) {
+		nypx_tex_set(t->res.id, t->type, t->width, t->height, t->pix);
 	}
-	is->res.flags = 0;
-	NYAS_ASSERT(nypx__resource_check(is) && "Error creating internal shader.");
+	t->res.flags = NYAS_IRF_CREATED;
+	NYAS_ASSERT(nypx__resource_check(t) && "Invalid internal resource.");
 }
 
 static void
@@ -646,33 +327,87 @@ nyas__sync_gpu_fb(nyas_framebuffer fb, const nyas_fbattach *atta)
 }
 
 static void
-nyas__set_shader_data(nyas_mat m, enum shadata_type group)
+nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
 {
-	r_shader *s = nyas_arr_at(shader_pool, m.shader);
+	NYAS_ASSERT((common == 0 || common == 1) && "Invalid common value.");
 	NYAS_ASSERT(nypx__resource_check(s) && "Invalid internal shader.");
-	nyas_tex *t = (nyas_tex *)((float *)m.ptr) + m.data_count;
-	for (int i = 0; i < m.tex_count + m.cube_count; ++i) {
-		r_tex *itx = nyas_arr_at(tex_pool, t[i]);
-		if (nyas__is_dirty(itx)) {
-			nyas__sync_gpu_tex(t[i]);
+
+	size_t count = s->count[common].data + s->count[common].tex +
+	  s->count[common].cubemap;
+	if (!count) {
+		return;
+	}
+	// copy for thread safety, uniform setting will be async (drawcommand)
+	float *tmpdata = nyas_alloc_frame(count * sizeof(float));
+	// copy numeric data
+	memcpy(tmpdata, srcdata, s->count[common].data * sizeof(float));
+
+	// set tex data (src {handle} --> dst {internal id})
+	nyas_tex *srcdata_tex = (nyas_tex *)srcdata + s->count[common].data;
+	uint32_t *tmpdata_texid = (uint32_t *)tmpdata + s->count[common].data;
+	for (int i = 0; i < s->count[common].tex; ++i) {
+		tex_t *itx = nyas_arr_at(tex_pool, srcdata_tex[i]);
+		if (itx->res.flags & NYAS_IRF_DIRTY) {
+			nyas__sync_gpu_tex(srcdata_tex[i]);
 		}
+		*tmpdata_texid++ = itx->res.id;
 	}
 
-	glUniform4fv(s->data_loc[group].data, m.data_count / 4, m.ptr);
-	glUniform1iv(s->data_loc[group].tex, m.tex_count, t);
-	glUniform1iv(s->data_loc[group].cubemap, m.cube_count, t + m.tex_count);
+	// set tex cubemap data (src {handle} --> dst {internal id})
+	nyas_tex *srcdata_cubemap = srcdata_tex + s->count[common].tex;
+	for (int i = 0; i < s->count[common].cubemap; ++i) {
+		tex_t *itx = nyas_arr_at(tex_pool, srcdata_cubemap[i]);
+		if (itx->res.flags & NYAS_IRF_DIRTY) {
+			nyas__sync_gpu_tex(srcdata_cubemap[i]);
+		}
+		*tmpdata_texid++ = itx->res.id;
+	}
+
+	// set opengl uniforms
+	int tuoffset = NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA * common;
+	if (s->count[common].data) {
+		nypx_shader_set_data(s->loc[common].data, tmpdata,
+		                     s->count[common].data / 4);
+		tmpdata += s->count[common].data;
+	}
+
+	if (s->count[common].tex) {
+		nypx_shader_set_tex(s->loc[common].tex, (int *)tmpdata,
+		                    s->count[common].tex, tuoffset);
+		tmpdata += s->count[common].tex;
+		tuoffset += s->count[common].tex;
+	}
+
+	if (s->count[common].cubemap) {
+		nypx_shader_set_cube(s->loc[common].cubemap, (int *)tmpdata,
+		                     s->count[common].cubemap, tuoffset);
+	}
 }
 
 void
 nyas_setshader_fn(nyas_cmdata *data)
 {
+	static const char *uniforms[] = { "u_data",       "u_tex",
+		                              "u_cube",       "u_common_data",
+		                              "u_common_tex", "u_common_cube" };
+
 	CHECK_HANDLE(shader, data->mat.shader);
-	r_shader *s = nyas_arr_at(shader_pool, data->mat.shader);
-	if (nyas__is_dirty(s)) {
-		nyas__sync_gpu_shader(s);
+	shdr_t *s = nyas_arr_at(shader_pool, data->mat.shader);
+	if (!(s->res.flags & NYAS_IRF_CREATED)) {
+		nypx_shader_create(&s->res.id);
+		NYAS_ASSERT(nypx__resource_check(s) && "Error shader creation.");
+		s->res.flags |= NYAS_IRF_DIRTY;
 	}
-	glUseProgram(s->res.id);
-	nyas__set_shader_data(data->mat, SHADATA_COMMON);
+
+	if (s->res.flags & NYAS_IRF_DIRTY) {
+		NYAS_ASSERT(s->name && *s->name && "Shader name needed.");
+		nypx_shader_compile(s->res.id, s->name);
+		nypx_shader_loc(s->res.id, &s->loc[0].data, &uniforms[0], 6);
+		s->res.flags = NYAS_IRF_CREATED; // reset dirty flag
+	}
+
+	nypx_shader_use(s->res.id);
+	nyas__set_shader_data(s, data->mat.ptr, true);
 }
 
 void
@@ -703,10 +438,17 @@ nyas_draw_fn(nyas_cmdata *data)
 
 	if (nyas__is_dirty(imsh)) {
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
+		if (imsh->res.id == NYAS_UNINIT) {
+			nyas__create_mesh(mesh, data->draw.material.shader);
+		} else if (imsh->res.flags & RF_DIRTY) {
+			nyas__mesh_update(mesh, data->draw.material.shader);
+		}
+		imsh->res.flags = 0;
 	}
 
 	glBindVertexArray(imsh->res.id);
-	nyas__set_shader_data(data->draw.material, SHADATA_UNIT);
+	shdr_t *s = nyas_arr_at(shader_pool, data->draw.material.shader);
+	nyas__set_shader_data(s, data->draw.material.ptr, false);
 	glDrawElements(GL_TRIANGLES, imsh->elements, ELEMENT_TYPE, 0);
 	glBindVertexArray(0);
 }
@@ -754,7 +496,7 @@ nyas_setfb_fn(nyas_cmdata *data)
 	}
 
 	r_fb *ifb = nyas_arr_at(framebuffer_pool, d->fb);
-	if (d->attachment.slot != NYAS_IGNORE) {
+	if ((int)d->attachment.slot != NYAS_IGNORE) {
 		ifb->res.flags |= RF_DIRTY;
 	}
 
