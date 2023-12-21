@@ -76,7 +76,7 @@ nyas_imgui_draw(void)
 				for (size_t i = 0; i < nyas_arr_len(shader_pool); ++i) {
 					nk_label(ctx, ((struct nyas_internal_shader*)shader_pool)[i].name, NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
-						((struct nyas_internal_shader*)shader_pool)[i].res.flags |= RF_DIRTY;
+						((struct nyas_internal_shader*)shader_pool)[i].res.flags |= NYAS_IRF_DIRTY;
 					}
 				}
 				nk_tree_pop(ctx);

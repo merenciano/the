@@ -245,6 +245,14 @@ nypx_shader_create(uint32_t *id)
 void
 nypx_shader_compile(uint32_t id, const char *name)
 {
+	// For shader hot-recompilations
+	GLuint shaders[8];
+	GLsizei attach_count;
+	glGetAttachedShaders(id, 8, &attach_count, shaders);
+	for (int i = 0; i < attach_count; ++i) {
+		glDetachShader(id, shaders[i]);
+	}
+
 	size_t shsrc_size; // Shader source size in bytes
 	char *shsrc;
 	char vert_path[256] = { '\0' };
