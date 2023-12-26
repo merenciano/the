@@ -2,6 +2,7 @@
 
 #include "core/io.h"
 #include "render/pixels_internal.h"
+#include "render/pixels_extra.h"
 #include "scene/entity.h"
 
 #include <glad/glad.h>
@@ -38,25 +39,54 @@ nyas_imgui_init(void)
 void
 nyas_imgui_draw(void)
 {
-	static char mesh_path[512] = {0};
+	static char mesh_path[512] = { 0 };
 	nk_glfw3_new_frame(&glfw);
 
 	if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
 	             NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 	               NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
 		nk_layout_row_static(ctx, 30, 80, 1);
-		nk_layout_row_dynamic(ctx, 30, 2);
 
-		for (int i = 0; i < nyas_entity_count(); ++i)
-		{
+		for (int i = 0; i < nyas_entity_count(); ++i) {
 			nyas_entity *e = nyas_entities() + i;
-			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);
+			// Mesh
+			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512,
+			                               NULL);
+			nk_layout_row_dynamic(ctx, 30, 2);
 			if (nk_button_label(ctx, "Load OBJ")) {
 				nyas_mesh_load_obj(e->mesh, mesh_path);
 			}
 			if (nk_button_label(ctx, "Load MSH")) {
 				nyas_mesh_load_msh(e->mesh, mesh_path);
 			}
+
+			// Material
+			nyas_pbr_desc_unit *unit = e->mat.ptr;
+			nyas_pbr_desc_scene *scene = ((struct nyas_internal_shader*)shader_pool)->common;
+
+			nk_label(ctx, "Albedo texture intensity: ", NK_TEXT_LEFT);
+			unit->use_albedo_map = nk_slide_float(ctx, 0.0f, unit->use_albedo_map, 1.0f, 0.01f);
+			nk_label(ctx, "Color: ", NK_TEXT_LEFT);
+			//unit->use_albedo_map = nk_slide_float(ctx, 0.0f, unit->use_albedo_map, 1.0f, 0.01f);
+			nk_label(ctx, "Normal map intensity: ", NK_TEXT_LEFT);
+			unit->normal_map_intensity = nk_slide_float(ctx, 0.0f, unit->normal_map_intensity, 1.0f, 0.01f);
+			nk_label(ctx, "Material texture intensity: ", NK_TEXT_LEFT);
+			unit->use_pbr_maps = nk_slide_float(ctx, 0.0f, unit->use_pbr_maps, 1.0f, 0.01f);
+			nk_label(ctx, "Roughness: ", NK_TEXT_LEFT);
+			unit->roughness = nk_slide_float(ctx, 0.0f, unit->roughness, 1.0f, 0.01f);
+			nk_label(ctx, "Metalness: ", NK_TEXT_LEFT);
+			unit->metallic = nk_slide_float(ctx, 0.0f, unit->metallic, 1.0f, 0.01f);
+			nk_label(ctx, "Tiling: ", NK_TEXT_LEFT);
+			unit->tiling_x = nk_slide_float(ctx, 0.0f, unit->tiling_x, 1.0f, 0.01f);
+			unit->tiling_y = nk_slide_float(ctx, 0.0f, unit->tiling_y, 1.0f, 0.01f);
+			
+			nk_label(ctx, "Light direction: ", NK_TEXT_LEFT);
+			nk_layout_row_dynamic(ctx, 50, 3);
+			nk_property_float(ctx, "#X:", -100.0f, scene->sunlight, 100.0f, 0.01f, 0.01f);
+			nk_property_float(ctx, "#Y:", -100.0f, scene->sunlight + 1, 100.0f, 0.01f, 0.01f);
+			nk_property_float(ctx, "#Z:", -100.0f, scene->sunlight + 2, 100.0f, 0.01f, 0.01f);
+			nk_label(ctx, "Light intensity: ", NK_TEXT_LEFT);
+			scene->sunlight[3] = nk_slide_float(ctx, 0.0f, scene->sunlight[3], 10.0f, 0.05f);
 		}
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
@@ -74,9 +104,13 @@ nyas_imgui_draw(void)
 			          sizeof(struct nyas_internal_shader));
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
 				for (size_t i = 0; i < nyas_arr_len(shader_pool); ++i) {
-					nk_label(ctx, ((struct nyas_internal_shader*)shader_pool)[i].name, NK_TEXT_LEFT);
+					nk_label(
+					  ctx,
+					  ((struct nyas_internal_shader *)shader_pool)[i].name,
+					  NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
-						((struct nyas_internal_shader*)shader_pool)[i].res.flags |= NYAS_IRF_DIRTY;
+						((struct nyas_internal_shader *)shader_pool)[i]
+						  .res.flags |= NYAS_IRF_DIRTY;
 					}
 				}
 				nk_tree_pop(ctx);

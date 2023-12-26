@@ -140,6 +140,7 @@ void Init(void)
 	int preflgs = nyas_tex_flags(3, true, true, true, false, false, true);
 	nyas_tex pref = nyas_tex_empty(128, 128, preflgs);
 
+	vec4_assign(((nyas_pbr_desc_scene*)nyas_shader_data(shader))->sunlight, e.light);
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(shader);
 	pbr_scene_tex[0] = lut;
 	pbr_scene_tex[1] = irr;
@@ -173,7 +174,6 @@ void Update(nyas_chrono *dt)
 	nyas_pbr_desc_scene *common_pbr = nyas_shader_data(shader);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	nyas_camera_pos(common_pbr->camera_position, &camera);
-	vec4_assign(common_pbr->sunlight, e.light);
 
 	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = fb;
