@@ -130,6 +130,10 @@ GeneratePrefilterCommandList(GenEnv *env,
 			draw_comm->data.draw.material = nyas_mat_tmp(env->pref_sh);
 			mat4_assign(draw_comm->data.draw.material.ptr, vp + 16 * side);
 			((float*)draw_comm->data.draw.material.ptr)[16] = roughness;
+			((float*)draw_comm->data.draw.material.ptr)[17] = roughness;
+			((float*)draw_comm->data.draw.material.ptr)[18] = roughness;
+			((float*)draw_comm->data.draw.material.ptr)[19] = roughness;
+
 			draw_comm->execute = nyas_draw_fn;
 			clear_comm->next = draw_comm;
 			draw_comm->next = NULL;

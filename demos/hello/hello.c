@@ -15,8 +15,6 @@ typedef struct HelloCtx {
 	nyas_shader skybox;
 	nyas_framebuffer fb;
 	nyas_tex skycube;
-	nyas_mat fs_mat;
-	nyas_mat skymat;
 	nyas_entity *e;
 	nyas_chrono chrono;
 } HelloCtx;
@@ -28,16 +26,39 @@ Init(void *context)
 	ctx->chrono = nyas_time();
 	nyas_v2i sz = nyas_window_size();
 	ctx->fb = nyas_fb_create(sz.x, sz.y, true, true);
-	ctx->hellomat = nyas_shader_create("hello");
-	ctx->fs_img = nyas_shader_create("fullscreen-img");
-	ctx->skybox = nyas_shader_create("skybox");
-	ctx->fs_mat = nyas_mat_pers(ctx->fs_img, 0, 1, 0);
-	*(nyas_tex *)ctx->fs_mat.ptr = nyas_fb_color(ctx->fb);
 
-	ctx->skycube = nyas_tex_load_img("./assets/tex/Xcave.png",
-	                                 NYAS_TEX_SKYBOX);
-	ctx->skymat = nyas_mat_pers(ctx->skybox, 16, 0, 1);
-	*nyas_mat_tex(&ctx->skymat) = ctx->skycube;
+	nyas_shader_desc hello_desc = { .name = "hello",
+		                            .data_count = sizeof(HelloMatData) / 4,
+		                            .tex_count = 0,
+		                            .cubemap_count = 0,
+		                            .common_data_count = 0,
+		                            .common_tex_count = 0,
+		                            .common_cubemap_count = 0 };
+	ctx->hellomat = nyas_shader_create(&hello_desc);
+
+	nyas_shader_desc fs_desc = { .name = "fullscreen-img",
+		                         .data_count = 0,
+		                         .tex_count = 1,
+		                         .cubemap_count = 0,
+		                         .common_data_count = 0,
+		                         .common_tex_count = 0,
+		                         .common_cubemap_count = 0 };
+	ctx->fs_img = nyas_shader_create(&fs_desc);
+
+	nyas_shader_desc skybox_desc = { .name = "skybox",
+		                             .data_count = 16,
+		                             .tex_count = 0,
+		                             .cubemap_count = 1,
+		                             .common_data_count = 0,
+		                             .common_tex_count = 0,
+		                             .common_cubemap_count = 0 };
+	ctx->skybox = nyas_shader_create(&skybox_desc);
+
+	*nyas_shader_tex(ctx->fs_img) = nyas_fb_color(ctx->fb);
+
+	int sky_flags = nyas_tex_flags(3, false, false, true, false, false, false);
+	ctx->skycube = nyas_tex_load("./assets/tex/%ccave.png", 0, sky_flags);
+	*nyas_shader_tex(ctx->skybox) = ctx->skycube;
 
 	nyas_set_color(ctx->hello_mat.color, 1.0f, 0.0f, 1.0f, 1.0f);
 
@@ -45,14 +66,7 @@ Init(void *context)
 	float pos[3] = { 0.0f, 0.0f, -4.0f };
 	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
 	ctx->e->mesh = SPHERE_MESH;
-	ctx->e->mat.data_count = sizeof(HelloMatData) / 4;
-	ctx->e->mat.tex_count = 0;
-	ctx->e->mat.cube_count = 0;
-	HelloMatData *mat_data = nyas_mat_alloc(&ctx->e->mat);
-	ctx->e->mat.shader = ctx->hellomat;
-	*mat_data = ctx->hello_mat;
-
-	ctx->e->mat = nyas_mat_pers(ctx->hellomat, sizeof(HelloMatData) / 4, 0, 0);
+	ctx->e->mat = nyas_mat_from_shader(ctx->hellomat);
 	*(HelloMatData *)ctx->e->mat.ptr = ctx->hello_mat;
 }
 
@@ -108,15 +122,15 @@ Update(void *context)
 	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
-	nyas_camera_static_vp(ctx->skymat.ptr, &camera);
+	nyas_camera_static_vp(nyas_shader_data(ctx->skybox), &camera);
 	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = ctx->skymat;
+	use_sky_shader->data.mat = nyas_mat_from_shader(ctx->skybox);
 	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
 	nyas_cmd *draw_sky = nyas_cmd_alloc();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material = nyas_mat_dft(ctx->skybox);
+	draw_sky->data.draw.material.shader = ctx->skybox;
 	draw_sky->execute = nyas_draw_fn;
 	use_sky_shader->next = draw_sky;
 
@@ -140,13 +154,13 @@ Update(void *context)
 	rops2->next = clear2;
 
 	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = ctx->fs_mat;
+	usefullscreen->data.mat = nyas_mat_from_shader(ctx->fs_img);
 	usefullscreen->execute = nyas_setshader_fn;
 	clear2->next = usefullscreen;
 
 	nyas_cmd *draw = nyas_cmd_alloc();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.material = ctx->fs_mat;
+	draw->data.draw.material.shader = ctx->fs_img;
 	draw->execute = nyas_draw_fn;
 	usefullscreen->next = draw;
 	draw->next = NULL;
@@ -166,6 +180,9 @@ Render(void)
 int
 main(int argc, char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("NYAS HelloWorld", 1920, 1080, true);
 	nyas_px_init();

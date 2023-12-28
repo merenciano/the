@@ -1,6 +1,6 @@
-#include "nyas.h"
 #include "../helpersdemo.h"
 #include "mathc.h"
+#include "nyas.h"
 #include <string.h>
 
 typedef struct entt {
@@ -25,78 +25,72 @@ nyas_shader lut_sh;
 nyas_shader pref_sh;
 nyas_tex skybox_tex;
 
-void Init(void)
+void
+Init(void)
 {
-	fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
-	                      true);
+	fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true, true);
 	e.light[0] = 1.0f;
 	e.light[1] = -1.0f;
 	e.light[2] = 1.0f;
 	e.light[3] = 1.0f;
-	nyas_shader_desc pbr_descriptor = {
-		.name = "pbr",
-		.data_count = 7 * 4, // 7 vec4
-		.tex_count = 4,
-		.cubemap_count = 0,
-		.common_data_count = 6 * 4, // 6 vec4
-		.common_tex_count = 1,
-		.common_cubemap_count = 2
-	};
+	nyas_shader_desc pbr_descriptor = { .name = "pbr",
+		                                .data_count = 7 * 4, // 7 vec4
+		                                .tex_count = 4,
+		                                .cubemap_count = 0,
+		                                .common_data_count = 6 * 4, // 6 vec4
+		                                .common_tex_count = 1,
+		                                .common_cubemap_count = 2 };
 	shader = nyas_shader_create(&pbr_descriptor);
 
-	nyas_shader_desc sky_descriptor = {
-	  .name = "skybox",
-	  .data_count = 0,
-	  .tex_count = 0,
-	  .cubemap_count = 0,
-	  .common_data_count = 4 * 4, // mat4
-	  .common_tex_count = 0,
-	  .common_cubemap_count = 1
-	};
+	nyas_shader_desc sky_descriptor = { .name = "skybox",
+		                                .data_count = 0,
+		                                .tex_count = 0,
+		                                .cubemap_count = 0,
+		                                .common_data_count = 4 * 4, // mat4
+		                                .common_tex_count = 0,
+		                                .common_cubemap_count = 1 };
 	skybox_sh = nyas_shader_create(&sky_descriptor);
 
 	nyas_shader_desc img_descriptor = {
-	  .name = "fullscreen-img", // fullscreen quad with texture
-	  .data_count = 0,
-	  .tex_count = 0,
-	  .cubemap_count = 0,
-	  .common_data_count = 0,
-	  .common_tex_count = 1,
-	  .common_cubemap_count = 0
+		.name = "fullscreen-img", // fullscreen quad with texture
+		.data_count = 0,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.common_data_count = 0,
+		.common_tex_count = 1,
+		.common_cubemap_count = 0
 	};
 	fs_sh = nyas_shader_create(&img_descriptor);
 
 	nyas_shader_desc eqr_descriptor = {
-	  .name = "eqr-to-cube", // environment image to cubemap
-	  .data_count = 4 * 4,
-	  .tex_count = 0,
-	  .cubemap_count = 0,
-	  .common_data_count = 0,
-	  .common_tex_count = 1,
-	  .common_cubemap_count = 0
+		.name = "eqr-to-cube", // environment image to cubemap
+		.data_count = 4 * 4,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.common_data_count = 0,
+		.common_tex_count = 1,
+		.common_cubemap_count = 0
 	};
 	eqr_sh = nyas_shader_create(&eqr_descriptor);
 
 	nyas_shader_desc pref_descriptor = {
-	  .name = "prefilter-env", // environment prefilter
-	  .data_count = 5 * 4,
-	  .tex_count = 0,
-	  .cubemap_count = 0,
-	  .common_data_count = 0,
-	  .common_tex_count = 0,
-	  .common_cubemap_count = 1
+		.name = "prefilter-env", // environment prefilter
+		.data_count = 5 * 4,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.common_data_count = 0,
+		.common_tex_count = 0,
+		.common_cubemap_count = 1
 	};
 	pref_sh = nyas_shader_create(&pref_descriptor);
 
-	nyas_shader_desc lut_descriptor = {
-	  .name = "lut-gen", // look-up table
-	  .data_count = 0,
-	  .tex_count = 0,
-	  .cubemap_count = 0,
-	  .common_data_count = 0,
-	  .common_tex_count = 0,
-	  .common_cubemap_count = 0
-	};
+	nyas_shader_desc lut_descriptor = { .name = "lut-gen", // look-up table
+		                                .data_count = 0,
+		                                .tex_count = 0,
+		                                .cubemap_count = 0,
+		                                .common_data_count = 0,
+		                                .common_tex_count = 0,
+		                                .common_cubemap_count = 0 };
 	lut_sh = nyas_shader_create(&lut_descriptor);
 
 	int envflags = nyas_tex_flags(3, true, true, false, false, false, false);
@@ -121,12 +115,12 @@ void Init(void)
 	e.upbr.tiling_x = 4.0f;
 	e.upbr.tiling_y = 4.0f;
 	e.e = nyas_entity_create();
-	float position[3] = {0.0f, 0.0f, 0.0f};
+	float position[3] = { 0.0f, 0.0f, 0.0f };
 	mat4_translation(e.e->transform, e.e->transform, position);
 	e.e->mesh = nyas_mesh_create();
 	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball-n.obj");
 	e.e->mat = nyas_mat_pers(shader);
-	*(nyas_pbr_desc_unit*)e.e->mat.ptr = e.upbr;
+	*(nyas_pbr_desc_unit *)e.e->mat.ptr = e.upbr;
 	nyas_tex *t = nyas_mat_tex(&e.e->mat);
 	t[0] = e.albedo;
 	t[1] = e.metalness;
@@ -140,7 +134,8 @@ void Init(void)
 	int preflgs = nyas_tex_flags(3, true, true, true, false, false, true);
 	nyas_tex pref = nyas_tex_empty(128, 128, preflgs);
 
-	vec4_assign(((nyas_pbr_desc_scene*)nyas_shader_data(shader))->sunlight, e.light);
+	vec4_assign(((nyas_pbr_desc_scene *)nyas_shader_data(shader))->sunlight,
+	            e.light);
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(shader);
 	pbr_scene_tex[0] = lut;
 	pbr_scene_tex[1] = irr;
@@ -148,28 +143,27 @@ void Init(void)
 
 	*nyas_shader_tex(skybox_sh) = skybox_tex;
 
-	GenEnv env = {
-		.eqr_sh = eqr_sh,
-		.lut_sh = lut_sh,
-		.pref_sh = pref_sh,
-		.eqr_in = e.env,
-		.eqr_out = skybox_tex,
-		.irr_in = e.envirr,
-		.irr_out = irr,
-		.pref_out = pref,
-		.lut = lut
-	};
+	GenEnv env = { .eqr_sh = eqr_sh,
+		           .lut_sh = lut_sh,
+		           .pref_sh = pref_sh,
+		           .eqr_in = e.env,
+		           .eqr_out = skybox_tex,
+		           .irr_in = e.envirr,
+		           .irr_out = irr,
+		           .pref_out = pref,
+		           .lut = lut };
 
 	GeneratePbrEnv(&env);
 }
 
-void Update(nyas_chrono *dt)
+void
+Update(nyas_chrono *dt)
 {
 	float delta = nyas_time_sec(nyas_elapsed(*dt));
 	*dt = nyas_time();
 	nyas_io_poll();
 	nyas_input_read();
-	nyas_camera_control(&camera, delta); 
+	nyas_camera_control(&camera, delta);
 
 	nyas_pbr_desc_scene *common_pbr = nyas_shader_data(shader);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
@@ -263,7 +257,8 @@ void Update(nyas_chrono *dt)
 	nyas_cmd_add(rops);
 }
 
-void Render(void)
+void
+Render(void)
 {
 	nyas_px_render();
 	nyas_imgui_draw();
@@ -271,9 +266,11 @@ void Render(void)
 	nyas_frame_end();
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-	(void)argc; (void)argv;
+	(void)argc;
+	(void)argv;
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("NYAS Asset Inspector", 1920, 1080, true);
 	nyas_px_init();

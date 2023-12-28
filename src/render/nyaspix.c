@@ -100,13 +100,13 @@ nypx__texcnfg(int flags)
 
 	if ((flags & TF_MIPMAP) & TF_CUBE) {
 		if (flags & (TF_MAG_FILTER_LERP | TF_MAG_MIP_FILTER_LERP)) {
-			cnfg.mag = GL_LINEAR_MIPMAP_LINEAR;
+			cnfg.min = GL_LINEAR_MIPMAP_LINEAR;
 		} else if (flags & TF_MAG_MIP_FILTER_LERP) {
-			cnfg.mag = GL_NEAREST_MIPMAP_LINEAR;
+			cnfg.min = GL_NEAREST_MIPMAP_LINEAR;
 		} else if (flags & TF_MAG_FILTER_LERP) {
-			cnfg.mag = GL_LINEAR_MIPMAP_NEAREST;
+			cnfg.min = GL_LINEAR_MIPMAP_NEAREST;
 		} else {
-			cnfg.mag = GL_NEAREST_MIPMAP_NEAREST;
+			cnfg.min = GL_NEAREST_MIPMAP_NEAREST;
 		}
 	}
 
@@ -118,6 +118,7 @@ nypx_tex_create(uint32_t *id, int type)
 {
 	struct texcnfg cnfg = nypx__texcnfg(type);
 	glGenTextures(1, id);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(cnfg.target, *id);
 	glTexParameteri(cnfg.target, GL_TEXTURE_MIN_FILTER, cnfg.min);
 	glTexParameteri(cnfg.target, GL_TEXTURE_MAG_FILTER, cnfg.mag);
@@ -138,6 +139,7 @@ nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
 	struct texcnfg cnfg = nypx__texcnfg(type);
 	int sides = 1;
 	GLenum target = cnfg.target;
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(cnfg.target, id);
 
 	if (type & TF_CUBE) {
