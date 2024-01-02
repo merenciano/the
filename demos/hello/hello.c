@@ -38,20 +38,20 @@ Init(void *context)
 
 	nyas_shader_desc fs_desc = { .name = "fullscreen-img",
 		                         .data_count = 0,
-		                         .tex_count = 1,
+		                         .tex_count = 0,
 		                         .cubemap_count = 0,
 		                         .common_data_count = 0,
-		                         .common_tex_count = 0,
+		                         .common_tex_count = 1,
 		                         .common_cubemap_count = 0 };
 	ctx->fs_img = nyas_shader_create(&fs_desc);
 
 	nyas_shader_desc skybox_desc = { .name = "skybox",
-		                             .data_count = 16,
+		                             .data_count = 0,
 		                             .tex_count = 0,
-		                             .cubemap_count = 1,
-		                             .common_data_count = 0,
+		                             .cubemap_count = 0,
+		                             .common_data_count = 16,
 		                             .common_tex_count = 0,
-		                             .common_cubemap_count = 0 };
+		                             .common_cubemap_count = 1 };
 	ctx->skybox = nyas_shader_create(&skybox_desc);
 
 	*nyas_shader_tex(ctx->fs_img) = nyas_fb_color(ctx->fb);
@@ -66,7 +66,7 @@ Init(void *context)
 	float pos[3] = { 0.0f, 0.0f, -4.0f };
 	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
 	ctx->e->mesh = SPHERE_MESH;
-	ctx->e->mat = nyas_mat_from_shader(ctx->hellomat);
+	ctx->e->mat = nyas_mat_pers(ctx->hellomat);
 	*(HelloMatData *)ctx->e->mat.ptr = ctx->hello_mat;
 }
 
@@ -108,7 +108,7 @@ Update(void *context)
 	clear->execute = nyas_clear_fn;
 
 	nyas_cmd *usemat = nyas_cmd_alloc();
-	usemat->data.mat = nyas_mat_dft(ctx->hellomat);
+	usemat->data.mat.shader = ctx->hellomat;
 	usemat->execute = nyas_setshader_fn;
 	clear->next = usemat;
 	usemat->next = NULL;

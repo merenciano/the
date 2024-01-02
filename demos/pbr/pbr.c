@@ -12,7 +12,60 @@ struct Shaders {
 	nyas_shader pbr;
 };
 
+struct Textures {
+	nyas_tex sky;
+	nyas_tex lut;
+	nyas_tex prefilter;
+	nyas_tex irradiance;
+
+	nyas_tex rusted_a;
+	nyas_tex rusted_n;
+	nyas_tex rusted_r;
+	nyas_tex rusted_a;
+
+	nyas_tex cliff_n;
+	nyas_tex cliff_r;
+	nyas_tex cliff_m;
+	nyas_tex cliff_m;
+
+	nyas_tex peeled_a;
+	nyas_tex peeled_n;
+	nyas_tex peeled_r;
+	nyas_tex peeled_a;
+
+	nyas_tex plastic_n;
+	nyas_tex plastic_r;
+	nyas_tex plastic_m;
+	nyas_tex plastic_m;
+
+	nyas_tex tiles_a;
+	nyas_tex tiles_n;
+	nyas_tex tiles_r;
+	nyas_tex tiles_a;
+
+	nyas_tex gold_n;
+	nyas_tex gold_r;
+	nyas_tex gold_m;
+	nyas_tex gold_m;
+
+	nyas_tex shore_a;
+	nyas_tex shore_n;
+	nyas_tex shore_r;
+	nyas_tex shore_a;
+
+	nyas_tex granite_a;
+	nyas_tex granite_n;
+	nyas_tex granite_r;
+	nyas_tex granite_a;
+
+	nyas_tex sponge_a;
+	nyas_tex sponge_n;
+	nyas_tex sponge_r;
+	nyas_tex sponge_a;
+};
+
 struct Shaders g_shaders;
+struct Textures g_tex;
 static nyas_resourcemap g_resources;
 nyas_framebuffer g_fb;
 
@@ -30,8 +83,37 @@ Init(void)
 	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
 	g_resources.textures = nyas_hmap_create(64, sizeof(nyas_tex));
 
-	g_shaders.fullscreen_img = nyas_shader_create("fullscreen-img");
-	g_shaders.skybox = nyas_shader_create("skybox");
+	nyas_shader_desc fs_img_shader_desc = {
+		.name = "fullscreen-img",
+		.data_count = 0,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.common_data_count = 0,
+		.common_tex_count = 1,
+		.common_cubemap_count = 0
+	};
+	g_shaders.fullscreen_img = nyas_shader_create(&fs_img_shader_desc);
+
+	nyas_shader_desc sky_shader_desc = {
+		.name = "skybox",
+		.data_count = 0,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.common_data_count = 16,
+		.common_tex_count = 0,
+		.common_cubemap_count = 1
+	};
+	g_shaders.skybox = nyas_shader_create(&sky_shader_desc);
+
+	nyas_shader_desc eqr_shader_desc = {
+		.name = "eqr-to-cube",
+		.data_count = 0,
+		.tex_count = 0, // TODO: iba por aqui! hay que rellenar esta tambien.
+		.cubemap_count = 0,
+		.common_data_count = 16,
+		.common_tex_count = 0,
+		.common_cubemap_count = 1
+	};
 	g_shaders.eqr_to_cube = nyas_shader_create("eqr-to-cube");
 	g_shaders.prefilter_env = nyas_shader_create("prefilter-env");
 	g_shaders.lut_gen = nyas_shader_create("lut-gen");
@@ -42,9 +124,10 @@ Init(void)
 
 	nyas_resourcemap *rm = &g_resources;
 
-	nyas_resourcemap_mesh_file(rm, "MatBall", "assets/obj/matball-n.obj");
-	nyas_resourcemap_tex_add(rm, "Skybox", 1024, 1024, NYAS_TEX_ENVIRONMENT);
-	nyas_resourcemap_tex_add(rm, "Irradian", 1024, 1024, NYAS_TEX_ENVIRONMENT);
+	nyas_resourcemap_mesh_file(rm, "MatBall", "assets/obj/matball.obj");
+	int sky_flags = nyas_tex_flags(3, false, false, true, false, false, false);
+	g_tex.sky = nyas_tex_empty(1024, 1024, sky_flags);
+	nyas_resourcemap_tex_add(rm, "Irradian", 1024, 1024, );
 	nyas_resourcemap_tex_add(rm, "Prefilte", 128, 128,
 	                         NYAS_TEX_PREFILTER_ENVIRONMENT);
 	nyas_resourcemap_tex_add(rm, "LutMap", 512, 512, NYAS_TEX_LUT);

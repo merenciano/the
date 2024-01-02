@@ -53,35 +53,55 @@ void nyas_imgui_draw(void) {
       if (nk_button_label(ctx, "Load MSH")) {
         nyas_mesh_load_msh(e->mesh, mesh_path);
       }
+      nk_layout_row_dynamic(ctx, 30, 3);
+      if (nk_button_label(ctx, "Load Cube")) {
+        e->mesh = nyas_mesh_create_cube();
+      }
+      if (nk_button_label(ctx, "Load Sphere")) {
+        e->mesh = nyas_mesh_create_sphere(128, 128);
+      }
+      if (nk_button_label(ctx, "Load Quad")) {
+        e->mesh = nyas_mesh_create_quad();
+      }
 
       // Material
       if (nk_tree_push(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED)) {
         nyas_pbr_desc_unit *unit = e->mat.ptr;
         nyas_pbr_desc_scene *scene =
             ((struct nyas_internal_shader *)shader_pool)->common;
+        struct nyas_internal_texture *tex =
+            nyas_arr_at(tex_pool, *nyas_mat_tex(&e->mat));
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED)) {
           struct nyas_internal_texture *tex =
               nyas_arr_at(tex_pool, *nyas_mat_tex(&e->mat));
-          nk_layout_row_static(ctx, 250, 250, 1);
+          nk_layout_row_static(ctx, 256, 256, 1);
           nk_image(ctx, nk_image_id(tex->res.id));
-          nk_layout_row_dynamic(ctx, 30, 1);
+          nk_layout_row_dynamic(ctx, 30, 2);
           nk_label(ctx, "Albedo texture intensity: ", NK_TEXT_LEFT);
           unit->use_albedo_map =
-              nk_slide_float(ctx, 0.0f, unit->use_albedo_map, 1.0f, 0.01f);
+            nk_slide_float(ctx, 0.0f, unit->use_albedo_map, 1.0f, 0.01f);
           nk_label(ctx, "Color: ", NK_TEXT_LEFT);
           *(struct nk_colorf *)unit->color =
               nk_color_picker(ctx, *(struct nk_colorf *)unit->color, NK_RGB);
+          nk_tree_pop(ctx);
         }
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Normal map", NK_MINIMIZED)) {
+          nk_layout_row_static(ctx, 256, 256, 1);
+          nk_image(ctx, nk_image_id(tex[1].res.id));
           nk_layout_row_dynamic(ctx, 30, 2);
           nk_label(ctx, "Normal map intensity: ", NK_TEXT_LEFT);
           unit->normal_map_intensity = nk_slide_float(
               ctx, 0.0f, unit->normal_map_intensity, 1.0f, 0.01f);
+          nk_tree_pop(ctx);
         }
 
         if (nk_tree_push(ctx, NK_TREE_TAB, "Material maps", NK_MINIMIZED)) {
+          nk_layout_row_static(ctx, 124, 124, 2);
+          nk_image(ctx, nk_image_id(tex[2].res.id));
+          nk_image(ctx, nk_image_id(tex[3].res.id));
+          nk_layout_row_dynamic(ctx, 30, 2);
           nk_label(ctx, "Material texture intensity: ", NK_TEXT_LEFT);
           unit->use_pbr_maps =
               nk_slide_float(ctx, 0.0f, unit->use_pbr_maps, 1.0f, 0.01f);
@@ -91,14 +111,13 @@ void nyas_imgui_draw(void) {
           nk_label(ctx, "Metalness: ", NK_TEXT_LEFT);
           unit->metallic =
               nk_slide_float(ctx, 0.0f, unit->metallic, 1.0f, 0.01f);
+          nk_tree_pop(ctx);
         }
 
         nk_layout_row_dynamic(ctx, 30, 3);
         nk_label(ctx, "Tiling: ", NK_TEXT_LEFT);
-        unit->tiling_x =
-            nk_slide_float(ctx, 0.0f, unit->tiling_x, 100.0f, 0.01f);
-        unit->tiling_y =
-            nk_slide_float(ctx, 0.0f, unit->tiling_y, 100.0f, 0.01f);
+        nk_property_float(ctx, "#X", 0.0f, &unit->tiling_x, 100.0f, 0.01f, 0.01f);
+        nk_property_float(ctx, "#Y", 0.0f, &unit->tiling_y, 100.0f, 0.01f, 0.01f);
 
         nk_layout_row_dynamic(ctx, 30, 1);
         nk_label(ctx, "Light direction: ", NK_TEXT_LEFT);
@@ -117,6 +136,7 @@ void nyas_imgui_draw(void) {
         // struct nyas_internal_texture* scene_tex = nyas_arr_at(tex_pool,
         // nyas_shader_tex(0)[1]); nk_layout_row_static(ctx, 250, 250, 1);
         // nk_image(ctx, nk_image_id(scene_tex->res.id));
+        nk_tree_pop(ctx);
       }
     }
 

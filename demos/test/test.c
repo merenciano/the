@@ -98,12 +98,12 @@ Init(void)
 	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, envflags);
 
 	int alb = nyas_tex_flags(3, false, false, false, false, true, true);
-	e.albedo = nyas_tex_load("../pbr/assets/tex/cliff/cliff_A.png", 1, alb);
+	e.albedo = nyas_tex_load("../pbr/assets/tex/peeling/peeling_A.png", 1, alb);
 	int n = nyas_tex_flags(3, false, true, false, false, true, true);
-	e.normal = nyas_tex_load("../pbr/assets/tex/cliff/cliff_N.png", 1, n);
+	e.normal = nyas_tex_load("../pbr/assets/tex/peeling/peeling_N.png", 1, n);
 	int r_m = nyas_tex_flags(1, false, true, false, false, true, true);
-	e.roughness = nyas_tex_load("../pbr/assets/tex/cliff/cliff_R.png", 1, r_m);
-	e.metalness = nyas_tex_load("../pbr/assets/tex/cliff/cliff_M.png", 1, r_m);
+	e.roughness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_R.png", 1, r_m);
+	e.metalness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_M.png", 1, r_m);
 
 	*nyas_shader_tex(fs_sh) = nyas_fb_color(fb);
 
@@ -118,7 +118,7 @@ Init(void)
 	float position[3] = { 0.0f, 0.0f, 0.0f };
 	mat4_translation(e.e->transform, e.e->transform, position);
 	e.e->mesh = nyas_mesh_create();
-	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball-n.obj");
+	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball.obj");
 	e.e->mat = nyas_mat_pers(shader);
 	*(nyas_pbr_desc_unit *)e.e->mat.ptr = e.upbr;
 	nyas_tex *t = nyas_mat_tex(&e.e->mat);
