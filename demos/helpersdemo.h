@@ -1,6 +1,113 @@
 #include "nyas.h"
 #include "mathc.h"
 
+static const nyas_shader_desc pbr_shader_desc = {
+	.name = "pbr",
+	.data_count = 7 * 4, // 7 vec4
+	.tex_count = 4,
+	.cubemap_count = 0,
+	.common_data_count = 6 * 4, // 6 vec4
+	.common_tex_count = 1,
+	.common_cubemap_count = 2 };
+
+static const nyas_shader_desc sky_shader_desc = {
+	.name = "skybox",
+	.data_count = 0,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 4 * 4, // mat4
+	.common_tex_count = 0,
+	.common_cubemap_count = 1 };
+
+static const nyas_shader_desc fs_img_shader_desc = {
+	.name = "fullscreen-img", // fullscreen quad with texture
+	.data_count = 0,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 0,
+	.common_tex_count = 1,
+	.common_cubemap_count = 0
+};
+
+static const nyas_shader_desc eqr_to_cubemap_shader_desc = {
+	.name = "eqr-to-cube", // environment image to cubemap
+	.data_count = 4 * 4,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 0,
+	.common_tex_count = 1,
+	.common_cubemap_count = 0
+};
+
+static const nyas_shader_desc prefilter_shader_desc = {
+	.name = "prefilter-env", // environment prefilter
+	.data_count = 5 * 4,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 0,
+	.common_tex_count = 0,
+	.common_cubemap_count = 1
+};
+
+static const nyas_shader_desc lut_shader_desc = {
+	.name = "lut-gen", // look-up table
+	.data_count = 0,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 0,
+	.common_tex_count = 0,
+	.common_cubemap_count = 0
+};
+
+struct ShaderDescriptors {
+	nyas_shader_desc *pbr;
+	nyas_shader_desc *fullscreen_img;
+	nyas_shader_desc *sky;
+	nyas_shader_desc *prefilter;
+	nyas_shader_desc *cubemap_from_equirect;
+	nyas_shader_desc *lut;
+};
+
+static const struct ShaderDescriptors g_shader_descriptors = {
+	.pbr = &pbr_shader_desc,
+	.fullscreen_img = &fs_img_shader_desc,
+	.sky = &sky_shader_desc,
+	.cubemap_from_equirect = &eqr_to_cubemap_shader_desc,
+	.prefilter = &prefilter_shader_desc,
+	.lut = &lut_shader_desc
+};
+
+static const int environment_flags = NYAS_TEX_FLAGS(3, true, true, false, false, false, false);
+static const int albedo_map_flags = NYAS_TEX_FLAGS(3, false, false, false, false, true, true);
+static const int normal_map_flags = NYAS_TEX_FLAGS(3, false, true, false, false, true, true);
+static const int pbr_map_flags = NYAS_TEX_FLAGS(1, false, true, false, false, true, true);
+static const int skybox_flags = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+static const int lut_flags = NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
+static const int irr_flags = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+static const int pref_flags = NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
+
+struct TexFlags {
+	int env;
+	int sky;
+	int albedo;
+	int normal;
+	int pbr_map;
+	int lut;
+	int irr;
+	int prefilter;
+}
+
+static const struct TexFlags g_tex_flags = {
+	.env = environment_flags,
+	.sky = skybox_flags,
+	.albedo = albedo_map_flags,
+	.normal = normal_map_flags,
+	.pbr_map = pbr_map_flags,
+	.lut = lut_flags,
+	.irr = irr_flags,
+	.prefilter = pref_flags
+};
+
 typedef struct GenEnv {
 	nyas_shader eqr_sh;
 	nyas_shader lut_sh;

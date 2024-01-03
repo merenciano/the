@@ -21,57 +21,53 @@ struct Textures {
 	nyas_tex rusted_a;
 	nyas_tex rusted_n;
 	nyas_tex rusted_r;
-	nyas_tex rusted_a;
+	nyas_tex rusted_m;
 
+	nyas_tex cliff_a;
 	nyas_tex cliff_n;
 	nyas_tex cliff_r;
-	nyas_tex cliff_m;
 	nyas_tex cliff_m;
 
 	nyas_tex peeled_a;
 	nyas_tex peeled_n;
 	nyas_tex peeled_r;
-	nyas_tex peeled_a;
+	nyas_tex peeled_m;
 
+	nyas_tex plastic_a;
 	nyas_tex plastic_n;
 	nyas_tex plastic_r;
-	nyas_tex plastic_m;
 	nyas_tex plastic_m;
 
 	nyas_tex tiles_a;
 	nyas_tex tiles_n;
 	nyas_tex tiles_r;
-	nyas_tex tiles_a;
+	nyas_tex tiles_m;
 
+	nyas_tex gold_a;
 	nyas_tex gold_n;
 	nyas_tex gold_r;
-	nyas_tex gold_m;
 	nyas_tex gold_m;
 
 	nyas_tex shore_a;
 	nyas_tex shore_n;
 	nyas_tex shore_r;
-	nyas_tex shore_a;
+	nyas_tex shore_m;
 
 	nyas_tex granite_a;
 	nyas_tex granite_n;
 	nyas_tex granite_r;
-	nyas_tex granite_a;
+	nyas_tex granite_m;
 
-	nyas_tex sponge_a;
-	nyas_tex sponge_n;
-	nyas_tex sponge_r;
-	nyas_tex sponge_a;
+	nyas_tex foam_a;
+	nyas_tex foam_n;
+	nyas_tex foam_r;
+	nyas_tex foam_m;
 };
 
 struct Shaders g_shaders;
 struct Textures g_tex;
 static nyas_resourcemap g_resources;
 nyas_framebuffer g_fb;
-
-nyas_mat pbr_common;
-nyas_mat sky_common;
-nyas_mat fulls;
 
 static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 0.0f };
 
@@ -83,145 +79,71 @@ Init(void)
 	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
 	g_resources.textures = nyas_hmap_create(64, sizeof(nyas_tex));
 
-	nyas_shader_desc fs_img_shader_desc = {
-		.name = "fullscreen-img",
-		.data_count = 0,
-		.tex_count = 0,
-		.cubemap_count = 0,
-		.common_data_count = 0,
-		.common_tex_count = 1,
-		.common_cubemap_count = 0
-	};
 	g_shaders.fullscreen_img = nyas_shader_create(&fs_img_shader_desc);
+	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
+	g_shaders.eqr_to_cube = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
+	g_shaders.prefilter_env = nyas_shader_create(g_shader_descriptors.prefilter);
+	g_shaders.lut_gen = nyas_shader_create(g_shader_descriptors.lut);
+	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
 
-	nyas_shader_desc sky_shader_desc = {
-		.name = "skybox",
-		.data_count = 0,
-		.tex_count = 0,
-		.cubemap_count = 0,
-		.common_data_count = 16,
-		.common_tex_count = 0,
-		.common_cubemap_count = 1
-	};
-	g_shaders.skybox = nyas_shader_create(&sky_shader_desc);
-
-	nyas_shader_desc eqr_shader_desc = {
-		.name = "eqr-to-cube",
-		.data_count = 0,
-		.tex_count = 0, // TODO: iba por aqui! hay que rellenar esta tambien.
-		.cubemap_count = 0,
-		.common_data_count = 16,
-		.common_tex_count = 0,
-		.common_cubemap_count = 1
-	};
-	g_shaders.eqr_to_cube = nyas_shader_create("eqr-to-cube");
-	g_shaders.prefilter_env = nyas_shader_create("prefilter-env");
-	g_shaders.lut_gen = nyas_shader_create("lut-gen");
-	g_shaders.pbr = nyas_shader_create("pbr");
-
-	fulls = nyas_mat_pers(g_shaders.fullscreen_img, 0, 1, 0);
-	*(nyas_tex *)fulls.ptr = nyas_fb_color(g_fb);
-
+	*nyas_shader_tex(g_shaders.fullscreen_img) = nyas_fb_color(g_fb);
 	nyas_resourcemap *rm = &g_resources;
 
 	nyas_resourcemap_mesh_file(rm, "MatBall", "assets/obj/matball.obj");
-	int sky_flags = nyas_tex_flags(3, false, false, true, false, false, false);
-	g_tex.sky = nyas_tex_empty(1024, 1024, sky_flags);
-	nyas_resourcemap_tex_add(rm, "Irradian", 1024, 1024, );
-	nyas_resourcemap_tex_add(rm, "Prefilte", 128, 128,
-	                         NYAS_TEX_PREFILTER_ENVIRONMENT);
-	nyas_resourcemap_tex_add(rm, "LutMap", 512, 512, NYAS_TEX_LUT);
+	g_tex.sky = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
+	g_tex.irradiance = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
+	g_tex.prefilter = nyas_tex_empty(128, 128, g_tex_flags.prefilter);
+	g_tex.lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
 
-	nyas_resourcemap_tex_file(rm, "Gold_A",
-	                          "assets/tex/celtic-gold/celtic-gold_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Gold_N",
-	                          "assets/tex/celtic-gold/celtic-gold_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Gold_M",
-	                          "assets/tex/celtic-gold/celtic-gold_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Gold_R",
-	                          "assets/tex/celtic-gold/celtic-gold_R.png",
-	                          NYAS_TEX_R);
+	g_tex.gold_a = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_A.png", 1, g_tex_flags.albedo);
+	g_tex.gold_n = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_N.png", 1, g_tex_flags.normal);
+	g_tex.gold_r = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.gold_m = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Peel_A", "assets/tex/peeling/peeling_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Peel_N", "assets/tex/peeling/peeling_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Peel_M", "assets/tex/peeling/peeling_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Peel_R", "assets/tex/peeling/peeling_R.png",
-	                          NYAS_TEX_R);
+	g_tex.peeled_a = nyas_tex_load("assets/tex/peeling/peeling_A.png", 1, g_tex_flags.albedo);
+	g_tex.peeled_n = nyas_tex_load("assets/tex/peeling/peeling_N.png", 1, g_tex_flags.normal);
+	g_tex.peeled_r = nyas_tex_load("assets/tex/peeling/peeling_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.peeled_m = nyas_tex_load("assets/tex/peeling/peeling_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Rust_A", "assets/tex/rusted/rusted_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Rust_N", "assets/tex/rusted/rusted_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Rust_M", "assets/tex/rusted/rusted_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Rust_R", "assets/tex/rusted/rusted_R.png",
-	                          NYAS_TEX_R);
+	g_tex.rusted_a = nyas_tex_load("assets/tex/rusted/rusted_A.png", 1, g_tex_flags.albedo);
+	g_tex.rusted_n = nyas_tex_load("assets/tex/rusted/rusted_N.png", 1, g_tex_flags.normal);
+	g_tex.rusted_r = nyas_tex_load("assets/tex/rusted/rusted_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.rusted_m = nyas_tex_load("assets/tex/rusted/rusted_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Tiles_A", "assets/tex/tiles/tiles_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Tiles_N", "assets/tex/tiles/tiles_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Tiles_M", "assets/tex/tiles/tiles_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Tiles_R", "assets/tex/tiles/tiles_R.png",
-	                          NYAS_TEX_R);
+	g_tex.tiles_a = nyas_tex_load("assets/tex/tiles/tiles_A.png", 1, g_tex_flags.albedo);
+	g_tex.tiles_n = nyas_tex_load("assets/tex/tiles/tiles_N.png", 1, g_tex_flags.normal);
+	g_tex.tiles_r = nyas_tex_load("assets/tex/tiles/tiles_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.tiles_m = nyas_tex_load("assets/tex/tiles/tiles_M.png", 1, g_tex_flags.pbr_map);
+	
+	g_tex.plastic_a = nyas_tex_load("assets/tex/ship-panels/ship-panels_A.png", 1, g_tex_flags.albedo);
+	g_tex.plastic_n = nyas_tex_load("assets/tex/ship-panels/ship-panels_N.png", 1, g_tex_flags.normal);
+	g_tex.plastic_r = nyas_tex_load("assets/tex/ship-panels/ship-panels_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.plastic_m = nyas_tex_load("assets/tex/ship-panels/ship-panels_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Future_A",
-	                          "assets/tex/ship-panels/ship-panels_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Future_N",
-	                          "assets/tex/ship-panels/ship-panels_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Future_M",
-	                          "assets/tex/ship-panels/ship-panels_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Future_R",
-	                          "assets/tex/ship-panels/ship-panels_R.png",
-	                          NYAS_TEX_R);
+	g_tex.shore_a = nyas_tex_load("assets/tex/shore/shore_A.png", 1, g_tex_flags.albedo);
+	g_tex.shore_n = nyas_tex_load("assets/tex/shore/shore_N.png", 1, g_tex_flags.normal);
+	g_tex.shore_r = nyas_tex_load("assets/tex/shore/shore_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.shore_m = nyas_tex_load("assets/tex/shore/shore_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Shore_A", "assets/tex/shore/shore_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Shore_N", "assets/tex/shore/shore_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Shore_M", "assets/tex/shore/shore_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Shore_R", "assets/tex/shore/shore_R.png",
-	                          NYAS_TEX_R);
+	g_tex.cliff_a = nyas_tex_load("assets/tex/cliff/cliff_A.png", 1, g_tex_flags.albedo);
+	g_tex.cliff_n = nyas_tex_load("assets/tex/cliff/cliff_N.png", 1, g_tex_flags.normal);
+	g_tex.cliff_r = nyas_tex_load("assets/tex/cliff/cliff_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.cliff_m = nyas_tex_load("assets/tex/cliff/cliff_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Cliff_A", "assets/tex/cliff/cliff_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Cliff_N", "assets/tex/cliff/cliff_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Cliff_M", "assets/tex/cliff/cliff_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Cliff_R", "assets/tex/cliff/cliff_R.png",
-	                          NYAS_TEX_R);
+	g_tex.granite_a = nyas_tex_load("assets/tex/granite/granite_A.png", 1, g_tex_flags.albedo);
+	g_tex.granite_n = nyas_tex_load("assets/tex/granite/granite_N.png", 1, g_tex_flags.normal);
+	g_tex.granite_r = nyas_tex_load("assets/tex/granite/granite_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.granite_m = nyas_tex_load("assets/tex/granite/granite_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Granit_A",
-	                          "assets/tex/granite/granite_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Granit_N",
-	                          "assets/tex/granite/granite_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Granit_M",
-	                          "assets/tex/granite/granite_M.png", NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Granit_R",
-	                          "assets/tex/granite/granite_R.png", NYAS_TEX_R);
+	g_tex.granite_a = nyas_tex_load("assets/tex/granite/granite_A.png", 1, g_tex_flags.albedo);
+	g_tex.granite_n = nyas_tex_load("assets/tex/granite/granite_N.png", 1, g_tex_flags.normal);
+	g_tex.granite_r = nyas_tex_load("assets/tex/granite/granite_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.granite_m = nyas_tex_load("assets/tex/granite/granite_M.png", 1, g_tex_flags.pbr_map);
 
-	nyas_resourcemap_tex_file(rm, "Foam_A", "assets/tex/foam/foam_A.png",
-	                          NYAS_TEX_SRGB);
-	nyas_resourcemap_tex_file(rm, "Foam_N", "assets/tex/foam/foam_N.png",
-	                          NYAS_TEX_RGB);
-	nyas_resourcemap_tex_file(rm, "Foam_M", "assets/tex/foam/foam_M.png",
-	                          NYAS_TEX_R);
-	nyas_resourcemap_tex_file(rm, "Foam_R", "assets/tex/foam/foam_R.png",
-	                          NYAS_TEX_R);
+	g_tex.foam_a = nyas_tex_load("assets/tex/foam/foam_A.png", 1, g_tex_flags.albedo);
+	g_tex.foam_n = nyas_tex_load("assets/tex/foam/foam_N.png", 1, g_tex_flags.normal);
+	g_tex.foam_r = nyas_tex_load("assets/tex/foam/foam_R.png", 1, g_tex_flags.pbr_map);
+	g_tex.foam_m = nyas_tex_load("assets/tex/foam/foam_M.png", 1, g_tex_flags.pbr_map);
 
 	struct nyas_pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
@@ -243,13 +165,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Gold_A");
-		t[1] = nyas_resourcemap_tex(rm, "Gold_M");
-		t[2] = nyas_resourcemap_tex(rm, "Gold_R");
-		t[3] = nyas_resourcemap_tex(rm, "Gold_N");
+		t[0] = g_tex.gold_a;
+		t[1] = g_tex.gold_n;
+		t[2] = g_tex.gold_r;
+		t[3] = g_tex.gold_m;
 	}
 
 	// Shore
@@ -261,13 +183,13 @@ Init(void)
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Shore_A");
-		t[1] = nyas_resourcemap_tex(rm, "Shore_M");
-		t[2] = nyas_resourcemap_tex(rm, "Shore_R");
-		t[3] = nyas_resourcemap_tex(rm, "Shore_N");
+		t[0] = g_tex.shore_a;
+		t[1] = g_tex.shore_n;
+		t[2] = g_tex.shore_r;
+		t[3] = g_tex.shore_m;
 	}
 
 	// Peeling
@@ -279,13 +201,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Peel_A");
-		t[1] = nyas_resourcemap_tex(rm, "Peel_M");
-		t[2] = nyas_resourcemap_tex(rm, "Peel_R");
-		t[3] = nyas_resourcemap_tex(rm, "Peel_N");
+		t[0] = g_tex.peeled_a;
+		t[1] = g_tex.peeled_n;
+		t[2] = g_tex.peeled_r;
+		t[3] = g_tex.peeled_m;
 	}
 
 	// Rusted
@@ -298,13 +220,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Rust_A");
-		t[1] = nyas_resourcemap_tex(rm, "Rust_M");
-		t[2] = nyas_resourcemap_tex(rm, "Rust_R");
-		t[3] = nyas_resourcemap_tex(rm, "Rust_N");
+		t[0] = g_tex.rusted_a;
+		t[1] = g_tex.rusted_n;
+		t[2] = g_tex.rusted_r;
+		t[3] = g_tex.rusted_m;
 	}
 
 	// Tiles
@@ -316,13 +238,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Tiles_A");
-		t[1] = nyas_resourcemap_tex(rm, "Tiles_M");
-		t[2] = nyas_resourcemap_tex(rm, "Tiles_R");
-		t[3] = nyas_resourcemap_tex(rm, "Tiles_N");
+		t[0] = g_tex.tiles_a;
+		t[1] = g_tex.tiles_n;
+		t[2] = g_tex.tiles_r;
+		t[3] = g_tex.tiles_m;
 	}
 
 	// Ship Panels
@@ -334,13 +256,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Future_A");
-		t[1] = nyas_resourcemap_tex(rm, "Future_M");
-		t[2] = nyas_resourcemap_tex(rm, "Future_R");
-		t[3] = nyas_resourcemap_tex(rm, "Future_N");
+		t[0] = g_tex.plastic_a;
+		t[1] = g_tex.plastic_n;
+		t[2] = g_tex.plastic_r;
+		t[3] = g_tex.plastic_m;
 	}
 
 	// Cliff
@@ -353,13 +275,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Cliff_A");
-		t[1] = nyas_resourcemap_tex(rm, "Cliff_M");
-		t[2] = nyas_resourcemap_tex(rm, "Cliff_R");
-		t[3] = nyas_resourcemap_tex(rm, "Cliff_N");
+		t[0] = g_tex.cliff_a;
+		t[1] = g_tex.cliff_n;
+		t[2] = g_tex.cliff_r;
+		t[3] = g_tex.cliff_m;
 	}
 
 	// Granite
@@ -371,13 +293,13 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Granit_A");
-		t[1] = nyas_resourcemap_tex(rm, "Granit_M");
-		t[2] = nyas_resourcemap_tex(rm, "Granit_R");
-		t[3] = nyas_resourcemap_tex(rm, "Granit_N");
+		t[0] = g_tex.granite_a;
+		t[1] = g_tex.granite_n;
+		t[2] = g_tex.granite_r;
+		t[3] = g_tex.granite_m;
 	}
 
 	// Foam
@@ -389,35 +311,36 @@ Init(void)
 		nyas_entity *e = nyas_entity_create();
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = nyas_resourcemap_mesh(rm, "MatBall");
-		e->mat = nyas_mat_pers(g_shaders.pbr, pbr_data_count, 4, 0);
+		e->mat = nyas_mat_pers(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
-		t[0] = nyas_resourcemap_tex(rm, "Foam_A");
-		t[1] = nyas_resourcemap_tex(rm, "Foam_M");
-		t[2] = nyas_resourcemap_tex(rm, "Foam_R");
-		t[3] = nyas_resourcemap_tex(rm, "Foam_N");
+		t[0] = g_tex.foam_a;
+		t[1] = g_tex.foam_n;
+		t[2] = g_tex.foam_r;
+		t[3] = g_tex.foam_m;
 	}
 
 	int pbr_cmn_data_count = sizeof(nyas_pbr_desc_scene) / sizeof(float);
-	pbr_common = nyas_mat_pers(g_shaders.pbr, pbr_cmn_data_count, 1, 2);
-	nyas_tex *pbr_scene_tex = nyas_mat_tex(&pbr_common);
-	pbr_scene_tex[0] = nyas_resourcemap_tex(rm, "LutMap");
-	pbr_scene_tex[1] = nyas_resourcemap_tex(rm, "Irradian");
-	pbr_scene_tex[2] = nyas_resourcemap_tex(rm, "Prefilte");
+	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
+	pbr_scene_tex[0] = g_tex.lut;
+	pbr_scene_tex[1] = g_tex.irradiance;
+	pbr_scene_tex[2] = g_tex.prefilter;
 
-	sky_common = nyas_mat_pers(g_shaders.skybox, 16, 0, 1);
-	*nyas_mat_tex(&sky_common) = nyas_resourcemap_tex(rm, "Skybox");
+	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
+
+	nyas_tex eqr_in_tex = nyas_tex_load("assets/tex/env/helipad-env.hdr", 0, g_tex_flags.env);
+	nyas_tex irr_in_tex = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 0, g_tex_flags.env);
 
 	GenEnv env = {
 		.eqr_sh = g_shaders.eqr_to_cube,
 		.lut_sh = g_shaders.lut_gen,
 		.pref_sh = g_shaders.prefilter_env,
-		.eqr_in = nyas_tex_load_img("assets/tex/env/helipad-env.hdr", NYAS_TEX_RGB_F16),
-		.eqr_out = nyas_resourcemap_tex(rm, "Skybox"),
-		.irr_in = nyas_tex_load_img("assets/tex/env/helipad-dif.hdr", NYAS_TEX_RGB_F16),
-		.irr_out = nyas_resourcemap_tex(rm, "Irradian"),
-		.pref_out = nyas_resourcemap_tex(rm, "Prefilte"),
-		.lut = nyas_resourcemap_tex(rm, "LutMap")
+		.eqr_in = eqr_in_tex,
+		.eqr_out = g_tex.sky,
+		.irr_in = irr_in_tex,
+		.irr_out = g_tex.irradiance,
+		.pref_out = g_tex.prefilter,
+		.lut = g_tex.lut
 	};
 
 	GeneratePbrEnv(&env);
@@ -434,7 +357,7 @@ Update(nyas_chrono *chrono)
 	nyas_camera_control(&camera, dt);
 
 	/* PBR common shader data. */
-	struct nyas_pbr_desc_scene *common_pbr = pbr_common.ptr;
+	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	nyas_camera_pos(common_pbr->camera_position, &camera);
 	vec4_assign(common_pbr->sunlight, g_sunlight);
@@ -465,7 +388,7 @@ Update(nyas_chrono *chrono)
 	rops->next = clear;
 
 	nyas_cmd *use_pbr = nyas_cmd_alloc();
-	use_pbr->data.mat = pbr_common;
+	use_pbr->data.mat = nyas_mat_from_shader(g_shaders.pbr);
 	use_pbr->execute = nyas_setshader_fn;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -480,15 +403,15 @@ Update(nyas_chrono *chrono)
 	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
-	nyas_camera_static_vp(sky_common.ptr, &camera);
+	nyas_camera_static_vp(nyas_shader_data(g_shaders.skybox), &camera);
 	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = sky_common;
+	use_sky_shader->data.mat = nyas_mat_from_shader(g_shaders.skybox);
 	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
 	nyas_cmd *draw_sky = nyas_cmd_alloc();
 	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material = sky_common;
+	draw_sky->data.draw.material.shader = g_shaders.skybox;
 	draw_sky->execute = nyas_draw_fn;
 	use_sky_shader->next = draw_sky;
 
@@ -513,13 +436,13 @@ Update(nyas_chrono *chrono)
 	rops2->next = clear;
 
 	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = fulls;
+	usefullscreen->data.mat = nyas_mat_from_shader(g_shaders.fullscreen_img);
 	usefullscreen->execute = nyas_setshader_fn;
 	clear->next = usefullscreen;
 
 	nyas_cmd *draw = nyas_cmd_alloc();
 	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.material = fulls;
+	draw->data.draw.material.shader = g_shaders.fullscreen_img;
 	draw->execute = nyas_draw_fn;
 	usefullscreen->next = draw;
 	draw->next = NULL;
