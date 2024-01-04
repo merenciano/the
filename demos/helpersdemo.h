@@ -1,4 +1,5 @@
 #include "nyas.h"
+#include "render/nyaspix.h"
 #include "mathc.h"
 
 static const nyas_shader_desc pbr_shader_desc = {
@@ -60,12 +61,12 @@ static const nyas_shader_desc lut_shader_desc = {
 };
 
 struct ShaderDescriptors {
-	nyas_shader_desc *pbr;
-	nyas_shader_desc *fullscreen_img;
-	nyas_shader_desc *sky;
-	nyas_shader_desc *prefilter;
-	nyas_shader_desc *cubemap_from_equirect;
-	nyas_shader_desc *lut;
+	const nyas_shader_desc *pbr;
+	const nyas_shader_desc *fullscreen_img;
+	const nyas_shader_desc *sky;
+	const nyas_shader_desc *prefilter;
+	const nyas_shader_desc *cubemap_from_equirect;
+	const nyas_shader_desc *lut;
 };
 
 static const struct ShaderDescriptors g_shader_descriptors = {
@@ -95,7 +96,7 @@ struct TexFlags {
 	int lut;
 	int irr;
 	int prefilter;
-}
+};
 
 static const struct TexFlags g_tex_flags = {
 	.env = environment_flags,

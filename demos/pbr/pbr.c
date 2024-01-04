@@ -77,9 +77,8 @@ Init(void)
 	g_fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
 	                      true);
 	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
-	g_resources.textures = nyas_hmap_create(64, sizeof(nyas_tex));
 
-	g_shaders.fullscreen_img = nyas_shader_create(&fs_img_shader_desc);
+	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
 	g_shaders.eqr_to_cube = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
 	g_shaders.prefilter_env = nyas_shader_create(g_shader_descriptors.prefilter);
@@ -158,7 +157,6 @@ Init(void)
 	pbr.normal_map_intensity = 1.0f;
 
 	float position[3] = { -2.0f, 0.0f, 0.0f };
-	int pbr_data_count = sizeof(nyas_pbr_desc_unit) / 4;
 
 	// CelticGold
 	{
@@ -320,7 +318,6 @@ Init(void)
 		t[3] = g_tex.foam_m;
 	}
 
-	int pbr_cmn_data_count = sizeof(nyas_pbr_desc_scene) / sizeof(float);
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
 	pbr_scene_tex[0] = g_tex.lut;
 	pbr_scene_tex[1] = g_tex.irradiance;
@@ -328,8 +325,8 @@ Init(void)
 
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
 
-	nyas_tex eqr_in_tex = nyas_tex_load("assets/tex/env/helipad-env.hdr", 0, g_tex_flags.env);
-	nyas_tex irr_in_tex = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 0, g_tex_flags.env);
+	nyas_tex eqr_in_tex = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
+	nyas_tex irr_in_tex = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
 
 	GenEnv env = {
 		.eqr_sh = g_shaders.eqr_to_cube,
@@ -462,8 +459,9 @@ Render(void)
 int
 main(int argc, char **argv)
 {
+	(void)argc; (void)argv;
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
+	nyas_io_init("NYAS PBR Material Demo", 800, 600, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 	nyas_imgui_init();

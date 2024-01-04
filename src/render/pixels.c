@@ -248,12 +248,6 @@ nyas_alloc_frame(unsigned int size)
 	return ret;
 }
 
-#define NYAS_TEX_FLAGS(CHANNELS, FLOAT, LINEAR, CUBEMAP, DEPTH, TILE, MIPS) ( \
-	(((CHANNELS) - 1) & 0x03) | \
-	| (TF_FLOAT * (FLOAT)) | (TF_CUBE * (CUBEMAP)) | (TF_DEPTH * (DEPTH)) \
-	| (TF_TILING * (TILE)) | (TF_MIPMAP * (MIPS)) | (TF_LINEAR_COLOR * (LINEAR)) \
-	| TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | (TF_MAG_MIP_FILTER_LERP * (MIPS)))
-
 int
 nyas_tex_flags(int ch,
                bool fp,
@@ -354,7 +348,7 @@ nyas_tex_size(nyas_tex tex, int *out)
 }
 
 nyas_shader
-nyas_shader_create(nyas_shader_desc *desc)
+nyas_shader_create(const nyas_shader_desc *desc)
 {
 	nyas_shader ret = nyas__create_shader_handle();
 	shdr_t *shdr = nyas_arr_at(shader_pool, ret);

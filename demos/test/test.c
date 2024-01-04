@@ -40,7 +40,7 @@ Init(void)
 		                                .common_data_count = 6 * 4, // 6 vec4
 		                                .common_tex_count = 1,
 		                                .common_cubemap_count = 2 };
-	shader = nyas_shader_create(&pbr_descriptor);
+	shader = nyas_shader_create(g_shader_descriptors.pbr);
 
 	nyas_shader_desc sky_descriptor = { .name = "skybox",
 		                                .data_count = 0,
@@ -49,7 +49,7 @@ Init(void)
 		                                .common_data_count = 4 * 4, // mat4
 		                                .common_tex_count = 0,
 		                                .common_cubemap_count = 1 };
-	skybox_sh = nyas_shader_create(&sky_descriptor);
+	skybox_sh = nyas_shader_create(g_shader_descriptors.sky);
 
 	nyas_shader_desc img_descriptor = {
 		.name = "fullscreen-img", // fullscreen quad with texture
@@ -60,7 +60,7 @@ Init(void)
 		.common_tex_count = 1,
 		.common_cubemap_count = 0
 	};
-	fs_sh = nyas_shader_create(&img_descriptor);
+	fs_sh = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 
 	nyas_shader_desc eqr_descriptor = {
 		.name = "eqr-to-cube", // environment image to cubemap
@@ -71,7 +71,7 @@ Init(void)
 		.common_tex_count = 1,
 		.common_cubemap_count = 0
 	};
-	eqr_sh = nyas_shader_create(&eqr_descriptor);
+	eqr_sh = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
 
 	nyas_shader_desc pref_descriptor = {
 		.name = "prefilter-env", // environment prefilter
@@ -82,7 +82,7 @@ Init(void)
 		.common_tex_count = 0,
 		.common_cubemap_count = 1
 	};
-	pref_sh = nyas_shader_create(&pref_descriptor);
+	pref_sh = nyas_shader_create(g_shader_descriptors.prefilter);
 
 	nyas_shader_desc lut_descriptor = { .name = "lut-gen", // look-up table
 		                                .data_count = 0,
@@ -91,24 +91,24 @@ Init(void)
 		                                .common_data_count = 0,
 		                                .common_tex_count = 0,
 		                                .common_cubemap_count = 0 };
-	lut_sh = nyas_shader_create(&lut_descriptor);
+	lut_sh = nyas_shader_create(g_shader_descriptors.lut);
 
 	int envflags = nyas_tex_flags(3, true, true, false, false, false, false);
-	e.env = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, envflags);
-	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, envflags);
+	e.env = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
+	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
 
 	int alb = nyas_tex_flags(3, false, false, false, false, true, true);
-	e.albedo = nyas_tex_load("../pbr/assets/tex/peeling/peeling_A.png", 1, alb);
+	e.albedo = nyas_tex_load("../pbr/assets/tex/peeling/peeling_A.png", 1, g_tex_flags.albedo);
 	int n = nyas_tex_flags(3, false, true, false, false, true, true);
-	e.normal = nyas_tex_load("../pbr/assets/tex/peeling/peeling_N.png", 1, n);
+	e.normal = nyas_tex_load("../pbr/assets/tex/peeling/peeling_N.png", 1, g_tex_flags.normal);
 	int r_m = nyas_tex_flags(1, false, true, false, false, true, true);
-	e.roughness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_R.png", 1, r_m);
-	e.metalness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_M.png", 1, r_m);
+	e.roughness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_R.png", 1, g_tex_flags.pbr_map);
+	e.metalness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_M.png", 1, g_tex_flags.pbr_map);
 
 	*nyas_shader_tex(fs_sh) = nyas_fb_color(fb);
 
 	int sky_flags = nyas_tex_flags(3, true, true, true, false, false, false);
-	skybox_tex = nyas_tex_empty(1024, 1024, sky_flags);
+	skybox_tex = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
 	e.upbr.use_albedo_map = 1.0f;
 	e.upbr.normal_map_intensity = 1.0f;
 	e.upbr.use_pbr_maps = 1.0f;
@@ -128,11 +128,11 @@ Init(void)
 	t[3] = e.normal;
 
 	int lutflgs = nyas_tex_flags(2, true, true, false, false, false, false);
-	nyas_tex lut = nyas_tex_empty(512, 512, lutflgs);
+	nyas_tex lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
 	int irrflgs = nyas_tex_flags(3, true, true, true, false, false, false);
-	nyas_tex irr = nyas_tex_empty(1024, 1024, irrflgs);
+	nyas_tex irr = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
 	int preflgs = nyas_tex_flags(3, true, true, true, false, false, true);
-	nyas_tex pref = nyas_tex_empty(128, 128, preflgs);
+	nyas_tex pref = nyas_tex_empty(128, 128, g_tex_flags.prefilter);
 
 	vec4_assign(((nyas_pbr_desc_scene *)nyas_shader_data(shader))->sunlight,
 	            e.light);
@@ -272,7 +272,7 @@ main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS Asset Inspector", 1920, 1080, true);
+	nyas_io_init("NYAS Asset Inspector", 800, 600, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 	nyas_imgui_init();

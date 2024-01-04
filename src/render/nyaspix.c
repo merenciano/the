@@ -334,7 +334,7 @@ void
 nypx_shader_set_tex(int loc, int *tex, int count, int texunit_offset)
 {
 	for (int i = 0; i < count; ++i) {
-		glActiveTexture(GL_TEXTURE0 + texunit_offset+ i);
+		glActiveTexture(GL_TEXTURE0 + texunit_offset + i);
 		glBindTexture(GL_TEXTURE_2D, tex[i]);
 		tex[i] = texunit_offset + i;
 	}

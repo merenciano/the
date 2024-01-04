@@ -52,6 +52,12 @@ void nyas_px_render(void);
 void nyas_frame_end(void);
 void *nyas_alloc_frame(unsigned int size);
 
+#define NYAS_TEX_FLAGS(CHANNELS, FLOAT, LINEAR, CUBEMAP, DEPTH, TILE, MIPS) ( \
+	(((CHANNELS) - 1) & 0x03) \
+	| (TF_FLOAT * (FLOAT)) | (TF_CUBE * (CUBEMAP)) | (TF_DEPTH * (DEPTH)) \
+	| (TF_TILING * (TILE)) | (TF_MIPMAP * (MIPS)) | (TF_LINEAR_COLOR * (LINEAR)) \
+	| TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | (TF_MAG_MIP_FILTER_LERP * (MIPS)))
+
 int nyas_tex_flags(int nchann,
                    bool fp,
                    bool linear,
@@ -78,7 +84,7 @@ void nyas_mesh_load_msh(nyas_mesh mesh, const char *path);
 void nyas_mesh_set_vertices(nyas_mesh mesh, float *v, size_t size, int vattr);
 void nyas_mesh_set_indices(nyas_mesh mesh, nyas_idx *indices, size_t elements);
 
-nyas_shader nyas_shader_create(nyas_shader_desc *desc);
+nyas_shader nyas_shader_create(const nyas_shader_desc *desc);
 void *nyas_shader_data(nyas_shader shader);
 nyas_tex *nyas_shader_tex(nyas_shader shader);
 nyas_tex *nyas_shader_cubemap(nyas_shader shader);
