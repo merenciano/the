@@ -363,7 +363,7 @@ nyas_setfb_fn(nyas_cmdata *data)
 	} else {
 		fb_t *ifb = nyas__sync_gpu_fb(d->fb);
 		nypx_fb_use(d->fb);
-		if ((int)d->attach.type != NYAS_IGNORE) {
+		if (d->attach.type != NYAS_IGNORE) {
 			tex_t *t = nyas__sync_gpu_tex(d->attach.tex);
 			nypx_fb_set(ifb->res.id, t->res.id, d->attach.type,
 			            d->attach.mip_level, d->attach.face);

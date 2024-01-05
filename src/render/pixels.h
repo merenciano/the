@@ -179,8 +179,8 @@ typedef struct nyas_fb_slot {
 
 typedef struct nyas_set_fb_cmdata {
 	nyas_framebuffer fb;
-	int16_t vp_x;
-	int16_t vp_y;
+	int vp_x;
+	int vp_y;
 	nyas_fb_slot attach;
 } nyas_set_fb_cmdata;
 
