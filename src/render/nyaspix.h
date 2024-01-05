@@ -33,18 +33,6 @@ typedef struct nypx_res {
 	int flags;
 } nypx_res;
 
-typedef struct nypx_mesh {
-	nypx_res res;
-	nypx_res res_vb; // vertex buffer resource
-	nypx_res res_ib; // index buffer resource
-	float *vtx;
-	nypx_index *idx;
-	int64_t elem_count;
-	uint32_t vtx_size;
-	int attrib;
-} nypx_mesh;
-
-
 enum nypx_framebuffer_slots {
 	NYPX_SLOT_DEPTH,
 	NYPX_SLOT_STENCIL,
@@ -66,13 +54,6 @@ enum nypx_cube_faces {
 	NYPX_CUBE_NEG_Z,
 	NYPX_CUBE_FACE_COUNT
 };
-
-typedef struct nypx_fb_slot {
-	struct nypx_tex *tex;
-	int mip_level;
-	uint16_t type;
-	uint16_t side;
-} nypx_fb_slot;
 
 typedef struct nypx_fb {
 	nypx_res res;
@@ -105,7 +86,6 @@ void nypx_shader_use(uint32_t id);
 void nypx_shader_release(uint32_t id);
 
 void nypx_fb_create(uint32_t *id);
-void nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level);
 
 // Sets fb attach from cubemap face
 // id: framebuffer internal id
@@ -113,7 +93,7 @@ void nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level);
 // slot: framebuffer attachment
 // level: mipmap level
 // face: cubemap face (see enum nypx_cube_faces)
-void nypx_fb_set_cube(uint32_t id,
+void nypx_fb_set(uint32_t id,
                       uint32_t texid,
                       int slot,
                       int level,

@@ -23,14 +23,14 @@ nypx__check_handle(int h, void *arr)
 	            "Out of bounds handle");
 }
 
-enum vtxattr {
+/*enum vtxattr {
 	A_POSITION = 0,
 	A_NORMAL,
 	A_TANGENT,
 	A_BITANGENT,
 	A_UV,
 	VERTEX_ATTRIBUTE_COUNT
-};
+};*/
 
 typedef enum resource_flags {
 	RF_DIRTY = 1 << 0,
@@ -42,7 +42,7 @@ typedef struct resource {
 	int flags;
 } r_resource;
 
-typedef struct {
+/*typedef struct {
 	r_resource res;
 	float *vtx;
 	nyas_idx *idx;
@@ -50,7 +50,7 @@ typedef struct {
 	unsigned int elements;
 	int attr_flags;
 	unsigned int internal_buffers_id[2];
-} r_mesh;
+} r_mesh;*/
 
 enum nyas_internal_resource_flags {
 	NYAS_IRF_DIRTY = 1U << 3,
@@ -63,14 +63,16 @@ struct nyas_internal_resource {
 	int flags;
 };
 
-/*typedef struct {
-	r_resource res;
-	void *pix[6];
-	int width;
-	int height;
-	int type;
-} r_tex;*/
-
+struct nyas_internal_mesh {
+	struct nyas_internal_resource res;
+	struct nyas_internal_resource res_vb; // vertex buffer resource
+	struct nyas_internal_resource res_ib; // index buffer resource
+	float *vtx;
+	nypx_index *idx;
+	int64_t elem_count;
+	uint32_t vtx_size;
+	int attrib;
+};
 
 struct nyas_internal_texture {
 	struct nyas_internal_resource res;
@@ -89,13 +91,17 @@ struct nyas_internal_shader {
 	void *common;
 };
 
-typedef struct {
+/*typedef struct {
 	r_resource res;
 	int width;
 	int height;
 	nyas_tex color_tex;
 	nyas_tex depth_tex;
-} r_fb;
+} r_fb;*/
+
+struct nyas_internal_framebuffer {
+	struct nyas_internal_resource res;
+};
 
 extern nyas_arr mesh_pool;
 extern nyas_arr tex_pool;

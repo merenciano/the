@@ -372,10 +372,10 @@ nypx_fb_create(uint32_t *id)
 	glGenFramebuffers(1, id);
 }
 
-int nypx__fb_attach_gl(int slot)
+int
+nypx__fb_attach_gl(int slot)
 {
-	switch (slot)
-	{
+	switch (slot) {
 	case NYPX_SLOT_DEPTH:
 		return GL_DEPTH_ATTACHMENT;
 	case NYPX_SLOT_STENCIL:
@@ -383,23 +383,16 @@ int nypx__fb_attach_gl(int slot)
 	case NYPX_SLOT_DEPTH_STENCIL:
 		return GL_DEPTH_STENCIL_ATTACHMENT;
 	default:
-		return GL_COLOR_ATTACHMENT0 + slot;
+		return GL_COLOR_ATTACHMENT0 - NYPX_SLOT_COLOR0 + slot;
 	}
 }
 
 void
-nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level)
+nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, id);
-	slot = nypx__fb_attach_gl(slot);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, texid, level);
-}
-
-void
-nypx_fb_set_cube(uint32_t id, uint32_t texid, int slot, int level, int face)
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, id);
-	GLenum target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
+	GLenum target = face >= 0 ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face :
+								GL_TEXTURE_2D;
 	slot = nypx__fb_attach_gl(slot);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, texid, level);
 }

@@ -17,6 +17,8 @@
 
 typedef struct nyas_internal_shader shdr_t;
 typedef struct nyas_internal_texture tex_t;
+typedef struct nyas_internal_mesh mesh_t;
+typedef struct nyas_internal_framebuffer fb_t;
 
 typedef struct {
 	GLint internal_format;
@@ -41,16 +43,16 @@ typedef struct {
   The array's position must match with the
   enum (nyas_VertexAttributes) value of the attribute.
 */
-static const GLint attrib_sizes[VERTEX_ATTRIBUTE_COUNT] = { 3, 3, 3, 3, 2 };
+static const GLint attrib_sizes[VTXATTR_COUNT] = { 3, 3, 3, 3, 2 };
 
 /*
   Attribute's layout name in the shader.
   The array's position must match with the attribute's
   value at enum nyas_VertexAttributes.
 */
-static const char *attrib_names[VERTEX_ATTRIBUTE_COUNT] = {
-	"a_position", "a_normal", "a_tangent", "a_bitangent", "a_uv"
-};
+static const char *attrib_names[VTXATTR_COUNT] = { "a_position", "a_normal",
+	                                               "a_tangent", "a_bitangent",
+	                                               "a_uv" };
 
 static bool
 nypx__resource_check(void *rsrc)
@@ -153,119 +155,28 @@ nyas__gl_depth(nyas_depthfn_opt df)
 }
 
 static void
-nyas__attach_to_fb(nyas_fbattach a)
+nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 {
-	int id = ((tex_t *)nyas_arr_at(tex_pool, a.tex))->res.id;
-	GLenum target = a.side < 0 ? GL_TEXTURE_2D :
-								 GL_TEXTURE_CUBE_MAP_POSITIVE_X + a.side;
-
-	GLenum slot = a.slot == NYAS_ATTACH_COLOR ? GL_COLOR_ATTACHMENT0 :
-												GL_DEPTH_ATTACHMENT;
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, id, a.level);
-}
-
-static void
-nyas__set_viewport_from_fb(nyas_framebuffer fb)
-{
-	int w, h;
-	nyas_fb_size(fb, &w, &h);
-	glViewport(0, 0, w, h);
-}
-
-static void
-nyas__set_viewport(int x, int y)
-{
-	if (x < 0) {
-		nyas_v2i win_size = nyas_window_size();
-		glViewport(0, 0, win_size.x, win_size.y);
-	} else {
-		glViewport(0, 0, x, y);
-	}
-}
-
-static GLsizei
-nyas__get_attrib_stride(int32_t attr_flags)
-{
-	GLsizei stride = 0;
-	for (int i = 0; i < VERTEX_ATTRIBUTE_COUNT; ++i) {
-		if (attr_flags & (1 << i)) {
-			stride += attrib_sizes[i];
-		}
-	}
-	return stride * sizeof(float);
-}
-
-static void
-nyas__mesh_update(nyas_mesh mesh, nyas_shader shader)
-{
-	r_mesh *m = nyas_arr_at(mesh_pool, mesh);
+	CHECK_HANDLE(mesh, mesh);
+	CHECK_HANDLE(shader, shader);
+	mesh_t *m = nyas_arr_at(mesh_pool, mesh);
 	shdr_t *s = nyas_arr_at(shader_pool, shader);
+	NYAS_ASSERT(nypx__resource_check(s) && "Invalid internal resource.");
 
-	glBindVertexArray(m->res.id);
-	glBindBuffer(GL_ARRAY_BUFFER, m->internal_buffers_id[0]);
-	glBufferData(GL_ARRAY_BUFFER, m->vtx_size, m->vtx, GL_STATIC_DRAW);
-
-	GLint offset = 0;
-	GLsizei stride = nyas__get_attrib_stride(m->attr_flags);
-	for (int i = 0; i < VERTEX_ATTRIBUTE_COUNT; ++i) {
-		if (!(m->attr_flags & (1 << i))) {
-			continue;
-		}
-
-		GLint size = attrib_sizes[i];
-		GLint attrib_pos = glGetAttribLocation(s->res.id, attrib_names[i]);
-		if (attrib_pos >= 0) {
-			glEnableVertexAttribArray(attrib_pos);
-			glVertexAttribPointer(attrib_pos, size, GL_FLOAT, GL_FALSE, stride,
-			                      (void *)(offset * sizeof(float)));
-		}
-		offset += size;
+	if (!(m->res.flags & NYAS_IRF_CREATED)) {
+		nypx_mesh_create(&m->res.id, &m->res_vb.id, &m->res_ib.id);
+		m->res.flags |= NYAS_IRF_DIRTY;
 	}
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->internal_buffers_id[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->elements * sizeof(nyas_idx),
-	             (const void *)m->idx, GL_STATIC_DRAW);
-
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	if (m->res.flags & RF_FREE_AFTER_LOAD) {
-		if (m->vtx) {
-			nyas_free(m->vtx);
-			m->vtx = NULL;
-		}
-		if (m->idx) {
-			nyas_free(m->idx);
-			m->idx = NULL;
-		}
+	if (m->res.flags & NYAS_IRF_DIRTY) {
+		nypx_mesh_set(m->res.id, m->res_vb.id, m->res_ib.id, s->res.id,
+		              m->attrib, m->vtx, m->vtx_size, m->idx, m->elem_count);
 	}
+	m->res.flags = NYAS_IRF_CREATED;
+	NYAS_ASSERT(nypx__resource_check(m) && "Invalid internal resource.");
 }
 
-static void
-nyas__create_mesh(nyas_mesh mesh, nyas_shader shader)
-{
-	r_mesh *m = nyas_arr_at(mesh_pool, mesh);
-
-	glGenVertexArrays(1, (GLuint *)&m->res.id);
-	glGenBuffers(2, m->internal_buffers_id);
-	nyas__mesh_update(mesh, shader);
-}
-
-static void
-nyas__sync_gpu_mesh(nyas_mesh m, nyas_shader s)
-{
-	r_mesh *im = nyas_arr_at(mesh_pool, m);
-	if (im->res.id == NYAS_UNINIT) {
-		nyas__create_mesh(m, s);
-	} else if (im->res.flags & RF_DIRTY) {
-		nyas__mesh_update(m, s);
-	}
-	im->res.flags = 0;
-}
-
-static void
+static tex_t *
 nyas__sync_gpu_tex(nyas_tex tex)
 {
 	CHECK_HANDLE(tex, tex);
@@ -280,50 +191,20 @@ nyas__sync_gpu_tex(nyas_tex tex)
 	}
 	t->res.flags = NYAS_IRF_CREATED;
 	NYAS_ASSERT(nypx__resource_check(t) && "Invalid internal resource.");
+	return t;
 }
 
-static void
-nyas__sync_gpu_fb(nyas_framebuffer fb, const nyas_fbattach *atta)
+static fb_t *
+nyas__sync_gpu_fb(nyas_framebuffer fb)
 {
-	NYAS_ASSERT(atta && "Null ptr arg.");
-	r_fb *ifb = nyas_arr_at(framebuffer_pool, fb);
-	if (ifb->res.id == NYAS_UNINIT) {
-		glGenFramebuffers(1, (GLuint *)&(ifb->res.id));
+	CHECK_HANDLE(framebuffer, fb);
+	fb_t *ifb = nyas_arr_at(framebuffer_pool, fb);
+	if (!(ifb->res.flags & NYAS_IRF_CREATED)) {
+		nypx_fb_create(&ifb->res.id);
 	}
 	NYAS_ASSERT(nypx__resource_check(ifb) && "Invalid internal resource.");
-	glBindFramebuffer(GL_FRAMEBUFFER, ifb->res.id);
-	if (atta->slot == NYAS_ATTACH_DEPTH) {
-		// Change depth texture
-		CHECK_HANDLE(tex, atta->tex);
-		ifb->depth_tex = atta->tex;
-		nyas__sync_gpu_tex(ifb->depth_tex);
-		nyas__attach_to_fb(*atta);
-	} else if (atta->slot == NYAS_ATTACH_COLOR) {
-		// Change color texture
-		CHECK_HANDLE(tex, atta->tex);
-		ifb->color_tex = atta->tex;
-		nyas__sync_gpu_tex(ifb->color_tex);
-		nyas__attach_to_fb(*atta);
-	} else {
-		if (ifb->depth_tex != NYAS_INACTIVE) {
-			nyas__sync_gpu_tex(ifb->depth_tex);
-			nyas_fbattach a = { .tex = ifb->depth_tex,
-				                .slot = NYAS_ATTACH_DEPTH,
-				                .side = -1,
-				                .level = 0 };
-			nyas__attach_to_fb(a);
-		}
-
-		if (ifb->color_tex != NYAS_INACTIVE) {
-			nyas__sync_gpu_tex(ifb->color_tex);
-			nyas_fbattach a = { .tex = ifb->color_tex,
-				                .slot = NYAS_ATTACH_COLOR,
-				                .side = -1,
-				                .level = 0 };
-			nyas__attach_to_fb(a);
-		}
-	}
-	ifb->res.flags = 0;
+	ifb->res.flags = NYAS_IRF_CREATED;
+	return ifb;
 }
 
 static void
@@ -346,20 +227,14 @@ nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
 	nyas_tex *srcdata_tex = (nyas_tex *)srcdata + s->count[common].data;
 	uint32_t *tmpdata_texid = (uint32_t *)tmpdata + s->count[common].data;
 	for (int i = 0; i < s->count[common].tex; ++i) {
-		tex_t *itx = nyas_arr_at(tex_pool, srcdata_tex[i]);
-		if (itx->res.flags & NYAS_IRF_DIRTY) {
-			nyas__sync_gpu_tex(srcdata_tex[i]);
-		}
+		tex_t *itx = nyas__sync_gpu_tex(srcdata_tex[i]);
 		*tmpdata_texid++ = itx->res.id;
 	}
 
 	// set tex cubemap data (src {handle} --> dst {internal id})
 	nyas_tex *srcdata_cubemap = srcdata_tex + s->count[common].tex;
 	for (int i = 0; i < s->count[common].cubemap; ++i) {
-		tex_t *itx = nyas_arr_at(tex_pool, srcdata_cubemap[i]);
-		if (itx->res.flags & NYAS_IRF_DIRTY) {
-			nyas__sync_gpu_tex(srcdata_cubemap[i]);
-		}
+		tex_t *itx = nyas__sync_gpu_tex(srcdata_cubemap[i]);
 		*tmpdata_texid++ = itx->res.id;
 	}
 
@@ -432,24 +307,18 @@ void
 nyas_draw_fn(nyas_cmdata *data)
 {
 	nyas_mesh mesh = data->draw.mesh;
-	r_mesh *imsh = nyas_arr_at(mesh_pool, mesh);
+	mesh_t *imsh = nyas_arr_at(mesh_pool, mesh);
 	CHECK_HANDLE(mesh, mesh);
-	NYAS_ASSERT(imsh->elements && "Attempt to draw an uninitialized mesh");
+	NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
 
-	if (nyas__is_dirty(imsh)) {
+	if (imsh->res.flags & NYAS_IRF_DIRTY) {
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
-		if (imsh->res.id == NYAS_UNINIT) {
-			nyas__create_mesh(mesh, data->draw.material.shader);
-		} else if (imsh->res.flags & RF_DIRTY) {
-			nyas__mesh_update(mesh, data->draw.material.shader);
-		}
-		imsh->res.flags = 0;
 	}
 
 	glBindVertexArray(imsh->res.id);
 	shdr_t *s = nyas_arr_at(shader_pool, data->draw.material.shader);
 	nyas__set_shader_data(s, data->draw.material.ptr, false);
-	glDrawElements(GL_TRIANGLES, imsh->elements, ELEMENT_TYPE, 0);
+	glDrawElements(GL_TRIANGLES, imsh->elem_count, ELEMENT_TYPE, 0);
 	glBindVertexArray(0);
 }
 
@@ -490,27 +359,17 @@ nyas_setfb_fn(nyas_cmdata *data)
 	NYAS_ASSERT(data && "Null param");
 	const nyas_set_fb_cmdata *d = &data->set_fb;
 	if (d->fb == NYAS_DEFAULT) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		nyas__set_viewport(-1, -1);
-		return;
-	}
-
-	r_fb *ifb = nyas_arr_at(framebuffer_pool, d->fb);
-	if ((int)d->attachment.slot != NYAS_IGNORE) {
-		ifb->res.flags |= RF_DIRTY;
-	}
-
-	CHECK_HANDLE(framebuffer, d->fb);
-	if (nyas__is_dirty(ifb)) {
-		nyas__sync_gpu_fb(d->fb, &d->attachment);
+		nypx_fb_use(0);
 	} else {
-		glBindFramebuffer(GL_FRAMEBUFFER, ifb->res.id);
+		fb_t *ifb = nyas__sync_gpu_fb(d->fb);
+		nypx_fb_use(d->fb);
+		if ((int)d->attach.type != NYAS_IGNORE) {
+			tex_t *t = nyas__sync_gpu_tex(d->attach.tex);
+			nypx_fb_set(ifb->res.id, t->res.id, d->attach.type,
+			            d->attach.mip_level, d->attach.face);
+		}
 	}
-	if (d->vp_x > 0) {
-		nyas__set_viewport(d->vp_x, d->vp_y);
-	} else {
-		nyas__set_viewport_from_fb(d->fb);
-	}
+	nypx_viewport(0, 0, d->vp_x, d->vp_y);
 }
 
 #endif // NYAS_OPENGL

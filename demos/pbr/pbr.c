@@ -167,9 +167,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.gold_a;
-		t[1] = g_tex.gold_n;
+		t[1] = g_tex.gold_m;
 		t[2] = g_tex.gold_r;
-		t[3] = g_tex.gold_m;
+		t[3] = g_tex.gold_n;
 	}
 
 	// Shore
@@ -185,9 +185,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.shore_a;
-		t[1] = g_tex.shore_n;
+		t[1] = g_tex.shore_m;
 		t[2] = g_tex.shore_r;
-		t[3] = g_tex.shore_m;
+		t[3] = g_tex.shore_n;
 	}
 
 	// Peeling
@@ -203,9 +203,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.peeled_a;
-		t[1] = g_tex.peeled_n;
+		t[1] = g_tex.peeled_m;
 		t[2] = g_tex.peeled_r;
-		t[3] = g_tex.peeled_m;
+		t[3] = g_tex.peeled_n;
 	}
 
 	// Rusted
@@ -222,9 +222,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.rusted_a;
-		t[1] = g_tex.rusted_n;
+		t[1] = g_tex.rusted_m;
 		t[2] = g_tex.rusted_r;
-		t[3] = g_tex.rusted_m;
+		t[3] = g_tex.rusted_n;
 	}
 
 	// Tiles
@@ -240,9 +240,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.tiles_a;
-		t[1] = g_tex.tiles_n;
+		t[1] = g_tex.tiles_m;
 		t[2] = g_tex.tiles_r;
-		t[3] = g_tex.tiles_m;
+		t[3] = g_tex.tiles_n;
 	}
 
 	// Ship Panels
@@ -258,9 +258,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.plastic_a;
-		t[1] = g_tex.plastic_n;
+		t[1] = g_tex.plastic_m;
 		t[2] = g_tex.plastic_r;
-		t[3] = g_tex.plastic_m;
+		t[3] = g_tex.plastic_n;
 	}
 
 	// Cliff
@@ -277,9 +277,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.cliff_a;
-		t[1] = g_tex.cliff_n;
+		t[1] = g_tex.cliff_m;
 		t[2] = g_tex.cliff_r;
-		t[3] = g_tex.cliff_m;
+		t[3] = g_tex.cliff_n;
 	}
 
 	// Granite
@@ -295,9 +295,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.granite_a;
-		t[1] = g_tex.granite_n;
+		t[1] = g_tex.granite_m;
 		t[2] = g_tex.granite_r;
-		t[3] = g_tex.granite_m;
+		t[3] = g_tex.granite_n;
 	}
 
 	// Foam
@@ -313,9 +313,9 @@ Init(void)
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(&e->mat);
 		t[0] = g_tex.foam_a;
-		t[1] = g_tex.foam_n;
+		t[1] = g_tex.foam_m;
 		t[2] = g_tex.foam_r;
-		t[3] = g_tex.foam_m;
+		t[3] = g_tex.foam_n;
 	}
 
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
@@ -461,7 +461,7 @@ main(int argc, char **argv)
 {
 	(void)argc; (void)argv;
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 800, 600, true);
+	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 	nyas_imgui_init();

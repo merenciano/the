@@ -47,6 +47,12 @@ typedef struct nyas_shader_desc {
 	int common_cubemap_count;
 } nyas_shader_desc;
 
+enum nyas_geometry {
+	NYAS_QUAD,
+	NYAS_CUBE,
+	NYAS_SPHERE
+};
+
 void nyas_px_init(void);
 void nyas_px_render(void);
 void nyas_frame_end(void);
@@ -69,20 +75,12 @@ nyas_tex nyas_tex_empty(int width, int height, int tex_flags);
 nyas_tex nyas_tex_load(const char *path, int flip, int tex_flags);
 int *nyas_tex_size(nyas_tex tex, int *out_vec2i);
 
-nyas_framebuffer nyas_fb_create(int width, int height, bool color, bool depth);
-nyas_tex nyas_fb_color(nyas_framebuffer fb);
-void nyas_fb_size(nyas_framebuffer fb, int *o_w, int *o_h);
+nyas_framebuffer nyas_fb_create(void);
 
-// TODO: Borrar vector siempre al cargar datos
-// TODO: Cambiar nombre al load_obj que crea la mesh y ponserselo a set_obj
-nyas_mesh nyas_mesh_create_cube(void);
-nyas_mesh nyas_mesh_create_sphere(int x_segments, int y_segments);
-nyas_mesh nyas_mesh_create_quad(void);
-nyas_mesh nyas_mesh_create(void);
-void nyas_mesh_load_obj(nyas_mesh mesh, const char *path);
-void nyas_mesh_load_msh(nyas_mesh mesh, const char *path);
-void nyas_mesh_set_vertices(nyas_mesh mesh, float *v, size_t size, int vattr);
-void nyas_mesh_set_indices(nyas_mesh mesh, nyas_idx *indices, size_t elements);
+nyas_mesh nyas_mesh_load_file(const char *path);
+nyas_mesh nyas_mesh_load_geometry(enum nyas_geometry geo);
+void nyas_mesh_reload_file(nyas_mesh mesh, const char *path);
+void nyas_mesh_reload_geometry(nyas_mesh mesh, enum nyas_geometry geo);
 
 nyas_shader nyas_shader_create(const nyas_shader_desc *desc);
 void *nyas_shader_data(nyas_shader shader);
@@ -172,18 +170,18 @@ typedef enum nyas_attach_slot {
 	NYAS_ATTACH_COLOR
 } nyas_attach_slot;
 
-typedef struct nyas_fbattach {
+typedef struct nyas_fb_slot {
 	nyas_tex tex;
-	nyas_attach_slot slot;
-	int level;
-	int side;
-} nyas_fbattach;
+	int mip_level;
+	int type;
+	int face;
+} nyas_fb_slot;
 
 typedef struct nyas_set_fb_cmdata {
 	nyas_framebuffer fb;
 	int16_t vp_x;
 	int16_t vp_y;
-	nyas_fbattach attachment;
+	nyas_fb_slot attach;
 } nyas_set_fb_cmdata;
 
 typedef union nyas_cmdata {

@@ -163,18 +163,24 @@ ConvertEqrToCubeCommandList(nyas_shader eqr_sh, nyas_tex tex_in,
 	use_tocube->execute = nyas_setshader_fn;
 	last_command->next = use_tocube;
 
-	nyas_fbattach atta = { .slot = NYAS_ATTACH_COLOR,
-		                   .tex = tex_out,
-		                   .level = 0 };
+	nyas_fb_slot atta = {
+		.tex = tex_out,
+		.mip_level = 0,
+		.type = NYPX_SLOT_COLOR0,
+		.face = -1
+	};
 
 	nyas_cmd *last = use_tocube;
 	float *vp = GenerateRenderToCubeVP();
+	int vp_size[2];
+	nyas_tex_size(tex_out, vp_size);
 	for (int i = 0; i < 6; ++i) {
 		nyas_cmd *cube_fb = nyas_cmd_alloc();
 		cube_fb->data.set_fb.fb = fb;
-		cube_fb->data.set_fb.vp_x = NYAS_IGNORE;
-		cube_fb->data.set_fb.attachment = atta;
-		cube_fb->data.set_fb.attachment.side = i;
+		cube_fb->data.set_fb.vp_x = vp_size[0];
+		cube_fb->data.set_fb.vp_y = vp_size[1];
+		cube_fb->data.set_fb.attach = atta;
+		cube_fb->data.set_fb.attach.face = i;
 		cube_fb->execute = nyas_setfb_fn;
 		last->next = cube_fb;
 
@@ -215,10 +221,10 @@ GeneratePrefilterCommandList(GenEnv *env,
 			fb_comm->data.set_fb.fb = fb;
 			fb_comm->data.set_fb.vp_x = vp_size;
 			fb_comm->data.set_fb.vp_y = vp_size;
-			fb_comm->data.set_fb.attachment.tex = env->pref_out;
-			fb_comm->data.set_fb.attachment.slot = NYAS_ATTACH_COLOR;
-			fb_comm->data.set_fb.attachment.side = side;
-			fb_comm->data.set_fb.attachment.level = i;
+			fb_comm->data.set_fb.attach.tex = env->pref_out;
+			fb_comm->data.set_fb.attach.type = NYPX_SLOT_COLOR0;
+			fb_comm->data.set_fb.attach.face = side;
+			fb_comm->data.set_fb.attach.mip_level = i;
 			fb_comm->execute = nyas_setfb_fn;
 			last_command->next = fb_comm;
 
@@ -255,13 +261,16 @@ GeneratePrefilterCommandList(GenEnv *env,
 static nyas_cmd *
 GenerateLutCommandlist(nyas_framebuffer fb, nyas_cmd *last_command, GenEnv *env)
 {
+	int vp_size[2];
+	nyas_tex_size(env->lut, vp_size);
 	nyas_cmd *set_init_fb = nyas_cmd_alloc();
 	set_init_fb->data.set_fb.fb = fb;
-	set_init_fb->data.set_fb.vp_x = NYAS_IGNORE;
-	set_init_fb->data.set_fb.attachment.slot = NYAS_ATTACH_COLOR;
-	set_init_fb->data.set_fb.attachment.tex = env->lut;
-	set_init_fb->data.set_fb.attachment.side = -1;
-	set_init_fb->data.set_fb.attachment.level = 0;
+	set_init_fb->data.set_fb.vp_x = vp_size[0];
+	set_init_fb->data.set_fb.vp_y = vp_size[1];
+	set_init_fb->data.set_fb.attach.type = NYPX_SLOT_COLOR0;
+	set_init_fb->data.set_fb.attach.tex = env->lut;
+	set_init_fb->data.set_fb.attach.face = -1;
+	set_init_fb->data.set_fb.attach.mip_level = 0;
 	set_init_fb->execute = nyas_setfb_fn;
 	last_command->next = set_init_fb;
 
@@ -290,7 +299,7 @@ GenerateLutCommandlist(nyas_framebuffer fb, nyas_cmd *last_command, GenEnv *env)
 static void
 GeneratePbrEnv(GenEnv *env)
 {
-	nyas_framebuffer auxfb = nyas_fb_create(1, 1, false, false);
+	nyas_framebuffer auxfb = nyas_fb_create();
 
 	nyas_cmd *rendops = nyas_cmd_alloc();
 	rendops->data.rend_opts.enable_flags = NYAS_DEPTH_TEST | NYAS_DEPTH_WRITE |

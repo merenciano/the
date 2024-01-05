@@ -28,97 +28,42 @@ nyas_tex skybox_tex;
 void
 Init(void)
 {
-	fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true, true);
 	e.light[0] = 1.0f;
 	e.light[1] = -1.0f;
 	e.light[2] = 1.0f;
 	e.light[3] = 1.0f;
-	nyas_shader_desc pbr_descriptor = { .name = "pbr",
-		                                .data_count = 7 * 4, // 7 vec4
-		                                .tex_count = 4,
-		                                .cubemap_count = 0,
-		                                .common_data_count = 6 * 4, // 6 vec4
-		                                .common_tex_count = 1,
-		                                .common_cubemap_count = 2 };
+
 	shader = nyas_shader_create(g_shader_descriptors.pbr);
-
-	nyas_shader_desc sky_descriptor = { .name = "skybox",
-		                                .data_count = 0,
-		                                .tex_count = 0,
-		                                .cubemap_count = 0,
-		                                .common_data_count = 4 * 4, // mat4
-		                                .common_tex_count = 0,
-		                                .common_cubemap_count = 1 };
 	skybox_sh = nyas_shader_create(g_shader_descriptors.sky);
-
-	nyas_shader_desc img_descriptor = {
-		.name = "fullscreen-img", // fullscreen quad with texture
-		.data_count = 0,
-		.tex_count = 0,
-		.cubemap_count = 0,
-		.common_data_count = 0,
-		.common_tex_count = 1,
-		.common_cubemap_count = 0
-	};
 	fs_sh = nyas_shader_create(g_shader_descriptors.fullscreen_img);
-
-	nyas_shader_desc eqr_descriptor = {
-		.name = "eqr-to-cube", // environment image to cubemap
-		.data_count = 4 * 4,
-		.tex_count = 0,
-		.cubemap_count = 0,
-		.common_data_count = 0,
-		.common_tex_count = 1,
-		.common_cubemap_count = 0
-	};
 	eqr_sh = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
-
-	nyas_shader_desc pref_descriptor = {
-		.name = "prefilter-env", // environment prefilter
-		.data_count = 5 * 4,
-		.tex_count = 0,
-		.cubemap_count = 0,
-		.common_data_count = 0,
-		.common_tex_count = 0,
-		.common_cubemap_count = 1
-	};
 	pref_sh = nyas_shader_create(g_shader_descriptors.prefilter);
-
-	nyas_shader_desc lut_descriptor = { .name = "lut-gen", // look-up table
-		                                .data_count = 0,
-		                                .tex_count = 0,
-		                                .cubemap_count = 0,
-		                                .common_data_count = 0,
-		                                .common_tex_count = 0,
-		                                .common_cubemap_count = 0 };
 	lut_sh = nyas_shader_create(g_shader_descriptors.lut);
 
-	int envflags = nyas_tex_flags(3, true, true, false, false, false, false);
-	e.env = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
-	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
+	e.env = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1,
+	                      g_tex_flags.env);
+	e.envirr = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1,
+	                         g_tex_flags.env);
 
-	int alb = nyas_tex_flags(3, false, false, false, false, true, true);
-	e.albedo = nyas_tex_load("../pbr/assets/tex/peeling/peeling_A.png", 1, g_tex_flags.albedo);
-	int n = nyas_tex_flags(3, false, true, false, false, true, true);
-	e.normal = nyas_tex_load("../pbr/assets/tex/peeling/peeling_N.png", 1, g_tex_flags.normal);
-	int r_m = nyas_tex_flags(1, false, true, false, false, true, true);
-	e.roughness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_R.png", 1, g_tex_flags.pbr_map);
-	e.metalness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_M.png", 1, g_tex_flags.pbr_map);
+	e.albedo = nyas_tex_load("../pbr/assets/tex/peeling/peeling_A.png", 1,
+	                         g_tex_flags.albedo);
+	e.normal = nyas_tex_load("../pbr/assets/tex/peeling/peeling_N.png", 1,
+	                         g_tex_flags.normal);
+	e.roughness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_R.png", 1,
+	                            g_tex_flags.pbr_map);
+	e.metalness = nyas_tex_load("../pbr/assets/tex/peeling/peeling_M.png", 1,
+	                            g_tex_flags.pbr_map);
 
-	*nyas_shader_tex(fs_sh) = nyas_fb_color(fb);
-
-	int sky_flags = nyas_tex_flags(3, true, true, true, false, false, false);
 	skybox_tex = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
 	e.upbr.use_albedo_map = 1.0f;
 	e.upbr.normal_map_intensity = 1.0f;
 	e.upbr.use_pbr_maps = 1.0f;
-	e.upbr.tiling_x = 4.0f;
-	e.upbr.tiling_y = 4.0f;
+	e.upbr.tiling_x = 1.0f;
+	e.upbr.tiling_y = 1.0f;
 	e.e = nyas_entity_create();
 	float position[3] = { 0.0f, 0.0f, 0.0f };
 	mat4_translation(e.e->transform, e.e->transform, position);
-	e.e->mesh = nyas_mesh_create();
-	nyas_mesh_load_obj(e.e->mesh, "assets/obj/matball.obj");
+	e.e->mesh = nyas_mesh_load_file("assets/obj/matball.obj");
 	e.e->mat = nyas_mat_pers(shader);
 	*(nyas_pbr_desc_unit *)e.e->mat.ptr = e.upbr;
 	nyas_tex *t = nyas_mat_tex(&e.e->mat);
@@ -127,11 +72,8 @@ Init(void)
 	t[2] = e.roughness;
 	t[3] = e.normal;
 
-	int lutflgs = nyas_tex_flags(2, true, true, false, false, false, false);
 	nyas_tex lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
-	int irrflgs = nyas_tex_flags(3, true, true, true, false, false, false);
 	nyas_tex irr = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	int preflgs = nyas_tex_flags(3, true, true, true, false, false, true);
 	nyas_tex pref = nyas_tex_empty(128, 128, g_tex_flags.prefilter);
 
 	vec4_assign(((nyas_pbr_desc_scene *)nyas_shader_data(shader))->sunlight,
@@ -154,6 +96,36 @@ Init(void)
 		           .lut = lut };
 
 	GeneratePbrEnv(&env);
+	nyas_v2i vp = nyas_window_size();
+	fb = nyas_fb_create();
+	int texflags = (TF_FLOAT | TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | 3);
+	nyas_tex fb_tex = nyas_tex_empty(vp.x, vp.y, texflags);
+	nyas_tex fb_depth = nyas_tex_empty(vp.x, vp.y, TF_DEPTH);
+	*nyas_shader_tex(fs_sh) = fb_tex;
+
+	nyas_cmd *set_fb_tex = nyas_cmd_alloc();
+	set_fb_tex->data.set_fb.fb = fb;
+	set_fb_tex->data.set_fb.vp_x = vp.x;
+	set_fb_tex->data.set_fb.vp_y = vp.y;
+	set_fb_tex->data.set_fb.attach.type = NYPX_SLOT_COLOR0;
+	set_fb_tex->data.set_fb.attach.tex = fb_tex;
+	set_fb_tex->data.set_fb.attach.mip_level = 0;
+	set_fb_tex->data.set_fb.attach.face = -1;
+	set_fb_tex->execute = nyas_setfb_fn;
+
+	nyas_cmd *set_fb_depth = nyas_cmd_alloc();
+	set_fb_depth->data.set_fb.fb = fb;
+	set_fb_depth->data.set_fb.vp_x = vp.x;
+	set_fb_depth->data.set_fb.vp_y = vp.y;
+	set_fb_depth->data.set_fb.attach.type = NYPX_SLOT_DEPTH;
+	set_fb_depth->data.set_fb.attach.tex = fb_depth;
+	set_fb_depth->data.set_fb.attach.mip_level = 0;
+	set_fb_depth->data.set_fb.attach.face = -1;
+	set_fb_depth->execute = nyas_setfb_fn;
+	set_fb_depth->next = NULL;
+
+	set_fb_tex->next = set_fb_depth;
+	nyas_cmd_add(set_fb_tex);
 }
 
 void
@@ -163,6 +135,7 @@ Update(nyas_chrono *dt)
 	*dt = nyas_time();
 	nyas_io_poll();
 	nyas_input_read();
+	nyas_v2i vp = nyas_window_size();
 	nyas_camera_control(&camera, delta);
 
 	nyas_pbr_desc_scene *common_pbr = nyas_shader_data(shader);
@@ -171,8 +144,9 @@ Update(nyas_chrono *dt)
 
 	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = fb;
-	fbuff->data.set_fb.vp_x = NYAS_IGNORE;
-	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->data.set_fb.vp_x = vp.x;
+	fbuff->data.set_fb.vp_y = vp.y;
+	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff->execute = nyas_setfb_fn;
 
 	nyas_cmd *rops = nyas_cmd_alloc();
@@ -224,7 +198,9 @@ Update(nyas_chrono *dt)
 
 	fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = NYAS_DEFAULT;
-	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->data.set_fb.vp_x = vp.x;
+	fbuff->data.set_fb.vp_y = vp.y;
+	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff->execute = nyas_setfb_fn;
 	draw_sky->next = fbuff;
 
@@ -272,7 +248,7 @@ main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS Asset Inspector", 800, 600, true);
+	nyas_io_init("NYAS Asset Inspector", 1920, 1080, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 	nyas_imgui_init();

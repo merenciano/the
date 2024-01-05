@@ -7,8 +7,7 @@ nyas_resourcemap_mesh_file(nyas_resourcemap *rm,
                            const char *name,
                            const char *path)
 {
-	nyas_mesh mesh = nyas_mesh_create();
-	nyas_mesh_load_obj(mesh, path);
+	nyas_mesh mesh = nyas_mesh_load_file(path);
 	nyas_hmap_insert(rm->meshes, name, &mesh);
 }
 
