@@ -73,7 +73,7 @@ nyas_imgui_draw(void)
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED)) {
 				nyas_pbr_desc_unit *unit = e->mat.ptr;
 				nyas_pbr_desc_scene *scene =
-				  ((struct nyas_internal_shader *)shader_pool)->common;
+				  ((struct nyas_internal_shader *)shader_pool + e->mat.shader)->common;
 				struct nyas_internal_texture *tex =
 				  nyas_arr_at(tex_pool, *nyas_mat_tex(&e->mat));
 

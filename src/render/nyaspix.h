@@ -6,8 +6,7 @@
 
 typedef uint16_t nypx_index;
 
-enum nypx_vertex_attributes
-{
+enum nypx_vertex_attributes {
 	VA_POSITION = 0,
 	VA_NORMAL,
 	VA_TANGENT,
@@ -16,8 +15,7 @@ enum nypx_vertex_attributes
 	VTXATTR_COUNT
 };
 
-enum nypx_texture_flags
-{
+enum nypx_texture_flags {
 	TF_CHANNELS = 0, // 0 and 1 bits
 	TF_CUBE = 1 << 2,
 	TF_DEPTH = 1 << 3,
@@ -30,14 +28,12 @@ enum nypx_texture_flags
 	TF_LINEAR_COLOR = 1 << 10
 };
 
-typedef struct nypx_res
-{
+typedef struct nypx_res {
 	int id; // internal handle
 	int flags;
 } nypx_res;
 
-enum nypx_framebuffer_slots
-{
+enum nypx_framebuffer_slots {
 	NYPX_SLOT_DEPTH,
 	NYPX_SLOT_STENCIL,
 	NYPX_SLOT_DEPTH_STENCIL,
@@ -49,8 +45,7 @@ enum nypx_framebuffer_slots
 	NYPX_SLOT_COLOR5,
 };
 
-enum nypx_cube_faces
-{
+enum nypx_cube_faces {
 	NYPX_CUBE_POS_X,
 	NYPX_CUBE_NEG_X,
 	NYPX_CUBE_POS_Y,
@@ -60,8 +55,7 @@ enum nypx_cube_faces
 	NYPX_CUBE_FACE_COUNT
 };
 
-typedef struct nypx_fb
-{
+typedef struct nypx_fb {
 	nypx_res res;
 } nypx_fb;
 
@@ -76,14 +70,14 @@ void nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid);
 void nypx_mesh_use(uint32_t id);
 
 void nypx_mesh_set(uint32_t id,
-				   uint32_t vid,
-				   uint32_t iid,
-				   uint32_t shader_id,
-				   int attrib,
-				   float *vtx,
-				   size_t vsize,
-				   nypx_index *idx,
-				   size_t elements);
+                   uint32_t vid,
+                   uint32_t iid,
+                   uint32_t shader_id,
+                   int attrib,
+                   float *vtx,
+                   size_t vsize,
+                   nypx_index *idx,
+                   size_t elements);
 
 void nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
@@ -111,11 +105,7 @@ void nypx_fb_create(uint32_t *id);
 // slot: framebuffer attachment
 // level: mipmap level
 // face: cubemap face (see enum nypx_cube_faces)
-void nypx_fb_set(uint32_t id,
-				 uint32_t texid,
-				 int slot,
-				 int level,
-				 int face);
+void nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face);
 
 void nypx_fb_use(uint32_t id);
 
@@ -125,8 +115,7 @@ void nypx_clear(int color, int depth, int stencil);
 
 void nypx_draw(int elem_count, int half_type); // half_type is uint16_t
 
-enum nypx_blend_func
-{
+enum nypx_blend_func {
 	NYPX_BLEND_INVALID = 0,
 	NYPX_BLEND_ONE,
 	NYPX_BLEND_SRC_ALPHA,
@@ -134,16 +123,14 @@ enum nypx_blend_func
 	NYPX_BLEND_ZERO,
 };
 
-enum nypx_cull_face
-{
+enum nypx_cull_face {
 	NYPX_CULL_CURRENT = 0,
 	NYPX_CULL_FRONT,
 	NYPX_CULL_BACK,
 	NYPX_CULL_FRONT_AND_BACK,
 };
 
-enum nypx_depth_func
-{
+enum nypx_depth_func {
 	// TODO: Add as needed.
 	NYPX_DEPTH_CURRENT = 0,
 	NYPX_DEPTH_LEQUAL,

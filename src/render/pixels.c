@@ -66,6 +66,8 @@ nyas__file_reader(void *ctx,
 
 	FILE *f = fopen(path, "rb");
 	if (!f) {
+		*buf = NULL;
+		*size = 0;
 		return;
 	}
 
@@ -415,7 +417,7 @@ nyas__mesh_set_cube(mesh_t *mesh)
 	}
 
 	if (mesh->idx) {
-		nyas_free(mesh->vtx);
+		nyas_free(mesh->idx);
 	}
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
@@ -441,7 +443,7 @@ nyas__mesh_set_sphere(mesh_t *mesh, int x_segments, int y_segments)
 	}
 
 	if (mesh->idx) {
-		nyas_free(mesh->vtx);
+		nyas_free(mesh->idx);
 	}
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
@@ -500,7 +502,7 @@ nyas__mesh_set_quad(mesh_t *mesh)
 	}
 
 	if (mesh->idx) {
-		nyas_free(mesh->vtx);
+		nyas_free(mesh->idx);
 	}
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
@@ -675,6 +677,10 @@ nyas__mesh_set_msh(mesh_t *mesh, const char *path)
 	char *data;
 	size_t sz;
 	nyas__file_reader(NULL, path, 0, NULL, &data, &sz);
+	if (!data || !sz) {
+		NYAS_LOG_ERR("Problem reading file %s", path);
+		return;
+	}
 
 	if (mesh->vtx) {
 		nyas_free(mesh->vtx);

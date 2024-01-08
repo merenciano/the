@@ -3,7 +3,6 @@
 #define COLOR                u_data[4].xyz
 #define USE_ALBEDO_MAP       u_data[4].w
 #define USE_PBR_MAPS         u_data[5].x
-#define REFLECTANCE          u_data[5].w
 #define ROUGHNESS            u_data[6].x
 #define METALLIC             u_data[6].y
 #define NORMAL_MAP_INTENSITY u_data[6].z
@@ -42,29 +41,32 @@ uniform sampler2D   u_tex[4];
 uniform sampler2D   u_common_tex[1];
 uniform samplerCube u_common_cube[2];
 
-// Normal distribution function (from filament documentation)
-float Distribution_GGX(float noh, float roughness) {
+// GGX NDF
+float NormalDistribution(float noh, float roughness) {
     float a = noh * roughness;
-    float k = roughness / (1.0 - noh * noh + a * a);
+    float k = a / ((1.0 - noh * noh) + a * a);
     return k * k * (1.0 / kPI);
 }
 
-// Correlated Smith approximation (from filament documentation)
-float Geometric_SmithGGX(float nol, float nov, float a) { // a is roughness
-    float v = nol * (nov * (1.0 - a) + a);
-    float l = nov * (nol * (1.0 - a) + a);
-    return 0.5 / (v + l);
+// GGX Smith
+float GeometricAttenuation(float nol, float nov, float roughness) {
+    float a2 = roughness * roughness;
+    float lv = nol * sqrt(nov * nov * (1.0 - a2) + a2);
+    float ll = nov * sqrt(nol * nol * (1.0 - a2) + a2);
+    return 0.5 / (lv + ll);
 }
 
 // Schlick's approximation
-vec3 Fschlick(vec3 f0, float f90, float voh) {
-    return f0 + (f90 - f0) * pow(1.0 - voh, 5.0);
+vec3 Fschlick(vec3 f0, float u)
+{
+    float f = pow(1.0 - u, 5.0);
+    return f + f0 * (1.0 - f);
 }
 
-vec3 Fresnel(vec3 f0, float voh)
+vec3 Fresnel(vec3 f0, float loh)
 {
     float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
-    return Fschlick(f0, f90, voh);
+    return Fschlick(f0, f90, loh);
 }
 
 float SpecularAA(vec3 n, float a)
@@ -92,8 +94,8 @@ void main()
     normal = normalize(v_in.tbn * normal);
     normal = mix(normalize(v_in.tbn[2]), clamp(normal, -1.0, 1.0), NORMAL_MAP_INTENSITY);
 
-    vec3 diffuse_color = vec3((1.0 - metalness) * albedo);
-    vec3 f0 = 0.16 * REFLECTANCE * REFLECTANCE * (1.0 - metalness) + albedo * metalness;
+    // Fresnel at normal incidence
+    vec3 f0 = mix(kFdielectric, albedo, metalness);
 
     vec3 view = normalize(CAMERA_POSITION - v_in.position);
     vec3 light = -LIGHT_DIRECTION;
@@ -105,32 +107,32 @@ void main()
     float noh = clamp(dot(normal, hlv), 0.0, 1.0);
     float voh = clamp(dot(view, hlv), 0.0, 1.0);
 
-    float loh = clamp(dot(light, hlv), 0.0, 1.0);
-
     float roughness = perceptual_roughness * perceptual_roughness;
-    vec3  f = Fresnel(f0, loh);
-    float d = Distribution_GGX(noh, roughness);
-    float g = Geometric_SmithGGX(nol, nov, roughness);
+    roughness = SpecularAA(normal, roughness);
+    vec3  f = Fresnel(f0, voh);
+    float d = NormalDistribution(noh, roughness);
+    float g = GeometricAttenuation(nol, nov, roughness);
 
     // Diffuse
-    //vec3 kd = mix(vec3(1.0) - f, vec3(0.0), metalness);
-    vec3 diffuse_brdf = (1 / kPI) * diffuse_color;
+    vec3 kd = mix(vec3(1.0) - f, vec3(0.0), metalness);
+    vec3 diffuse_brdf = kd * albedo;
 
     // Specular
-    vec3 specular_brdf = ((d * g) * f);
+    vec3 specular_brdf = ((d * g) * f) / max(kEpsilon, 4.0 * nol * nov);
     vec3 direct_lighting = (diffuse_brdf + specular_brdf) * LIGHT_INTENSITY * nol;
 
     // IBL
+    vec3 irradiance = texture(IRRADIANCE_MAP, normal).rgb;
+    //vec3 f_ibl = Fresnel(f0, nov);
+    //vec3 kd_ibl = mix(vec3(1.0) - f_ibl, vec3(0.0), metalness);
+    //vec3 diffuse_ibl = kd_ibl * albedo * irradiance;
+    vec3 ibl_d = irradiance * (albedo / kPI);
+
     vec3 r = reflect(-view, normal);
     float lod = perceptual_roughness * kMaxPrefilterLod;
     vec3 specular_irradiance = textureLod(PREFILTER_MAP, r, lod).rgb;
-    vec2 dfg_lut = texture(LUT_MAP, vec2(nov, perceptual_roughness)).rg;
-    vec3 ibl_dfg = mix(dfg_lut.xxx, dfg_lut.yyy, f0);
-    vec3 specular_ibl = ibl_dfg * specular_irradiance;
-
-    vec3 irradiance = texture(IRRADIANCE_MAP, normal).rgb;
-    vec3 diffuse_ibl = irradiance * diffuse_color * (1.0 - ibl_dfg) * (1 / kPI);
-
+    vec2 specular_brdf_ibl = texture(LUT_MAP, vec2(nov, perceptual_roughness)).rg;
+    vec3 specular_ibl = (f0 * specular_brdf_ibl.x + specular_brdf_ibl.y) * specular_irradiance;
     vec3 ambient_lighting = diffuse_ibl + specular_ibl;
 
     FragColor = vec4(direct_lighting + ambient_lighting, 1.0);

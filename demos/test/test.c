@@ -60,6 +60,7 @@ Init(void)
 	e.upbr.use_pbr_maps = 1.0f;
 	e.upbr.tiling_x = 1.0f;
 	e.upbr.tiling_y = 1.0f;
+	e.upbr.reflectance = 0.5f;
 	e.e = nyas_entity_create();
 	float position[3] = { 0.0f, 0.0f, 0.0f };
 	mat4_translation(e.e->transform, e.e->transform, position);
@@ -74,7 +75,7 @@ Init(void)
 
 	nyas_tex lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
 	nyas_tex irr = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	nyas_tex pref = nyas_tex_empty(128, 128, g_tex_flags.prefilter);
+	nyas_tex pref = nyas_tex_empty(256, 256, g_tex_flags.prefilter);
 
 	vec4_assign(((nyas_pbr_desc_scene *)nyas_shader_data(shader))->sunlight,
 	            e.light);
@@ -96,36 +97,9 @@ Init(void)
 		           .lut = lut };
 
 	GeneratePbrEnv(&env);
-	nyas_v2i vp = nyas_window_size();
 	fb = nyas_fb_create();
-	int texflags = (TF_FLOAT | TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | 3);
-	nyas_tex fb_tex = nyas_tex_empty(vp.x, vp.y, texflags);
-	nyas_tex fb_depth = nyas_tex_empty(vp.x, vp.y, TF_DEPTH);
+	nyas_tex fb_tex = InitMainFramebuffer(fb);
 	*nyas_shader_tex(fs_sh) = fb_tex;
-
-	nyas_cmd *set_fb_tex = nyas_cmd_alloc();
-	set_fb_tex->data.set_fb.fb = fb;
-	set_fb_tex->data.set_fb.vp_x = vp.x;
-	set_fb_tex->data.set_fb.vp_y = vp.y;
-	set_fb_tex->data.set_fb.attach.type = NYPX_SLOT_COLOR0;
-	set_fb_tex->data.set_fb.attach.tex = fb_tex;
-	set_fb_tex->data.set_fb.attach.mip_level = 0;
-	set_fb_tex->data.set_fb.attach.face = -1;
-	set_fb_tex->execute = nyas_setfb_fn;
-
-	nyas_cmd *set_fb_depth = nyas_cmd_alloc();
-	set_fb_depth->data.set_fb.fb = fb;
-	set_fb_depth->data.set_fb.vp_x = vp.x;
-	set_fb_depth->data.set_fb.vp_y = vp.y;
-	set_fb_depth->data.set_fb.attach.type = NYPX_SLOT_DEPTH;
-	set_fb_depth->data.set_fb.attach.tex = fb_depth;
-	set_fb_depth->data.set_fb.attach.mip_level = 0;
-	set_fb_depth->data.set_fb.attach.face = -1;
-	set_fb_depth->execute = nyas_setfb_fn;
-	set_fb_depth->next = NULL;
-
-	set_fb_tex->next = set_fb_depth;
-	nyas_cmd_add(set_fb_tex);
 }
 
 void

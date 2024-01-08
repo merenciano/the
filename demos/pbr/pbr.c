@@ -69,13 +69,10 @@ struct Textures g_tex;
 static nyas_resourcemap g_resources;
 nyas_framebuffer g_fb;
 
-static float g_sunlight[4] = { 0.0f, -1.0f, -0.1f, 0.0f };
-
 void
 Init(void)
 {
-	g_fb = nyas_fb_create(nyas_window_width(), nyas_window_height(), true,
-	                      true);
+	g_fb = nyas_fb_create();
 	g_resources.meshes = nyas_hmap_create(8, sizeof(nyas_mesh));
 
 	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
@@ -85,13 +82,12 @@ Init(void)
 	g_shaders.lut_gen = nyas_shader_create(g_shader_descriptors.lut);
 	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
 
-	*nyas_shader_tex(g_shaders.fullscreen_img) = nyas_fb_color(g_fb);
 	nyas_resourcemap *rm = &g_resources;
 
 	nyas_resourcemap_mesh_file(rm, "MatBall", "assets/obj/matball.obj");
 	g_tex.sky = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
 	g_tex.irradiance = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	g_tex.prefilter = nyas_tex_empty(128, 128, g_tex_flags.prefilter);
+	g_tex.prefilter = nyas_tex_empty(256, 256, g_tex_flags.prefilter);
 	g_tex.lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
 
 	g_tex.gold_a = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_A.png", 1, g_tex_flags.albedo);
@@ -150,6 +146,7 @@ Init(void)
 	pbr.color[2] = 1.0f;
 	pbr.tiling_x = 4.0f;
 	pbr.tiling_y = 4.0f;
+	pbr.reflectance = 0.5f;
 	pbr.use_albedo_map = 1.0f;
 	pbr.use_pbr_maps = 1.0f;
 	pbr.metallic = 0.5f;
@@ -318,6 +315,12 @@ Init(void)
 		t[3] = g_tex.foam_n;
 	}
 
+	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
+	common_pbr->sunlight[0] = 0.0f;
+	common_pbr->sunlight[1] = -1.0f;
+	common_pbr->sunlight[2] = -0.1f;
+	common_pbr->sunlight[4] = 0.0f;
+
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
 	pbr_scene_tex[0] = g_tex.lut;
 	pbr_scene_tex[1] = g_tex.irradiance;
@@ -341,6 +344,8 @@ Init(void)
 	};
 
 	GeneratePbrEnv(&env);
+	nyas_tex fb_tex = InitMainFramebuffer(g_fb);
+	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
 }
 
 void
@@ -351,18 +356,19 @@ Update(nyas_chrono *chrono)
 
 	nyas_io_poll();
 	nyas_input_read();
+	nyas_v2i vp = nyas_window_size();
 	nyas_camera_control(&camera, dt);
 
 	/* PBR common shader data. */
 	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	nyas_camera_pos(common_pbr->camera_position, &camera);
-	vec4_assign(common_pbr->sunlight, g_sunlight);
 
 	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = g_fb;
-	fbuff->data.set_fb.vp_x = NYAS_IGNORE;
-	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->data.set_fb.vp_x = vp.x;
+	fbuff->data.set_fb.vp_y = vp.y;
+	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff->execute = nyas_setfb_fn;
 
 	nyas_cmd *rops = nyas_cmd_alloc();
@@ -414,7 +420,9 @@ Update(nyas_chrono *chrono)
 
 	fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = NYAS_DEFAULT;
-	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->data.set_fb.vp_x = vp.x;
+	fbuff->data.set_fb.vp_y = vp.y;
+	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff->execute = nyas_setfb_fn;
 	draw_sky->next = fbuff;
 

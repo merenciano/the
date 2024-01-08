@@ -23,34 +23,10 @@ nypx__check_handle(int h, void *arr)
 	            "Out of bounds handle");
 }
 
-/*enum vtxattr {
-	A_POSITION = 0,
-	A_NORMAL,
-	A_TANGENT,
-	A_BITANGENT,
-	A_UV,
-	VERTEX_ATTRIBUTE_COUNT
-};*/
-
-typedef enum resource_flags {
-	RF_DIRTY = 1 << 0,
-	RF_FREE_AFTER_LOAD = 1 << 1
-} resource_flags;
-
 typedef struct resource {
 	int id;
 	int flags;
 } r_resource;
-
-/*typedef struct {
-	r_resource res;
-	float *vtx;
-	nyas_idx *idx;
-	unsigned int vtx_size;
-	unsigned int elements;
-	int attr_flags;
-	unsigned int internal_buffers_id[2];
-} r_mesh;*/
 
 enum nyas_internal_resource_flags {
 	NYAS_IRF_DIRTY = 1U << 3,

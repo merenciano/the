@@ -2,7 +2,6 @@
 
 #include "core/io.h"
 #include "core/log.h"
-#include "core/mem.h"
 
 #include <string.h>
 
@@ -20,51 +19,10 @@ typedef struct nyas_internal_texture tex_t;
 typedef struct nyas_internal_mesh mesh_t;
 typedef struct nyas_internal_framebuffer fb_t;
 
-typedef struct {
-	GLint internal_format;
-	GLenum format;
-	GLenum type;
-	GLint wrap;
-	GLint min_filter;
-	GLint mag_filter;
-} nyas_texcube_cnfg;
-
-typedef struct {
-	GLint internal_format;
-	GLenum format;
-	GLenum type;
-	GLint wrap;
-	GLint filter;
-	int channels;
-} nyas_tex_cnfg;
-
-/*
-  Attribute's number of elements for each vertex.
-  The array's position must match with the
-  enum (nyas_VertexAttributes) value of the attribute.
-*/
-static const GLint attrib_sizes[VTXATTR_COUNT] = { 3, 3, 3, 3, 2 };
-
-/*
-  Attribute's layout name in the shader.
-  The array's position must match with the attribute's
-  value at enum nyas_VertexAttributes.
-*/
-static const char *attrib_names[VTXATTR_COUNT] = { "a_position", "a_normal",
-	                                               "a_tangent", "a_bitangent",
-	                                               "a_uv" };
-
 static bool
 nypx__resource_check(void *rsrc)
 {
 	return rsrc && ((r_resource *)rsrc)->id >= 0;
-}
-
-static bool
-nyas__is_dirty(void *resource)
-{
-	r_resource *r = resource;
-	return r->flags & RF_DIRTY;
 }
 
 static void
@@ -315,11 +273,11 @@ nyas_draw_fn(nyas_cmdata *data)
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
 	}
 
-	glBindVertexArray(imsh->res.id);
+	nypx_mesh_use(imsh->res.id);
 	shdr_t *s = nyas_arr_at(shader_pool, data->draw.material.shader);
 	nyas__set_shader_data(s, data->draw.material.ptr, false);
 	glDrawElements(GL_TRIANGLES, imsh->elem_count, ELEMENT_TYPE, 0);
-	glBindVertexArray(0);
+	nypx_mesh_use(0);
 }
 
 void
@@ -362,7 +320,7 @@ nyas_setfb_fn(nyas_cmdata *data)
 		nypx_fb_use(0);
 	} else {
 		fb_t *ifb = nyas__sync_gpu_fb(d->fb);
-		nypx_fb_use(d->fb);
+		nypx_fb_use(ifb->res.id);
 		if (d->attach.type != NYAS_IGNORE) {
 			tex_t *t = nyas__sync_gpu_tex(d->attach.tex);
 			nypx_fb_set(ifb->res.id, t->res.id, d->attach.type,

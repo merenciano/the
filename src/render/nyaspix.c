@@ -98,7 +98,7 @@ nypx__texcnfg(int flags)
 		}
 	}
 
-	if ((flags & TF_MIPMAP) & TF_CUBE) {
+	if ((flags & (TF_MIPMAP | TF_CUBE)) == (TF_MIPMAP | TF_CUBE)) {
 		if (flags & (TF_MAG_FILTER_LERP | TF_MAG_MIP_FILTER_LERP)) {
 			cnfg.min = GL_LINEAR_MIPMAP_LINEAR;
 		} else if (flags & TF_MAG_MIP_FILTER_LERP) {
@@ -107,6 +107,16 @@ nypx__texcnfg(int flags)
 			cnfg.min = GL_LINEAR_MIPMAP_NEAREST;
 		} else {
 			cnfg.min = GL_NEAREST_MIPMAP_NEAREST;
+		}
+
+		if (flags & (TF_MAG_FILTER_LERP | TF_MAG_MIP_FILTER_LERP)) {
+			cnfg.mag = GL_LINEAR_MIPMAP_LINEAR;
+		} else if (flags & TF_MAG_MIP_FILTER_LERP) {
+			cnfg.mag = GL_NEAREST_MIPMAP_LINEAR;
+		} else if (flags & TF_MAG_FILTER_LERP) {
+			cnfg.mag = GL_LINEAR_MIPMAP_NEAREST;
+		} else {
+			cnfg.mag = GL_NEAREST_MIPMAP_NEAREST;
 		}
 	}
 
@@ -383,7 +393,7 @@ nypx__fb_attach_gl(int slot)
 	case NYPX_SLOT_DEPTH_STENCIL:
 		return GL_DEPTH_STENCIL_ATTACHMENT;
 	default:
-		return GL_COLOR_ATTACHMENT0 - NYPX_SLOT_COLOR0 + slot;
+		return (GL_COLOR_ATTACHMENT0 - NYPX_SLOT_COLOR0) + slot;
 	}
 }
 

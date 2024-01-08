@@ -1,6 +1,7 @@
 #include "nyas.h"
 #include <mathc.h>
 #include <string.h>
+#include "../helpersdemo.h"
 
 typedef struct {
 	float model[16];
@@ -24,8 +25,7 @@ Init(void *context)
 {
 	HelloCtx *ctx = context;
 	ctx->chrono = nyas_time();
-	nyas_v2i sz = nyas_window_size();
-	ctx->fb = nyas_fb_create(sz.x, sz.y, true, true);
+	ctx->fb = nyas_fb_create();
 
 	nyas_shader_desc hello_desc = { .name = "hello",
 		                            .data_count = sizeof(HelloMatData) / 4,
@@ -54,8 +54,6 @@ Init(void *context)
 		                             .common_cubemap_count = 1 };
 	ctx->skybox = nyas_shader_create(&skybox_desc);
 
-	*nyas_shader_tex(ctx->fs_img) = nyas_fb_color(ctx->fb);
-
 	int sky_flags = nyas_tex_flags(3, false, false, true, false, false, false);
 	ctx->skycube = nyas_tex_load("./assets/tex/%ccave.png", 0, sky_flags);
 	*nyas_shader_tex(ctx->skybox) = ctx->skycube;
@@ -68,6 +66,8 @@ Init(void *context)
 	ctx->e->mesh = SPHERE_MESH;
 	ctx->e->mat = nyas_mat_pers(ctx->hellomat);
 	*(HelloMatData *)ctx->e->mat.ptr = ctx->hello_mat;
+
+	*nyas_shader_tex(ctx->fs_img) = InitMainFramebuffer(ctx->fb);
 }
 
 void
@@ -79,11 +79,14 @@ Update(void *context)
 
 	nyas_io_poll();
 	nyas_input_read();
+	nyas_v2i vp = nyas_window_size();
 	nyas_camera_control(&camera, dt);
 
 	nyas_cmd *fbuff = nyas_cmd_alloc();
 	fbuff->data.set_fb.fb = ctx->fb;
-	fbuff->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff->data.set_fb.vp_x = vp.x;
+	fbuff->data.set_fb.vp_y = vp.y;
+	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff->execute = nyas_setfb_fn;
 
 	nyas_cmd *rops = nyas_cmd_alloc();
@@ -136,7 +139,9 @@ Update(void *context)
 
 	nyas_cmd *fbuff2 = nyas_cmd_alloc();
 	fbuff2->data.set_fb.fb = NYAS_DEFAULT;
-	fbuff2->data.set_fb.attachment.slot = NYAS_IGNORE;
+	fbuff2->data.set_fb.vp_x = vp.x;
+	fbuff2->data.set_fb.vp_y = vp.y;
+	fbuff2->data.set_fb.attach.type = NYAS_IGNORE;
 	fbuff2->execute = nyas_setfb_fn;
 	draw_sky->next = fbuff2;
 
