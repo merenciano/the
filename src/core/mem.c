@@ -1,78 +1,81 @@
 #include "mem.h"
-#include "buddy.h"
+
+#include "log.h"
 #include <stdlib.h>
 
-static uint8_t *mem;
-static uint8_t *offset;
+#define MEM_ALIGN 8
+#define MEM_ALIGN_MOD(ADDRESS) (ADDRESS & (MEM_ALIGN - 1))
+
+static unsigned char *mem;
+static size_t offset;
 static size_t capacity;
 
-void *THE_PersistentAlloc(size_t size, size_t align)
+void *
+nyas_mem_reserve(size_t size)
 {
-    THE_ASSERT((size_t)(offset + size - mem) <= capacity, "Out of memory");
-    if ((size_t)(offset + size - mem) > capacity) {
-	    THE_SLOG_ERROR("Persistent allocation failed, Out of memory!");
-        return NULL;
-    }
-
-    void *ret_mem = (void*)offset;
-    offset += size;
-	if (align != 0 && (size_t)offset % align) //TODO: think about a fancier align method
-	{
-		offset += (align - ((size_t)offset % align));
-	}
-    return ret_mem; 
+	offset += MEM_ALIGN_MOD(MEM_ALIGN - MEM_ALIGN_MOD(offset));
+	offset += size;
+	NYAS_ASSERT(offset <= capacity && "Allocator out of memory");
+	return mem + offset - size; 
 }
 
-void *THE_Alloc(size_t size)
+void *nyas_alloc(size_t size)
 {
-	return THE_BuddyAlloc(size);
+	return malloc(size);
 }
 
-void *THE_Calloc(s32 elem_count, size_t elem_size)
+void *
+nyas_calloc(size_t elem_count, size_t elem_size)
 {
-	return THE_BuddyCalloc(elem_count, elem_size);
+	return calloc(elem_count, elem_size);
 }
 
-void *THE_Realloc(void *ptr, size_t size)
+void *
+nyas_realloc(void *ptr, size_t size)
 {
-	return THE_BuddyRealloc(ptr, size);
+	return realloc(ptr, size);
 }
 
-void THE_Free(void *ptr)
+void
+nyas_free(void *ptr)
 {
-	THE_BuddyFree(ptr);
+	free(ptr);
 }
 
-void THE_MemInit(size_t size)
+void
+nyas_mem_init(size_t size)
 {
-	mem = (u8*)malloc(size);
+	mem = malloc(size); // TODO: mem minimal instance in stack memory in order to alloc this chunk for itself
+	NYAS_ASSERT(!((size_t)mem % MEM_ALIGN) && "WTF");
 	if (!mem) {
-		THE_SLOG_ERROR("Couldn't allocate THE memory.");
+		NYAS_LOG_ERR("Error allocating initial mem chunk.");
 		exit(1);
 	}
 
-	offset = mem;
+	offset = 0;
 	capacity = size;
-	THE_BuddyInit(1U << 29); // 1GB
 }
 
-void THE_MemFreeAll()
+void
+nyas_mem_freeall(void)
 {
 	free(mem);
 	mem = NULL;
 }
 
-float THE_MemUsedMB()
+float
+nyas_mem_mega_used(void)
 {
-	return THE_MemUsedBytes() / (1024.0f * 1024.0f);
+	return nyas_mem_bytes_used() / (1024.0f * 1024.0f);
 }
 
-size_t THE_MemUsedBytes()
+size_t nyas_mem_bytes_used(void)
 {
-	return offset - mem;
+	return offset;
 }
 
-size_t THE_MemCapacity()
+size_t
+nyas_mem_capacity(void)
 {
 	return capacity;
 }

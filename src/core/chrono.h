@@ -1,18 +1,15 @@
-#ifndef THE_CORE_CHRONO_H
-#define THE_CORE_CHRONO_H
+#ifndef NYAS_CORE_CHRONO_H
+#define NYAS_CORE_CHRONO_H
 
-#include <time.h>
-typedef struct timespec timespec;
+#include <stdint.h>
 
-typedef struct THE_Chrono {
-	timespec start;
-	timespec end;
-} THE_Chrono;
+#define nyas_elapsed(CHRONO) (nyas_time() - (CHRONO))
+#define nyas_time_sec(CHRONO) ((CHRONO) / 1000000000.0f)
+#define nyas_time_milli(CHRONO) ((CHRONO) / 1000000)
+#define nyas_time_micro(CHRONO) ((CHRONO) / 1000)
+#define nyas_time_nano(CHRONO) (CHRONO)
 
-void THE_ChronoStart(THE_Chrono *chrono);
-void THE_ChronoEnd(THE_Chrono *chrono);
-
-float THE_ChronoDurationSec(THE_Chrono *chrono);
-float THE_ChronoDurationMS(THE_Chrono *chrono);
+typedef int64_t nyas_chrono;
+nyas_chrono nyas_time(void);
 
 #endif

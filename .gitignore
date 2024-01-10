@@ -1,9 +1,13 @@
 .cache/
+.idea/
 .vscode/
 build/
 lib/*.a
 lib/*.so
-extern/cimgui/*.so
-examples/*/imgui.ini
-examples/matball/matballs
-examples/hello/hello
+cmake-build**/
+demos/*/imgui.ini
+demos/pbr/matballs
+demos/pbr/inspector
+demos/hello/hello
+tools/tomsh
+compile_commands.json

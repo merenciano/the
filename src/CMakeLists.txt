@@ -1,43 +1,23 @@
-target_sources(${THE_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/the.h
+target_sources(${LIB_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/config.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/config.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/definitions.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/buddy.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/buddy.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/execution.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_defs.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/manager.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/manager.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.c
-	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/hmap.c
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.h
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/entity.c
-	${CMAKE_CURRENT_SOURCE_DIR}/ecs/transform.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/renderertypes.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/camera.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/camera.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/rendercommands.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/internalresources.c
-	${CMAKE_CURRENT_SOURCE_DIR}/render/material.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/lua-functions.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/lua-functions.c
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/lua-scripting.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/lua-scripting.c
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/resource-map.c
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/helper-functions.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/helper-functions.c
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/imgui-tools.h
-	${CMAKE_CURRENT_SOURCE_DIR}/tools/imgui-tools.c
-	)
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/string.h
+	${CMAKE_CURRENT_SOURCE_DIR}/utils/hmap.h
+	${CMAKE_CURRENT_SOURCE_DIR}/utils/hmap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
+	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
+	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
+	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.c
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h
+	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.c
+)

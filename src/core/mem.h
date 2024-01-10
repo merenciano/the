@@ -1,18 +1,27 @@
-#ifndef THE_CORE_MEM_H
-#define THE_CORE_MEM_H
+#ifndef NYAS_CORE_MEM_H
+#define NYAS_CORE_MEM_H
 
-#include "definitions.h"
+#include <stddef.h>
 
-void *THE_PersistentAlloc(size_t size, size_t align);
-void *THE_Alloc(size_t size);
-void *THE_Calloc(s32 elem_count, size_t elem_size);
-void *THE_Realloc(void *ptr, size_t size);
-void THE_Free(void *ptr);
+#define NYAS_ALLOC nyas_alloc
+#define NYAS_CALLOC nyas_calloc
+#define NYAS_REALLOC nyas_realloc
+#define NYAS_FREE nyas_free
 
-void THE_MemInit(size_t size);
-void THE_MemFreeAll();
-float THE_MemUsedMB();
-size_t THE_MemUsedBytes();
-size_t THE_MemCapacity();
+#define NYAS_KB(X) ((X)*1024)
+#define NYAS_MB(X) (NYAS_KB(X) * 1024)
+#define NYAS_GB(X) (NYAS_MB((size_t)X) * 1024)
 
-#endif
+void *nyas_mem_reserve(size_t size);
+void *nyas_alloc(size_t size);
+void *nyas_calloc(size_t elem_count, size_t elem_size);
+void *nyas_realloc(void *ptr, size_t size);
+void nyas_free(void *ptr);
+
+void nyas_mem_init(size_t size);
+void nyas_mem_freeall(void);
+float nyas_mem_mega_used(void);
+size_t nyas_mem_bytes_used(void);
+size_t nyas_mem_capacity(void);
+
+#endif // NYAS_CORE_MEM_H
