@@ -33,7 +33,7 @@ nyas_entity_draw(nyas_entity *ntt, int32_t count)
 	nyas_cmd *command_list = nyas_cmd_alloc();
 	nyas_cmd *prev = command_list;
 	mat4_assign(ntt->mat.ptr, ntt->transform);
-	prev->data.draw.material = ntt->mat;
+	prev->data.draw.material = nyas_mat_copy(ntt->mat);
 	prev->data.draw.mesh = ntt->mesh;
 	prev->execute = nyas_draw_fn;
 
@@ -41,7 +41,7 @@ nyas_entity_draw(nyas_entity *ntt, int32_t count)
 		nyas_cmd *com = nyas_cmd_alloc();
 
 		mat4_assign(ntt[i].mat.ptr, ntt[i].transform);
-		com->data.draw.material = ntt[i].mat;
+		com->data.draw.material = nyas_mat_copy(ntt[i].mat);
 		com->data.draw.mesh = ntt[i].mesh;
 		com->next = NULL;
 		com->execute = nyas_draw_fn;

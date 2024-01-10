@@ -6,8 +6,8 @@ lib/*.a
 lib/*.so
 cmake-build**/
 demos/*/imgui.ini
-demos/pbr/pbr
+demos/pbr/matballs
+demos/pbr/inspector
 demos/hello/hello
-demos/test/test
 tools/tomsh
 compile_commands.json

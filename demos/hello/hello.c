@@ -1,7 +1,7 @@
 #include "nyas.h"
+#include "render/pixels_internal.h"
 #include <mathc.h>
 #include <string.h>
-#include "../helpersdemo.h"
 
 typedef struct {
 	float model[16];
@@ -19,6 +19,41 @@ typedef struct HelloCtx {
 	nyas_entity *e;
 	nyas_chrono chrono;
 } HelloCtx;
+
+static nyas_tex
+InitMainFramebuffer(nyas_framebuffer fb)
+{
+	nyas_v2i vp = nyas_window_size();
+	int texflags = (TF_FLOAT | TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | 3);
+	nyas_tex fb_tex = nyas_tex_empty(vp.x, vp.y, texflags);
+	nyas_tex fb_depth = nyas_tex_empty(vp.x, vp.y, TF_DEPTH);
+
+	nyas_cmd *set_fb_tex = nyas_cmd_alloc();
+	set_fb_tex->data.set_fb.fb = fb;
+	set_fb_tex->data.set_fb.vp_x = vp.x;
+	set_fb_tex->data.set_fb.vp_y = vp.y;
+	set_fb_tex->data.set_fb.attach.type = NYPX_SLOT_COLOR0;
+	set_fb_tex->data.set_fb.attach.tex = fb_tex;
+	set_fb_tex->data.set_fb.attach.mip_level = 0;
+	set_fb_tex->data.set_fb.attach.face = -1;
+	set_fb_tex->execute = nyas_setfb_fn;
+
+	nyas_cmd *set_fb_depth = nyas_cmd_alloc();
+	set_fb_depth->data.set_fb.fb = fb;
+	set_fb_depth->data.set_fb.vp_x = vp.x;
+	set_fb_depth->data.set_fb.vp_y = vp.y;
+	set_fb_depth->data.set_fb.attach.type = NYPX_SLOT_DEPTH;
+	set_fb_depth->data.set_fb.attach.tex = fb_depth;
+	set_fb_depth->data.set_fb.attach.mip_level = 0;
+	set_fb_depth->data.set_fb.attach.face = -1;
+	set_fb_depth->execute = nyas_setfb_fn;
+	set_fb_depth->next = NULL;
+
+	set_fb_tex->next = set_fb_depth;
+	nyas_cmd_add(set_fb_tex);
+
+	return fb_tex;
+}
 
 void
 Init(void *context)
@@ -127,7 +162,7 @@ Update(void *context)
 
 	nyas_camera_static_vp(nyas_shader_data(ctx->skybox), &camera);
 	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = nyas_mat_from_shader(ctx->skybox);
+	use_sky_shader->data.mat = nyas_mat_copy_shader(ctx->skybox);
 	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
@@ -159,7 +194,7 @@ Update(void *context)
 	rops2->next = clear2;
 
 	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = nyas_mat_from_shader(ctx->fs_img);
+	usefullscreen->data.mat = nyas_mat_copy_shader(ctx->fs_img);
 	usefullscreen->execute = nyas_setshader_fn;
 	clear2->next = usefullscreen;
 
@@ -177,7 +212,6 @@ void
 Render(void)
 {
 	nyas_px_render();
-	nyas_imgui_draw();
 	nyas_window_swap();
 	nyas_frame_end();
 }
@@ -192,7 +226,6 @@ main(int argc, char **argv)
 	nyas_io_init("NYAS HelloWorld", 1920, 1080, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
-	nyas_imgui_init();
 
 	HelloCtx ctx;
 	Init(&ctx);

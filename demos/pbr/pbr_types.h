@@ -1,5 +1,5 @@
-#ifndef NYAS_PIXELS_EXTRA_H
-#define NYAS_PIXELS_EXTRA_H
+#ifndef NYAS_PBR_TYPES_H
+#define NYAS_PBR_TYPES_H
 
 typedef struct nyas_pbr_desc_unit {
 	float model[16];
@@ -22,4 +22,4 @@ typedef struct nyas_pbr_desc_scene {
 	float sunlight[4];
 } nyas_pbr_desc_scene;
 
-#endif // NYAS_PIXELS_EXTRA_H
+#endif // NYAS_PBR_TYPES_H

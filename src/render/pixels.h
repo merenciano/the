@@ -90,15 +90,13 @@ void nyas_shader_reload(nyas_shader shader);
 
 /* Creates a new material and alloc persistent memory for its data */
 nyas_mat nyas_mat_pers(nyas_shader shader);
-
 /* Creates a new material and alloc frame-scoped memory for its data */
 nyas_mat nyas_mat_tmp(nyas_shader shader);
-nyas_mat nyas_mat_dft(nyas_shader shader);
-nyas_mat nyas_mat_from_shader(nyas_shader shader);
+nyas_mat nyas_mat_copy(nyas_mat mat);
+nyas_mat nyas_mat_copy_shader(nyas_shader shader);
 
-/* MaterialAlloc does not initialize the shader value. */
-void *nyas_mat_alloc(nyas_mat *mat);
-nyas_tex *nyas_mat_tex(nyas_mat *mat); // Ptr to first texture.
+nyas_tex *nyas_mat_tex(nyas_mat mat); // Ptr to first texture.
+nyas_tex *nyas_mat_cubemap(nyas_mat mat); // Ptr to first cubemap.
 
 extern nyas_mesh SPHERE_MESH;
 extern nyas_mesh CUBE_MESH;
@@ -122,7 +120,7 @@ typedef struct nyas_draw_cmdata {
 
 enum nyas_blendfn_opt {
 	// TODO: Add as needed.
-	NYAS_BLEND_FUNC_INVALID = 0,
+	NYAS_BLEND_FUNC_CURRENT = 0,
 	NYAS_BLEND_FUNC_ONE,
 	NYAS_BLEND_FUNC_SRC_ALPHA,
 	NYAS_BLEND_FUNC_ONE_MINUS_SRC_ALPHA,
@@ -149,6 +147,7 @@ typedef enum nyas_depthfn_opt {
 } nyas_depthfn_opt;
 
 typedef enum nyas_rops_opt {
+	NYAS_ROPS_NONE = 0,
 	NYAS_BLEND = 1 << 0,
 	NYAS_CULL_FACE = 1 << 1,
 	NYAS_DEPTH_TEST = 1 << 2,

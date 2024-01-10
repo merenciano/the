@@ -3,7 +3,8 @@
 #include "core/io.h"
 #include "core/log.h"
 #include "core/mem.h"
-#include "pixels_internal.h"
+#include "render/pixels_internal.h"
+#include "utils/array.h"
 
 #include <math.h>
 #include <mathc.h>
@@ -27,6 +28,22 @@
 
 #include "tinyobj_loader_c.h"
 
+#ifdef NYAS_PIXEL_CHECKS
+#define CHECK_HANDLE(TYPE, HANDLE) nypx__check_handle((HANDLE), (TYPE##_pool))
+#else
+#define CHECK_HANDLE(TYPE, HANDLE) (void)
+#endif
+
+#define NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA (8)
+
+static void
+nypx__check_handle(int h, void *arr)
+{
+	NYAS_ASSERT(h >= 0 && "Bad resource state");
+	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_len(arr) &&
+	            "Out of bounds handle");
+}
+
 typedef struct nyas_internal_shader shdr_t;
 typedef struct nyas_internal_texture tex_t;
 typedef struct nyas_internal_mesh mesh_t;
@@ -40,6 +57,13 @@ nyas_arr mesh_pool;
 nyas_arr tex_pool;
 nyas_arr shader_pool;
 nyas_arr framebuffer_pool;
+
+typedef struct nyas_cmd_queue {
+	nyas_cmd *curr;
+	nyas_cmd *curr_last;
+	nyas_cmd *next;
+	nyas_cmd *next_last;
+} cmd_queue;
 
 cmd_queue render_queue;
 
@@ -262,7 +286,6 @@ nyas_tex_load(const char *path, int flip, int flags)
 	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_empty");
 
 	nyas_tex tex = nyas__create_tex_handle();
-	CHECK_HANDLE(tex, tex);
 	tex_t *t = nyas_arr_at(tex_pool, tex);
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
@@ -299,7 +322,6 @@ nyas_tex_empty(int width, int height, int tex_flags)
 {
 	NYAS_ASSERT(width > 0 && height > 0 && "Incorrect dimensions");
 	nyas_tex tex = nyas__create_tex_handle();
-	CHECK_HANDLE(tex, tex);
 	tex_t *t = nyas_arr_at(tex_pool, tex);
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
@@ -562,7 +584,7 @@ nyas__mesh_set_obj(mesh_t *mesh, const char *path)
 	mesh->vtx_size = vertex_count * 14 * sizeof(float);
 	mesh->elem_count = vertex_count;
 	mesh->vtx = nyas_alloc(mesh->vtx_size);
-	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nypx_index));
+	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nyas_idx));
 
 	float *vit = mesh->vtx;
 
@@ -699,10 +721,10 @@ nyas__mesh_set_msh(mesh_t *mesh, const char *path)
 	data += mesh->vtx_size;
 
 	mesh->elem_count = (*(size_t *)data) /
-	  sizeof(nypx_index); // *(((size_t *)data)++)
+	  sizeof(nyas_idx); // *(((size_t *)data)++)
 	data += sizeof(size_t);
-	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nypx_index));
-	memcpy(mesh->idx, data, mesh->elem_count * sizeof(nypx_index));
+	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nyas_idx));
+	memcpy(mesh->idx, data, mesh->elem_count * sizeof(nyas_idx));
 
 	nyas_free(data - mesh->vtx_size - (2 * sizeof(size_t)));
 }
@@ -814,7 +836,18 @@ nyas_mat_tmp(nyas_shader shader)
 }
 
 nyas_mat
-nyas_mat_from_shader(nyas_shader shader)
+nyas_mat_copy(nyas_mat mat)
+{
+	nyas_mat ret = { .shader = mat.shader };
+	shdr_t *s = nyas_arr_at(shader_pool, mat.shader);
+	size_t size = (s->count[0].data + s->count[0].tex + s->count[0].cubemap) * 4;
+	ret.ptr = nyas_alloc_frame(size);
+	memcpy(ret.ptr, mat.ptr, size);
+	return ret;
+}
+
+nyas_mat
+nyas_mat_copy_shader(nyas_shader shader)
 {
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
 	shdr_t *s = nyas_arr_at(shader_pool, shader);
@@ -825,8 +858,233 @@ nyas_mat_from_shader(nyas_shader shader)
 }
 
 nyas_tex *
-nyas_mat_tex(nyas_mat *mat)
+nyas_mat_tex(nyas_mat mat)
 {
-	shdr_t *s = nyas_arr_at(shader_pool, mat->shader);
-	return (nyas_tex *)mat->ptr + s->count[0].data;
+	shdr_t *s = nyas_arr_at(shader_pool, mat.shader);
+	return (nyas_tex *)mat.ptr + s->count[0].data;
 }
+
+nyas_tex *
+nyas_mat_cubemap(nyas_mat mat)
+{
+	shdr_t *s = nyas_arr_at(shader_pool, mat.shader);
+	return (nyas_tex *)mat.ptr + (s->count[0].data + s->count[0].tex);
+}
+
+static void
+nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
+{
+	CHECK_HANDLE(mesh, mesh);
+	CHECK_HANDLE(shader, shader);
+	mesh_t *m = nyas_arr_at(mesh_pool, mesh);
+	shdr_t *s = nyas_arr_at(shader_pool, shader);
+
+	if (!(m->res.flags & NYAS_IRF_CREATED)) {
+		nypx_mesh_create(&m->res.id, &m->res_vb.id, &m->res_ib.id);
+		m->res.flags |= NYAS_IRF_DIRTY;
+	}
+
+	if (m->res.flags & NYAS_IRF_DIRTY) {
+		nypx_mesh_set(m->res.id, m->res_vb.id, m->res_ib.id, s->res.id,
+		              m->attrib, m->vtx, m->vtx_size, m->idx, m->elem_count);
+	}
+	m->res.flags = NYAS_IRF_CREATED;
+}
+
+static tex_t *
+nyas__sync_gpu_tex(nyas_tex tex)
+{
+	CHECK_HANDLE(tex, tex);
+	tex_t *t = nyas_arr_at(tex_pool, tex);
+	if (!(t->res.flags & NYAS_IRF_CREATED)) {
+		nypx_tex_create(&t->res.id, t->type);
+		t->res.flags |= NYAS_IRF_DIRTY;
+	}
+
+	if (t->res.flags & NYAS_IRF_DIRTY) {
+		nypx_tex_set(t->res.id, t->type, t->width, t->height, t->pix);
+	}
+	t->res.flags = NYAS_IRF_CREATED;
+	return t;
+}
+
+static void
+nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
+{
+	NYAS_ASSERT((common == 0 || common == 1) && "Invalid common value.");
+
+	int dc = s->count[common].data;
+	int tc = s->count[common].tex;
+	int cc = s->count[common].cubemap;
+	int dl = s->loc[common].data;
+	int tl = s->loc[common].tex;
+	int cl = s->loc[common].cubemap;
+	int tex_unit = NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA * common;
+
+	NYAS_ASSERT((dc >= 0) && (tc >= 0) && (cc >= 0));
+	// Check that if there is no data, the uniform location is negative
+	NYAS_ASSERT((dc && dl >= 0) || (!dc && dl < 0));
+	NYAS_ASSERT((tc && tl >= 0) || (!tc && tl < 0));
+	NYAS_ASSERT((cc && cl >= 0) || (!cc && cl < 0));
+	NYAS_ASSERT(tex_unit >= 0 && tex_unit < 128);
+
+	if (!(dc + tc + cc)) {
+		return;
+	}
+
+	// change texture handle for texture internal id
+	nyas_tex *data_tex = (nyas_tex *)srcdata + dc;
+	for (int i = 0; i < tc + cc; ++i) {
+		tex_t *itx = nyas__sync_gpu_tex(data_tex[i]);
+		data_tex[i] = (int)itx->res.id;
+	}
+
+	// set opengl uniforms
+	if (dc) {
+		nypx_shader_set_data(dl, srcdata, dc / 4);
+	}
+
+	if (tc) {
+		nypx_shader_set_tex(tl, data_tex, tc, tex_unit);
+	}
+
+	if (cc) {
+		nypx_shader_set_cube(cl, data_tex + tc, cc, tex_unit + tc);
+	}
+}
+
+void
+nyas_setshader_fn(nyas_cmdata *data)
+{
+	static const char *uniforms[] = { "u_data",       "u_tex",
+		                              "u_cube",       "u_common_data",
+		                              "u_common_tex", "u_common_cube" };
+
+	CHECK_HANDLE(shader, data->mat.shader);
+	shdr_t *s = nyas_arr_at(shader_pool, data->mat.shader);
+	if (!(s->res.flags & NYAS_IRF_CREATED)) {
+		nypx_shader_create(&s->res.id);
+		s->res.flags |= NYAS_IRF_DIRTY;
+	}
+
+	if (s->res.flags & NYAS_IRF_DIRTY) {
+		NYAS_ASSERT(s->name && *s->name && "Shader name needed.");
+		nypx_shader_compile(s->res.id, s->name);
+		nypx_shader_loc(s->res.id, &s->loc[0].data, &uniforms[0], 6);
+		s->res.flags = NYAS_IRF_CREATED; // reset dirty flag
+	}
+
+	nypx_shader_use(s->res.id);
+	nyas__set_shader_data(s, data->mat.ptr, true);
+}
+
+void
+nyas_clear_fn(nyas_cmdata *data)
+{
+	nypx_clear_color(data->clear.color[0], data->clear.color[1],
+	                 data->clear.color[2], data->clear.color[3]);
+	nypx_clear(data->clear.color_buffer, data->clear.depth_buffer,
+	           data->clear.stencil_buffer);
+}
+
+void
+nyas_draw_fn(nyas_cmdata *data)
+{
+	nyas_mesh mesh = data->draw.mesh;
+	mesh_t *imsh = nyas_arr_at(mesh_pool, mesh);
+	CHECK_HANDLE(mesh, mesh);
+	NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
+
+	if (imsh->res.flags & NYAS_IRF_DIRTY) {
+		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
+	}
+
+	nypx_mesh_use(imsh->res.id);
+	shdr_t *s = nyas_arr_at(shader_pool, data->draw.material.shader);
+	nyas__set_shader_data(s, data->draw.material.ptr, false);
+	nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
+	nypx_mesh_use(0);
+}
+
+void
+nyas_rops_fn(nyas_cmdata *data)
+{
+	int enable = data->rend_opts.enable_flags;
+	int disable = data->rend_opts.disable_flags;
+	for (int i = 1; i < NYAS_REND_OPTS_COUNT; ++i) {
+		// Check disable first for bad configs (both on)
+		switch (disable & (1 << i)) {
+		case NYAS_BLEND:
+			nypx_blend_disable();
+			continue;
+		case NYAS_CULL_FACE:
+			nypx_cull_disable();
+			continue;
+		case NYAS_DEPTH_TEST:
+			nypx_depth_disable_test();
+			continue;
+		case NYAS_DEPTH_WRITE:
+			nypx_depth_disable_mask();
+			continue;
+		}
+
+		// Check if the option is in the enable group
+		switch (enable & (1 << i)) {
+		case NYAS_BLEND:
+			nypx_blend_enable();
+			continue;
+		case NYAS_CULL_FACE:
+			nypx_cull_enable();
+			continue;
+		case NYAS_DEPTH_TEST:
+			nypx_depth_enable_test();
+			continue;
+		case NYAS_DEPTH_WRITE:
+			nypx_depth_enable_mask();
+			continue;
+		}
+	}
+
+	nyas_blend_fn blend = data->rend_opts.blend_func;
+	/* Ignore unless both have a value assigned. */
+	if (blend.src && blend.dst) {
+		nypx_blend_set(blend.src, blend.dst);
+	}
+
+	nyas_cullface_opt cull = data->rend_opts.cull_face;
+	if (cull) {
+		nypx_cull_set(cull);
+	}
+
+	nyas_depthfn_opt depth = data->rend_opts.depth_func;
+	if (depth) {
+		nypx_depth_set(depth);
+	}
+}
+
+void
+nyas_setfb_fn(nyas_cmdata *data)
+{
+	NYAS_ASSERT(data && "Null param");
+	const nyas_set_fb_cmdata *d = &data->set_fb;
+	if (d->fb == NYAS_DEFAULT) {
+		nypx_fb_use(0);
+	} else {
+		// GPU Sync
+		CHECK_HANDLE(framebuffer, d->fb);
+		fb_t *ifb = nyas_arr_at(framebuffer_pool, d->fb);
+		if (!(ifb->res.flags & NYAS_IRF_CREATED)) {
+			nypx_fb_create(&ifb->res.id);
+		}
+		ifb->res.flags = NYAS_IRF_CREATED;
+
+		nypx_fb_use(ifb->res.id);
+		if (d->attach.type != NYAS_IGNORE) {
+			tex_t *t = nyas__sync_gpu_tex(d->attach.tex);
+			nypx_fb_set(ifb->res.id, t->res.id, d->attach.type,
+			            d->attach.mip_level, d->attach.face);
+		}
+	}
+	nypx_viewport(0, 0, d->vp_x, d->vp_y);
+}
+

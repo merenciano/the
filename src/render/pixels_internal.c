@@ -1,4 +1,4 @@
-#include "nyaspix.h"
+#include "pixels_internal.h"
 
 #include "core/io.h" // file_read --shader source
 #include "core/log.h"
@@ -326,12 +326,6 @@ nypx_shader_loc(uint32_t id, int *o_loc, const char **i_unif, int count)
 	for (int i = 0; i < count; ++i) {
 		o_loc[i] = glGetUniformLocation(id, i_unif[i]);
 	}
-	/*s->loc[0].data = glGetUniformLocation(id, "u_data");
-	s->loc[0].tex = glGetUniformLocation(id, "u_tex");
-	s->loc[0].cubemap = glGetUniformLocation(id, "u_cube");
-	s->loc[1].data = glGetUniformLocation(id, "u_common_data");
-	s->loc[1].tex = glGetUniformLocation(id, "u_common_tex");
-	s->loc[1].cubemap = glGetUniformLocation(id, "u_common_cube");*/
 }
 
 void
@@ -340,28 +334,27 @@ nypx_shader_set_data(int loc, float *data, int v4count)
 	glUniform4fv(loc, v4count, data);
 }
 
+static void
+nypx__set_tex(int loc, int *t, int c, int unit, GLenum target)
+{
+	for (int i = 0; i < c; ++i) {
+		glActiveTexture(GL_TEXTURE0 + unit + i);
+		glBindTexture(target, t[i]);
+		t[i] = unit + i;
+	}
+	glUniform1iv(loc, c, t);
+}
+
 void
 nypx_shader_set_tex(int loc, int *tex, int count, int texunit_offset)
 {
-	for (int i = 0; i < count; ++i) {
-		glActiveTexture(GL_TEXTURE0 + texunit_offset + i);
-		glBindTexture(GL_TEXTURE_2D, tex[i]);
-		tex[i] = texunit_offset + i;
-	}
-
-	glUniform1iv(loc, count, tex);
+	nypx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_2D);
 }
 
 void
 nypx_shader_set_cube(int loc, int *tex, int count, int texunit_offset)
 {
-	for (int i = 0; i < count; ++i) {
-		glActiveTexture(GL_TEXTURE0 + texunit_offset + i);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, tex[i]);
-		tex[i] = texunit_offset + i;
-	}
-
-	glUniform1iv(loc, count, tex);
+	nypx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_CUBE_MAP);
 }
 
 void
@@ -430,10 +423,10 @@ nypx_clear(int color, int depth, int stencil)
 }
 
 void
-nypx_draw(int elem_count, int half_type)
+nypx_draw(int elem_count, int index_type)
 {
 	glDrawElements(GL_TRIANGLES, elem_count,
-	               half_type ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
+	               index_type ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT, 0);
 }
 
 void
@@ -455,9 +448,9 @@ nypx_blend_disable(void)
 }
 
 static GLenum
-nypx__gl_blend(enum nypx_blend_func bf)
+nypx__gl_blend(int blend_func)
 {
-	switch (bf) {
+	switch (blend_func) {
 	case NYPX_BLEND_ONE:
 		return GL_ONE;
 	case NYPX_BLEND_SRC_ALPHA:
@@ -472,9 +465,10 @@ nypx__gl_blend(enum nypx_blend_func bf)
 }
 
 void
-nypx_blend_set(enum nypx_blend_func src, enum nypx_blend_func dst)
+nypx_blend_set(int blend_func_src, int blend_func_dst)
 {
-	glBlendFunc(nypx__gl_blend(src), nypx__gl_blend(dst));
+	glBlendFunc(nypx__gl_blend(blend_func_src),
+	            nypx__gl_blend(blend_func_dst));
 }
 
 void
@@ -505,9 +499,9 @@ nypx__gl_cull(enum nypx_cull_face cull)
 }
 
 void
-nypx_cull_set(enum nypx_cull_face cull)
+nypx_cull_set(int cull_face)
 {
-	glCullFace(nypx__gl_cull(cull));
+	glCullFace(nypx__gl_cull(cull_face));
 }
 
 void
@@ -548,9 +542,9 @@ nypx__gl_depth(enum nypx_depth_func df)
 }
 
 void
-nypx_depth_set(enum nypx_depth_func depth)
+nypx_depth_set(int depth_func)
 {
-	glDepthFunc(nypx__gl_depth(depth));
+	glDepthFunc(nypx__gl_depth(depth_func));
 }
 
 void

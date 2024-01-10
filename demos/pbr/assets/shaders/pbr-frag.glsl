@@ -21,8 +21,7 @@
 #define IRRADIANCE_MAP       u_common_cube[0]
 #define PREFILTER_MAP        u_common_cube[1]
 
-const float kPI = 3.14159265359;
-const float kEpsilon = 1e-5;
+const float PI = 3.14159265359;
 const vec3  kFdielectric = vec3(0.04);
 const float kMaxPrefilterLod = 6.0;
 
@@ -46,7 +45,7 @@ uniform samplerCube u_common_cube[2];
 float Distribution_GGX(float noh, float roughness) {
     float a = noh * roughness;
     float k = roughness / (1.0 - noh * noh + a * a);
-    return k * k * (1.0 / kPI);
+    return k * k * (1.0 / PI);
 }
 
 // Correlated Smith approximation (from filament documentation)
@@ -65,6 +64,10 @@ vec3 Fresnel(vec3 f0, float voh)
 {
     float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
     return Fschlick(f0, f90, voh);
+}
+
+float Lambert() {
+    return 1.0 / PI;
 }
 
 float SpecularAA(vec3 n, float a)
@@ -92,8 +95,8 @@ void main()
     normal = normalize(v_in.tbn * normal);
     normal = mix(normalize(v_in.tbn[2]), clamp(normal, -1.0, 1.0), NORMAL_MAP_INTENSITY);
 
-    vec3 diffuse_color = vec3((1.0 - metalness) * albedo);
     vec3 f0 = 0.16 * REFLECTANCE * REFLECTANCE * (1.0 - metalness) + albedo * metalness;
+    float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
 
     vec3 view = normalize(CAMERA_POSITION - v_in.position);
     vec3 light = -LIGHT_DIRECTION;
@@ -108,13 +111,13 @@ void main()
     float loh = clamp(dot(light, hlv), 0.0, 1.0);
 
     float roughness = perceptual_roughness * perceptual_roughness;
-    vec3  f = Fresnel(f0, loh);
+    vec3  f = Fschlick(f0, f90, loh);
     float d = Distribution_GGX(noh, roughness);
     float g = Geometric_SmithGGX(nol, nov, roughness);
 
     // Diffuse
-    //vec3 kd = mix(vec3(1.0) - f, vec3(0.0), metalness);
-    vec3 diffuse_brdf = (1 / kPI) * diffuse_color;
+    vec3 diffuse_color = vec3((1.0 - metalness) * albedo);
+    vec3 diffuse_brdf = diffuse_color * Lambert();
 
     // Specular
     vec3 specular_brdf = ((d * g) * f);
@@ -128,8 +131,8 @@ void main()
     vec3 ibl_dfg = mix(dfg_lut.xxx, dfg_lut.yyy, f0);
     vec3 specular_ibl = ibl_dfg * specular_irradiance;
 
-    vec3 irradiance = texture(IRRADIANCE_MAP, normal).rgb;
-    vec3 diffuse_ibl = irradiance * diffuse_color * (1.0 - ibl_dfg) * (1 / kPI);
+    vec3 irradiance = texture(IRRADIANCE_MAP, r).rgb;
+    vec3 diffuse_ibl = irradiance * diffuse_color;
 
     vec3 ambient_lighting = diffuse_ibl + specular_ibl;
 

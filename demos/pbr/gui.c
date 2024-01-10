@@ -1,9 +1,10 @@
-#include "imgui.h"
+#include "gui.h"
 
 #include "core/io.h"
-#include "render/pixels_extra.h"
 #include "render/pixels_internal.h"
 #include "scene/entity.h"
+
+#include "pbr_types.h"
 
 #include <glad/glad.h>
 #include <stdio.h>
@@ -28,7 +29,7 @@ struct nk_glfw glfw = { 0 };
 struct nk_context *ctx;
 
 void
-nyas_imgui_init(void)
+nuklear_init(void)
 {
 	ctx = nk_glfw3_init(&glfw, internal_window, NK_GLFW3_INSTALL_CALLBACKS);
 	struct nk_font_atlas *atlas;
@@ -37,7 +38,7 @@ nyas_imgui_init(void)
 }
 
 void
-nyas_imgui_draw(void)
+nuklear_draw(void)
 {
 	static char mesh_path[512] = { 0 };
 	nk_glfw3_new_frame(&glfw);
@@ -75,11 +76,11 @@ nyas_imgui_draw(void)
 				nyas_pbr_desc_scene *scene =
 				  ((struct nyas_internal_shader *)shader_pool + e->mat.shader)->common;
 				struct nyas_internal_texture *tex =
-				  nyas_arr_at(tex_pool, *nyas_mat_tex(&e->mat));
+				  nyas_arr_at(tex_pool, *nyas_mat_tex(e->mat));
 
 				if (nk_tree_push(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED)) {
 					struct nyas_internal_texture *tex =
-					  nyas_arr_at(tex_pool, *nyas_mat_tex(&e->mat));
+					  nyas_arr_at(tex_pool, *nyas_mat_tex(e->mat));
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex->res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);

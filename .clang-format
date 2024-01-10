@@ -25,7 +25,7 @@ PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakOpenParenthesis: 100
 #PenaltyBreakString: 1
 #PenaltyExcessCharacter: 1000
-#PenaltyIndentedWhitespace: 1
+PenaltyIndentedWhitespace: 10
 #PenaltyReturnTypeOnItsOwnLine: 10
 PointerAlignment: Right
 PPIndentWidth: 1

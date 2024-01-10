@@ -1,4 +1,6 @@
-#include "../helpersdemo.h"
+#include "pbr.h"
+#include "pbr_types.h"
+#include "gui.h"
 #include "mathc.h"
 #include "nyas.h"
 #include <string.h>
@@ -67,7 +69,7 @@ Init(void)
 	e.e->mesh = nyas_mesh_load_file("assets/obj/matball.obj");
 	e.e->mat = nyas_mat_pers(shader);
 	*(nyas_pbr_desc_unit *)e.e->mat.ptr = e.upbr;
-	nyas_tex *t = nyas_mat_tex(&e.e->mat);
+	nyas_tex *t = nyas_mat_tex(e.e->mat);
 	t[0] = e.albedo;
 	t[1] = e.metalness;
 	t[2] = e.roughness;
@@ -143,7 +145,7 @@ Update(nyas_chrono *dt)
 	rops->next = clear;
 
 	nyas_cmd *use_pbr = nyas_cmd_alloc();
-	use_pbr->data.mat = nyas_mat_from_shader(shader);
+	use_pbr->data.mat = nyas_mat_copy_shader(shader);
 	use_pbr->execute = nyas_setshader_fn;
 	clear->next = use_pbr;
 	use_pbr->next = NULL;
@@ -160,7 +162,7 @@ Update(nyas_chrono *dt)
 
 	nyas_camera_static_vp(nyas_shader_data(skybox_sh), &camera);
 	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = nyas_mat_from_shader(skybox_sh);
+	use_sky_shader->data.mat = nyas_mat_copy_shader(skybox_sh);
 	use_sky_shader->execute = nyas_setshader_fn;
 	rops->next = use_sky_shader;
 
@@ -193,7 +195,7 @@ Update(nyas_chrono *dt)
 	rops2->next = clear;
 
 	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = nyas_mat_from_shader(fs_sh);
+	usefullscreen->data.mat = nyas_mat_copy_shader(fs_sh);
 	usefullscreen->execute = nyas_setshader_fn;
 	clear->next = usefullscreen;
 
@@ -211,7 +213,7 @@ void
 Render(void)
 {
 	nyas_px_render();
-	nyas_imgui_draw();
+	nuklear_draw();
 	nyas_window_swap();
 	nyas_frame_end();
 }
@@ -225,7 +227,7 @@ main(int argc, char **argv)
 	nyas_io_init("NYAS Asset Inspector", 1920, 1080, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
-	nyas_imgui_init();
+	nuklear_init();
 	Init();
 
 	nyas_chrono frame_chrono = nyas_time();

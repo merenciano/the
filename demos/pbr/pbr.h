@@ -1,6 +1,6 @@
 #include "mathc.h"
 #include "nyas.h"
-#include "render/nyaspix.h"
+#include "render/pixels_internal.h"
 
 static const nyas_shader_desc pbr_shader_desc = {
 	.name = "pbr",
@@ -12,14 +12,15 @@ static const nyas_shader_desc pbr_shader_desc = {
 	.common_cubemap_count = 2
 };
 
-static const nyas_shader_desc sky_shader_desc = { .name = "skybox",
-	                                              .data_count = 0,
-	                                              .tex_count = 0,
-	                                              .cubemap_count = 0,
-	                                              .common_data_count = 4 *
-	                                                4, // mat4
-	                                              .common_tex_count = 0,
-	                                              .common_cubemap_count = 1 };
+static const nyas_shader_desc sky_shader_desc = {
+	.name = "skybox",
+	.data_count = 0,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 4 * 4, // mat4
+	.common_tex_count = 0,
+	.common_cubemap_count = 1
+};
 
 static const nyas_shader_desc fs_img_shader_desc = {
 	.name = "fullscreen-img", // fullscreen quad with texture
@@ -51,14 +52,15 @@ static const nyas_shader_desc prefilter_shader_desc = {
 	.common_cubemap_count = 1
 };
 
-static const nyas_shader_desc lut_shader_desc = { .name =
-	                                                "env-dfg", // look-up table
-	                                              .data_count = 0,
-	                                              .tex_count = 0,
-	                                              .cubemap_count = 0,
-	                                              .common_data_count = 0,
-	                                              .common_tex_count = 0,
-	                                              .common_cubemap_count = 0 };
+static const nyas_shader_desc lut_shader_desc = {
+	.name = "env-dfg", // look-up table
+	.data_count = 0,
+	.tex_count = 0,
+	.cubemap_count = 0,
+	.common_data_count = 0,
+	.common_tex_count = 0,
+	.common_cubemap_count = 0
+};
 
 struct ShaderDescriptors {
 	const nyas_shader_desc *pbr;
@@ -106,14 +108,16 @@ struct TexFlags {
 	int prefilter;
 };
 
-static const struct TexFlags g_tex_flags = { .env = environment_flags,
-	                                         .sky = skybox_flags,
-	                                         .albedo = albedo_map_flags,
-	                                         .normal = normal_map_flags,
-	                                         .pbr_map = pbr_map_flags,
-	                                         .lut = lut_flags,
-	                                         .irr = irr_flags,
-	                                         .prefilter = pref_flags };
+static const struct TexFlags g_tex_flags = {
+	.env = environment_flags,
+	.sky = skybox_flags,
+	.albedo = albedo_map_flags,
+	.normal = normal_map_flags,
+	.pbr_map = pbr_map_flags,
+	.lut = lut_flags,
+	.irr = irr_flags,
+	.prefilter = pref_flags
+};
 
 typedef struct GenEnv {
 	nyas_shader eqr_sh;
@@ -158,15 +162,16 @@ GenerateRenderToCubeVP(void)
 }
 
 static nyas_cmd *
-ConvertEqrToCubeCommandList(nyas_shader eqr_sh,
-                            nyas_tex tex_in,
-                            nyas_tex tex_out,
-                            nyas_framebuffer fb,
-                            nyas_cmd *last_command)
+ConvertEqrToCubeCommandList(
+  nyas_shader eqr_sh,
+  nyas_tex tex_in,
+  nyas_tex tex_out,
+  nyas_framebuffer fb,
+  nyas_cmd *last_command)
 {
 	nyas_cmd *use_tocube = nyas_cmd_alloc();
 	*nyas_shader_tex(eqr_sh) = tex_in;
-	use_tocube->data.mat = nyas_mat_from_shader(eqr_sh);
+	use_tocube->data.mat = nyas_mat_copy_shader(eqr_sh);
 	use_tocube->execute = nyas_setshader_fn;
 	last_command->next = use_tocube;
 
@@ -199,13 +204,14 @@ ConvertEqrToCubeCommandList(nyas_shader eqr_sh,
 }
 
 static nyas_cmd *
-GeneratePrefilterCommandList(GenEnv *env,
-                             nyas_framebuffer fb,
-                             nyas_cmd *last_command)
+GeneratePrefilterCommandList(
+  GenEnv *env,
+  nyas_framebuffer fb,
+  nyas_cmd *last_command)
 {
 	nyas_cmd *use_pref = nyas_cmd_alloc();
 	*nyas_shader_cubemap(env->pref_sh) = env->eqr_out;
-	use_pref->data.mat = nyas_mat_from_shader(env->pref_sh);
+	use_pref->data.mat = nyas_mat_copy_shader(env->pref_sh);
 	use_pref->execute = nyas_setshader_fn;
 	last_command->next = use_pref;
 	last_command = use_pref;
@@ -260,9 +266,10 @@ GeneratePrefilterCommandList(GenEnv *env,
 }
 
 static nyas_cmd *
-GenerateLutCommandlist(nyas_framebuffer fb,
-                       nyas_cmd *last_command,
-                       GenEnv *env)
+GenerateLutCommandlist(
+  nyas_framebuffer fb,
+  nyas_cmd *last_command,
+  GenEnv *env)
 {
 	int vp_size[2];
 	nyas_tex_size(env->lut, vp_size);
@@ -313,13 +320,11 @@ GeneratePbrEnv(GenEnv *env)
 	rendops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
 	rendops->execute = nyas_rops_fn;
 
-	nyas_cmd *last_tocube =
-	  ConvertEqrToCubeCommandList(env->eqr_sh, env->eqr_in, env->eqr_out,
-	                              auxfb, rendops);
+	nyas_cmd *last_tocube = ConvertEqrToCubeCommandList(
+	  env->eqr_sh, env->eqr_in, env->eqr_out, auxfb, rendops);
 
-	last_tocube = ConvertEqrToCubeCommandList(env->eqr_sh, env->irr_in,
-	                                          env->irr_out, auxfb,
-	                                          last_tocube);
+	last_tocube = ConvertEqrToCubeCommandList(
+	  env->eqr_sh, env->irr_in, env->irr_out, auxfb, last_tocube);
 
 	nyas_cmd *pref = GeneratePrefilterCommandList(env, auxfb, last_tocube);
 
