@@ -17,7 +17,7 @@ IncludeCategories:
     Priority:        0
 IncludeIsMainRegex: "(_test)?$"
 IndentCaseLabels: false
-InsertNewlineAtEOF: true
+#InsertNewlineAtEOF: true
 MaxEmptyLinesToKeep: 1
 PenaltyBreakAssignment: 30
 PenaltyBreakBeforeFirstCallParameter: 100
@@ -25,7 +25,7 @@ PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakOpenParenthesis: 100
 #PenaltyBreakString: 1
 #PenaltyExcessCharacter: 1000
-#PenaltyIndentedWhitespace: 1
+PenaltyIndentedWhitespace: 10
 #PenaltyReturnTypeOnItsOwnLine: 10
 PointerAlignment: Right
 PPIndentWidth: 1

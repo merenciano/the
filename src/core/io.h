@@ -2,6 +2,7 @@
 #define NYAS_CORE_IO_H
 
 #include "nyas_defs.h"
+#include <stddef.h>
 #include <stdbool.h>
 
 enum nyas_input {
@@ -45,6 +46,8 @@ float nyas_input_mouse_y(void);
 void nyas_input_cursor_disable(void); // TODO: Merge with enable
 void nyas_input_cursor_enable(void); // TODO: flags for cursor mode and capture
 void nyas_input_capture(bool mouse, bool kb);
+
+int nyas_file_read(const char *path, char **dst, size_t *size);
 
 //TODO: Revisar como exponer las variables internas
 extern void *internal_window;

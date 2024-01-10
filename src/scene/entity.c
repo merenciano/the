@@ -1,27 +1,24 @@
 #include "entity.h"
 #include "mathc.h"
-#include "render/pixels_extra.h"
-
-#include <stdlib.h>
 
 static nyas_entity entities[256];
 static int entities_last;
 
 nyas_entity *
-nyas_entity_create()
+nyas_entity_create(void)
 {
 	mat4_identity(entities[entities_last].transform);
 	return entities + entities_last++;
 }
 
 nyas_entity *
-nyas_entities()
+nyas_entities(void)
 {
 	return entities;
 }
 
 int
-nyas_entity_count()
+nyas_entity_count(void)
 {
 	return entities_last;
 }
@@ -36,7 +33,7 @@ nyas_entity_draw(nyas_entity *ntt, int32_t count)
 	nyas_cmd *command_list = nyas_cmd_alloc();
 	nyas_cmd *prev = command_list;
 	mat4_assign(ntt->mat.ptr, ntt->transform);
-	prev->data.draw.material = ntt->mat;
+	prev->data.draw.material = nyas_mat_copy(ntt->mat);
 	prev->data.draw.mesh = ntt->mesh;
 	prev->execute = nyas_draw_fn;
 
@@ -44,7 +41,7 @@ nyas_entity_draw(nyas_entity *ntt, int32_t count)
 		nyas_cmd *com = nyas_cmd_alloc();
 
 		mat4_assign(ntt[i].mat.ptr, ntt[i].transform);
-		com->data.draw.material = ntt[i].mat;
+		com->data.draw.material = nyas_mat_copy(ntt[i].mat);
 		com->data.draw.mesh = ntt[i].mesh;
 		com->next = NULL;
 		com->execute = nyas_draw_fn;

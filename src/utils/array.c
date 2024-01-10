@@ -4,8 +4,7 @@
 
 #include <string.h>
 
-#define BUFSZ 1024
-#define ELEM(A, I) ((A) + (I) * hdr(A)->esz)
+#define BUFSZ (1024)
 #define ERR_IF(X) \
 	if (X)        \
 	return NULL
@@ -83,7 +82,7 @@ nyas_arr_npush(void **arr, size_t n)
 		return NULL;
 	}
 
-	void *first_elem = ELEM(*arr, hdr(*arr)->len);
+	void *first_elem = nyas_arr_at(*arr, hdr(*arr)->len);
 	hdr(*arr)->len += n;
 	return first_elem;
 }
@@ -94,7 +93,7 @@ nyas_arr_npop(void *arr, size_t n)
 	ERR_IF(!arr);
 	ERR_IF(hdr(arr)->len == 0);
 	hdr(arr)->len = hdr(arr)->len > n ? hdr(arr)->len - n : 0;
-	return ELEM(arr, hdr(arr)->len);
+	return nyas_arr_at(arr, hdr(arr)->len);
 }
 
 void *
@@ -102,7 +101,7 @@ nyas_arr_at(void *arr, size_t idx)
 {
 	ERR_IF(!arr);
 	ERR_IF(idx >= hdr(arr)->len);
-	return ELEM(arr, idx);
+	return (char*)arr + idx * hdr(arr)->esz;
 }
 
 size_t
@@ -120,7 +119,7 @@ ptrdiff_t
 nyas_arr_cmp(void *a, void *b)
 {
 	if ((a == b) || !a || !b) {
-		return a - b;
+		return (char*)a - (char*)b;
 	}
 
 	if (hdr(a)->len != hdr(b)->len) {
@@ -141,14 +140,14 @@ nyas_arr_swap(void *arr, size_t a, size_t b)
 	struct hdr *this = hdr(arr);
 	ERR_IF(a >= this->len || b >= this->len);
 	if (a == b) {
-		return ELEM(arr, a);
+		return nyas_arr_at(arr, a);
 	}
 
 	char buffer[BUFSZ];
 	void *tmp = BUFSZ < this->esz ? NYAS_ALLOC(this->esz) : buffer;
 	ERR_IF(!tmp);
-	void *pa = ELEM(arr, a);
-	void *pb = ELEM(arr, b);
+	void *pa = nyas_arr_at(arr, a);
+	void *pb = nyas_arr_at(arr, b);
 	memcpy(tmp, pa, this->esz);
 	memcpy(pa, pb, this->esz);
 	memcpy(pb, tmp, this->esz);
@@ -162,7 +161,7 @@ void *
 nyas_arr_rm(void *arr, size_t idx)
 {
 	ERR_IF(!arr);
-	return memcpy(ELEM(arr, idx), nyas_arr_npop(arr, 1), hdr(arr)->esz);
+	return memcpy(nyas_arr_at(arr, idx), nyas_arr_npop(arr, 1), hdr(arr)->esz);
 }
 
 void *
@@ -191,7 +190,7 @@ nyas_arr_cpyfta(void **dst, void *src, size_t from, size_t to, size_t at)
 	ERR_IF(!check_resize(dst, new_len));
 	hdr(*dst)->len = new_len;
 	size_t bytes_to_cpy = (to - from) * hdr(src)->esz;
-	return memcpy(ELEM(*dst, at), ELEM(src, from), bytes_to_cpy);
+	return memcpy(nyas_arr_at(*dst, at), nyas_arr_at(src, from), bytes_to_cpy);
 }
 
 void
@@ -231,8 +230,8 @@ nyas_arr_print(void *arr, void (*print_elem)(void *elem))
 	NYAS_LOG("Array %lx -> Length(%lu), Capacity(%lu), ElemSize(%lu):",
 	         (size_t)arr, *(((size_t *)arr) - 2), *((size_t *)arr - 1),
 	         *((size_t *)arr - 3));
-	for (int i = 0; i < nyas_arr_len(arr); ++i) {
-		printf(" [%d]", i);
+	for (size_t i = 0; i < nyas_arr_len(arr); ++i) {
+		printf(" [%lu]", i);
 		print_elem(nyas_arr_at(arr, i));
 	}
 	fflush(stdout);

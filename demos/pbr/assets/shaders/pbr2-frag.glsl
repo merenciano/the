@@ -23,7 +23,7 @@
 const float kPI = 3.14159265359;
 const float kEpsilon = 1e-5;
 const vec3  kFdielectric = vec3(0.04);
-const int   kMaxPrefilterLod = 5;
+const float kMaxPrefilterLod = 6.0;
 
 in Vertex
 {
@@ -57,10 +57,16 @@ float GeometricAttenuation(float nol, float nov, float roughness) {
 }
 
 // Schlick's approximation
-vec3 Fresnel(vec3 f0, float u)
+vec3 Fschlick(vec3 f0, float u)
 {
     float f = pow(1.0 - u, 5.0);
     return f + f0 * (1.0 - f);
+}
+
+vec3 Fresnel(vec3 f0, float loh)
+{
+    float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
+    return Fschlick(f0, f90, loh);
 }
 
 float SpecularAA(vec3 n, float a)
@@ -72,7 +78,7 @@ float SpecularAA(vec3 n, float a)
     vec3 dndv = dFdy(n);
     float variance = SIGMA2 * (dot(dndu, dndu) + dot(dndv, dndv));
     float kernelRoughness2 = min(2.0 * variance, KAPPA);
-    return clamp(a + kernelRoughness2, 0.0, 1.0);
+    return clamp(a + kernelRoughness2, 0.045, 1.0);
 }
 
 void main()
@@ -81,13 +87,12 @@ void main()
     albedo = mix(COLOR, albedo, USE_ALBEDO_MAP);
     float metalness = texture(METALLIC_MAP, v_in.uv).r;
     metalness = mix(METALLIC, metalness, USE_PBR_MAPS);
-    float roughness = texture(ROUGHNESS_MAP, v_in.uv).r;
-    roughness = mix(ROUGHNESS, roughness, USE_PBR_MAPS);
+    float perceptual_roughness = texture(ROUGHNESS_MAP, v_in.uv).r;
+    perceptual_roughness = mix(ROUGHNESS, perceptual_roughness, USE_PBR_MAPS);
 
     vec3 normal = normalize(2.0 * texture(NORMAL_MAP, v_in.uv).rgb - 1.0);
     normal = normalize(v_in.tbn * normal);
     normal = mix(normalize(v_in.tbn[2]), clamp(normal, -1.0, 1.0), NORMAL_MAP_INTENSITY);
-
 
     // Fresnel at normal incidence
     vec3 f0 = mix(kFdielectric, albedo, metalness);
@@ -97,13 +102,12 @@ void main()
     // Half vec between light and view 
     vec3 hlv = normalize(light + view);
 
-    float nov = abs(dot(normal, view)) + kEpsilon;
+    float nov = abs(dot(normal, view));
     float nol = clamp(dot(normal, light), 0.0, 1.0);
     float noh = clamp(dot(normal, hlv), 0.0, 1.0);
     float voh = clamp(dot(view, hlv), 0.0, 1.0);
 
-    roughness = roughness * roughness;
-    roughness = max(roughness, 0.01);
+    float roughness = perceptual_roughness * perceptual_roughness;
     roughness = SpecularAA(normal, roughness);
     vec3  f = Fresnel(f0, voh);
     float d = NormalDistribution(noh, roughness);
@@ -119,13 +123,15 @@ void main()
 
     // IBL
     vec3 irradiance = texture(IRRADIANCE_MAP, normal).rgb;
-    vec3 f_ibl = Fresnel(f0, nov);
-    vec3 kd_ibl = mix(vec3(1.0) - f_ibl, vec3(0.0), metalness);
-    vec3 diffuse_ibl = kd_ibl * albedo * irradiance;
+    //vec3 f_ibl = Fresnel(f0, nov);
+    //vec3 kd_ibl = mix(vec3(1.0) - f_ibl, vec3(0.0), metalness);
+    //vec3 diffuse_ibl = kd_ibl * albedo * irradiance;
+    vec3 ibl_d = irradiance * (albedo / kPI);
 
     vec3 r = reflect(-view, normal);
-    vec3 specular_irradiance = textureLod(PREFILTER_MAP, r, roughness * kMaxPrefilterLod).rgb;
-    vec2 specular_brdf_ibl = texture(LUT_MAP, vec2(nov, roughness)).rg;
+    float lod = perceptual_roughness * kMaxPrefilterLod;
+    vec3 specular_irradiance = textureLod(PREFILTER_MAP, r, lod).rgb;
+    vec2 specular_brdf_ibl = texture(LUT_MAP, vec2(nov, perceptual_roughness)).rg;
     vec3 specular_ibl = (f0 * specular_brdf_ibl.x + specular_brdf_ibl.y) * specular_irradiance;
     vec3 ambient_lighting = diffuse_ibl + specular_ibl;
 

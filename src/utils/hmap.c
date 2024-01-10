@@ -1,6 +1,6 @@
 #include "hmap.h"
-#include "log.h"
-#include "mem.h"
+#include "core/log.h"
+#include "core/mem.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -18,12 +18,7 @@ struct hm_hdr {
 	uint32_t value_size;
 };
 
-typedef struct {
-	union {
-		char name[8];
-		uint64_t hash;
-	};
-} hm_key;
+typedef uint64_t hm_key;
 
 struct nyas_hmap {
 	hm_key key;
@@ -44,9 +39,9 @@ static inline unsigned int next_pow2(unsigned int v)
 static inline uint64_t hm_hash(const char *key)
 {
 	hm_key mk;
-	mk.hash = 0;
-	strncpy(mk.name, key, 8);
-	return mk.hash;
+	mk = 0;
+	strncpy((char*)mk, key, 8);
+	return mk;
 }
 
 static inline nyas_hmap *getnode(nyas_hmap *hm, unsigned int offset)
@@ -57,7 +52,7 @@ static inline nyas_hmap *getnode(nyas_hmap *hm, unsigned int offset)
 nyas_hmap *
 nyas_hmap_create(unsigned int capacity, unsigned int value_size)
 {
-	NYAS_ASSERT(capacity <= (1 << 31));
+	NYAS_ASSERT(capacity <= (1U << 31));
 	capacity = next_pow2(capacity);
 	size_t map_size = (value_size + sizeof(hm_key)) * capacity
 		+ sizeof(struct hm_hdr);
@@ -84,12 +79,12 @@ nyas_hmap_insert(nyas_hmap *hm, const char *key, void *value)
 	NYAS_ASSERT(hmcount(hm) < hmcap(hm)); // Change this to 80% capacity
 
 	hm_key mk;
-	mk.hash = hm_hash(key);
-	uint32_t offset = mk.hash & (hmcap(hm) - 1);
+	mk = hm_hash(key);
+	uint32_t offset = mk & (hmcap(hm) - 1);
 
 	nyas_hmap *node;
-	for (node = getnode(hm, offset); node->key.hash != 0; node = getnode(hm, offset)) {
-		if (node->key.hash == mk.hash) {
+	for (node = getnode(hm, offset); node->key != 0; node = getnode(hm, offset)) {
+		if (node->key == mk) {
 			memcpy(&(node->value), value, (hmvalsz(hm)));
 			NYAS_LOG("Key %s already here!\n", key);
 			return;
@@ -97,7 +92,7 @@ nyas_hmap_insert(nyas_hmap *hm, const char *key, void *value)
 		offset = (offset + 1) & (hmcap(hm) - 1);
 	}
 
-	node->key.hash = mk.hash;
+	node->key = mk;
 	memcpy(&(node->value), value, hmvalsz(hm));
 	++hmcount(hm);
 }
@@ -106,12 +101,12 @@ void *
 nyas_hmap_get(nyas_hmap *hm, const char *key)
 {
 	hm_key mk;
-	mk.hash = hm_hash(key);
-	uint32_t offset = mk.hash & (hmcap(hm) - 1);
+	mk = hm_hash(key);
+	uint32_t offset = mk & (hmcap(hm) - 1);
 
 	nyas_hmap *node;
-	for (node = getnode(hm, offset); node->key.hash != mk.hash; node = getnode(hm, offset)) {
-		if (node->key.hash == 0) {
+	for (node = getnode(hm, offset); node->key != mk; node = getnode(hm, offset)) {
+		if (node->key == 0) {
 			return NYAS_HMAP_INVALID_VALUE;
 		}
 		offset = (offset + 1) & (hmcap(hm) - 1);

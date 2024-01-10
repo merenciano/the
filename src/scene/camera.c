@@ -6,7 +6,7 @@
 nyas_cam camera;
 
 static const float SENSIBILITY = 1.0f / 1000.0f;
-static const float SPEED = 100.0f;
+static const float SPEED = 10.0f;
 static const float SCROLL_SENSIBILITY = 1.0f;
 static float UP[3] = { 0.0f, 1.0f, 0.0f };
 
