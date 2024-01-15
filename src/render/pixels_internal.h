@@ -80,6 +80,49 @@ enum nypx_cube_faces {
 	NYPX_CUBE_FACE_COUNT
 };
 
+enum nyas_internal_resource_flags {
+	NYAS_IRF_DIRTY = 1U << 3,
+	NYAS_IRF_CREATED = 1U << 4,
+	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
+};
+
+struct nyas_internal_resource {
+	uint32_t id;
+	int flags;
+};
+
+struct nyas_internal_mesh {
+	struct nyas_internal_resource res;
+	struct nyas_internal_resource res_vb; // vertex buffer resource
+	struct nyas_internal_resource res_ib; // index buffer resource
+	float *vtx;
+	nypx_index *idx;
+	int64_t elem_count;
+	uint32_t vtx_size;
+	int attrib;
+};
+
+struct nyas_internal_texture {
+	struct nyas_internal_resource res;
+	void *pix[6];
+	int width;
+	int height;
+	int type;
+};
+
+struct nyas_internal_shader {
+	struct nyas_internal_resource res;
+	const char *name;
+	struct {
+		int data, tex, cubemap;
+	} loc[2], count[2]; // 0: unit, 1: common
+	void *common;
+};
+
+struct nyas_internal_framebuffer {
+	struct nyas_internal_resource res;
+};
+
 void nypx_tex_create(uint32_t *id, int type);
 
 void nypx_tex_set(uint32_t id, int type, int width, int height, void **pix);
@@ -88,7 +131,7 @@ void nypx_tex_release(uint32_t *id);
 
 void nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
-void nypx_mesh_use(uint32_t id);
+void nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s);
 
 void nypx_mesh_set(uint32_t id,
                    uint32_t vid,
@@ -161,49 +204,6 @@ void nypx_depth_disable_mask(void);
 void nypx_depth_set(int depth_func);
 
 void nypx_viewport(int x, int y, int width, int height);
-
-enum nyas_internal_resource_flags {
-	NYAS_IRF_DIRTY = 1U << 3,
-	NYAS_IRF_CREATED = 1U << 4,
-	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
-};
-
-struct nyas_internal_resource {
-	uint32_t id;
-	int flags;
-};
-
-struct nyas_internal_mesh {
-	struct nyas_internal_resource res;
-	struct nyas_internal_resource res_vb; // vertex buffer resource
-	struct nyas_internal_resource res_ib; // index buffer resource
-	float *vtx;
-	nypx_index *idx;
-	int64_t elem_count;
-	uint32_t vtx_size;
-	int attrib;
-};
-
-struct nyas_internal_texture {
-	struct nyas_internal_resource res;
-	void *pix[6];
-	int width;
-	int height;
-	int type;
-};
-
-struct nyas_internal_shader {
-	struct nyas_internal_resource res;
-	const char *name;
-	struct {
-		int data, tex, cubemap;
-	} loc[2], count[2]; // 0: unit, 1: common
-	void *common;
-};
-
-struct nyas_internal_framebuffer {
-	struct nyas_internal_resource res;
-};
 
 #include "utils/array.h"
 extern nyas_arr mesh_pool;

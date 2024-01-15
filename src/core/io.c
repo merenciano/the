@@ -39,7 +39,9 @@ nyas_io_init(const char *title, int width, int height, bool limit_framerate)
 	}
 
 	glfwMakeContextCurrent(internal_window);
-	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
+#ifndef __EMSCRIPTEN__
+	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+#endif
 
 	if (!limit_framerate) {
 		glfwSwapInterval(0);

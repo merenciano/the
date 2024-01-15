@@ -9,5 +9,6 @@ demos/*/imgui.ini
 demos/pbr/matballs
 demos/pbr/inspector
 demos/hello/hello
+demos/emsc/emsc.**
 tools/tomsh
 compile_commands.json

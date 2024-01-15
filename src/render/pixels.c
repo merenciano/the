@@ -999,11 +999,10 @@ nyas_draw_fn(nyas_cmdata *data)
 		nyas__sync_gpu_mesh(mesh, data->draw.material.shader);
 	}
 
-	nypx_mesh_use(imsh->res.id);
 	shdr_t *s = nyas_arr_at(shader_pool, data->draw.material.shader);
 	nyas__set_shader_data(s, data->draw.material.ptr, false);
+	nypx_mesh_use(imsh, s);
 	nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
-	nypx_mesh_use(0);
 }
 
 void

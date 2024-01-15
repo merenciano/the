@@ -1,2 +1,6 @@
-add_subdirectory(pbr)
-add_subdirectory(hello)
+if (NYAS_EMSC)
+	add_subdirectory(emsc)
+else()
+	add_subdirectory(pbr)
+	add_subdirectory(hello)
+endif()

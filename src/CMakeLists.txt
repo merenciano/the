@@ -15,9 +15,18 @@ target_sources(${LIB_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h
 	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.c
 )
+
+if (NYAS_GLES2)
+	target_sources(${LIB_NAME} PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal_gles2.c
+	)
+else(NYAS_GL3)
+	target_sources(${LIB_NAME} PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.c
+	)
+endif()

@@ -1,18 +1,15 @@
 #include "pixels_internal.h"
 
-#include "core/io.h" // file_read --shader source
+#include "core/io.h"
 #include "core/log.h"
-#include "core/mem.h" // free --shader source buffer
+#include "core/mem.h"
 
-#include <string.h> // shader path manipulation
-
-#include <glad/glad.h>
+#include <string.h>
+#include <GLES2/gl2.h>
 
 struct texcnfg {
 	GLenum target;
-	GLint ifmt;
 	GLenum fmt;
-	GLenum type;
 	GLint wrap;
 	GLint min;
 	GLint mag;
@@ -40,10 +37,8 @@ nypx__texcnfg(int flags)
 	if (flags & TF_DEPTH) {
 		struct texcnfg depthcnfg = {
 			.target = GL_TEXTURE_2D,
-			.ifmt = GL_DEPTH_COMPONENT,
 			.fmt = GL_DEPTH_COMPONENT,
-			.type = GL_FLOAT,
-			.wrap = GL_CLAMP_TO_BORDER,
+			.wrap = GL_CLAMP_TO_EDGE,
 			.min = GL_LINEAR,
 			.mag = GL_LINEAR,
 		};
@@ -53,9 +48,7 @@ nypx__texcnfg(int flags)
 
 	struct texcnfg cnfg = {
 		.target = flags & TF_CUBE ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D,
-		.ifmt = flags & TF_LINEAR_COLOR ? GL_RGB8 : GL_SRGB8,
 		.fmt = GL_RGB,
-		.type = GL_UNSIGNED_BYTE,
 		.wrap = flags & TF_TILING ? GL_REPEAT : GL_CLAMP_TO_EDGE,
 		.min = flags & TF_MIN_FILTER_LERP ? GL_LINEAR : GL_NEAREST,
 		.mag = flags & TF_MAG_FILTER_LERP ? GL_LINEAR : GL_NEAREST
@@ -63,40 +56,16 @@ nypx__texcnfg(int flags)
 
 	switch (flags & 0x3) {
 	case 0:
-		cnfg.ifmt = GL_R8;
-		cnfg.fmt = GL_RED;
+		cnfg.fmt = GL_LUMINANCE;
 		break;
 
 	case 1:
-		cnfg.ifmt = GL_RG8;
-		cnfg.fmt = GL_RG;
+		cnfg.fmt = GL_LUMINANCE_ALPHA;
 		break;
 
 	case 3:
-		cnfg.ifmt = GL_RGBA8;
 		cnfg.fmt = GL_RGBA;
 		break;
-	}
-
-	if (flags & TF_FLOAT) {
-		cnfg.type = GL_FLOAT;
-		switch (flags & 0x3) {
-		case 0:
-			cnfg.ifmt = GL_R16F;
-			break;
-
-		case 1:
-			cnfg.ifmt = GL_RG16F;
-			break;
-
-		case 2:
-			cnfg.ifmt = GL_RGB16F;
-			break;
-
-		case 3:
-			cnfg.ifmt = GL_RGBA16F;
-			break;
-		}
 	}
 
 	if ((flags & (TF_MIPMAP | TF_CUBE)) == (TF_MIPMAP | TF_CUBE)) {
@@ -135,13 +104,6 @@ nypx_tex_create(uint32_t *id, int type)
 	glTexParameteri(cnfg.target, GL_TEXTURE_MAG_FILTER, cnfg.mag);
 	glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_S, cnfg.wrap);
 	glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_T, cnfg.wrap);
-
-	if (type & TF_CUBE) { // TODO: Check if WrapR can be set for Tex2D
-		glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_R, cnfg.wrap);
-	} else if (type & TF_DEPTH) {
-		float border[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		glTexParameterfv(cnfg.target, GL_TEXTURE_BORDER_COLOR, border);
-	}
 }
 
 void
@@ -159,8 +121,8 @@ nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
 	}
 
 	for (int i = 0; i < sides; ++i) {
-		glTexImage2D(target + i, 0, cnfg.ifmt, width, height, 0, cnfg.fmt,
-		             cnfg.type, pix[i]);
+		glTexImage2D(target + i, 0, cnfg.fmt, width, height, 0, cnfg.fmt,
+		             GL_UNSIGNED_BYTE, pix[i]);
 	}
 
 	if (type & TF_MIPMAP) {
@@ -177,19 +139,9 @@ nypx_tex_release(uint32_t *id)
 void
 nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
 {
-	glGenVertexArrays(1, id);
+	(void)id;
 	glGenBuffers(1, vid);
 	glGenBuffers(1, iid);
-}
-
-void
-nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s)
-{
-	if (m) {
-		glBindVertexArray(m->res.id);
-	} else {
-		glBindVertexArray(0);
-	}
 }
 
 static GLsizei
@@ -205,6 +157,35 @@ nypx__get_attrib_stride(int32_t attr_flags)
 }
 
 void
+nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s)
+{
+	if (!m || !s) {
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		return;
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, m->res_vb.id);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->res_ib.id);
+	GLint offset = 0;
+	GLsizei stride = nypx__get_attrib_stride(m->attrib);
+	for (int i = 0; i < VTXATTR_COUNT; ++i) {
+		if (!(m->attrib & (1 << i))) {
+			continue;
+		}
+
+		GLint size = attrib_sizes[i];
+		GLint attrib_pos = glGetAttribLocation(s->res.id, attrib_names[i]);
+		if (attrib_pos >= 0) {
+			glEnableVertexAttribArray(attrib_pos);
+			glVertexAttribPointer(attrib_pos, size, GL_FLOAT, GL_FALSE, stride,
+			                      (void *)(offset * sizeof(float)));
+		}
+		offset += size;
+	}
+}
+
+void
 nypx_mesh_set(uint32_t id,
               uint32_t vid,
               uint32_t iid,
@@ -215,7 +196,10 @@ nypx_mesh_set(uint32_t id,
               nypx_index *idx,
               size_t elements)
 {
-	glBindVertexArray(id);
+	(void)id;
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iid);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index),
+	             (const void *)idx, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, vid);
 	glBufferData(GL_ARRAY_BUFFER, vsize, vtx, GL_STATIC_DRAW);
 
@@ -235,20 +219,12 @@ nypx_mesh_set(uint32_t id,
 		}
 		offset += size;
 	}
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iid);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index),
-	             (const void *)idx, GL_STATIC_DRAW);
-
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void
 nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid)
 {
-	glDeleteVertexArrays(1, id);
+	(void)id;
 	glDeleteBuffers(1, vid);
 	glDeleteBuffers(1, iid);
 }
@@ -389,7 +365,7 @@ nypx__fb_attach_gl(int slot)
 	case NYPX_SLOT_STENCIL:
 		return GL_STENCIL_ATTACHMENT;
 	case NYPX_SLOT_DEPTH_STENCIL:
-		return GL_DEPTH_STENCIL_ATTACHMENT;
+		return GL_DEPTH_ATTACHMENT;
 	default:
 		return (GL_COLOR_ATTACHMENT0 - NYPX_SLOT_COLOR0) + slot;
 	}
