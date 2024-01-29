@@ -79,7 +79,7 @@ nypx__texcnfg(int flags)
 	}
 
 	if (flags & TF_FLOAT) {
-		cnfg.type = GL_FLOAT;
+		cnfg.type = flags & TF_HALF_FLOAT ? GL_HALF_FLOAT : GL_FLOAT;
 		switch (flags & 0x3) {
 		case 0:
 			cnfg.ifmt = GL_R16F;
@@ -385,14 +385,14 @@ int
 nypx__fb_attach_gl(int slot)
 {
 	switch (slot) {
-	case NYPX_SLOT_DEPTH:
+	case NYAS_SLOT_DEPTH:
 		return GL_DEPTH_ATTACHMENT;
-	case NYPX_SLOT_STENCIL:
+	case NYAS_SLOT_STENCIL:
 		return GL_STENCIL_ATTACHMENT;
-	case NYPX_SLOT_DEPTH_STENCIL:
+	case NYAS_SLOT_DEPTH_STENCIL:
 		return GL_DEPTH_STENCIL_ATTACHMENT;
 	default:
-		return (GL_COLOR_ATTACHMENT0 - NYPX_SLOT_COLOR0) + slot;
+		return (GL_COLOR_ATTACHMENT0 - NYAS_SLOT_COLOR0) + slot;
 	}
 }
 
@@ -457,13 +457,13 @@ static GLenum
 nypx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
-	case NYPX_BLEND_ONE:
+	case NYAS_BLEND_ONE:
 		return GL_ONE;
-	case NYPX_BLEND_SRC_ALPHA:
+	case NYAS_BLEND_SRC_ALPHA:
 		return GL_SRC_ALPHA;
-	case NYPX_BLEND_ONE_MINUS_SRC_ALPHA:
+	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA:
 		return GL_ONE_MINUS_SRC_ALPHA;
-	case NYPX_BLEND_ZERO:
+	case NYAS_BLEND_ZERO:
 		return GL_ZERO;
 	default:
 		return -1;
@@ -490,14 +490,14 @@ nypx_cull_disable(void)
 }
 
 static GLenum
-nypx__gl_cull(enum nypx_cull_face cull)
+nypx__gl_cull(enum nyas_cull_face cull)
 {
 	switch (cull) {
-	case NYPX_CULL_BACK:
+	case NYAS_CULL_BACK:
 		return GL_BACK;
-	case NYPX_CULL_FRONT:
+	case NYAS_CULL_FRONT:
 		return GL_FRONT;
-	case NYPX_CULL_FRONT_AND_BACK:
+	case NYAS_CULL_FRONT_AND_BACK:
 		return GL_FRONT_AND_BACK;
 	default:
 		return -1;
@@ -535,12 +535,12 @@ nypx_depth_disable_mask(void)
 }
 
 static GLenum
-nypx__gl_depth(enum nypx_depth_func df)
+nypx__gl_depth(enum nyas_depth_func df)
 {
 	switch (df) {
-	case NYPX_DEPTH_LEQUAL:
+	case NYAS_DEPTH_LEQUAL:
 		return GL_LEQUAL;
-	case NYPX_DEPTH_LESS:
+	case NYAS_DEPTH_LESS:
 		return GL_LESS;
 	default:
 		return -1;

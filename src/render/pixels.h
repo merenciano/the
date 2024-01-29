@@ -1,6 +1,8 @@
 #ifndef NYAS_PIXELS_H
 #define NYAS_PIXELS_H
 
+#include "pixels_defs.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -74,6 +76,7 @@ int nyas_tex_flags(int nchann,
 nyas_tex nyas_tex_empty(int width, int height, int tex_flags);
 nyas_tex nyas_tex_load(const char *path, int flip, int tex_flags);
 int *nyas_tex_size(nyas_tex tex, int *out_vec2i);
+void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
 
 nyas_framebuffer nyas_fb_create(void);
 
@@ -118,34 +121,6 @@ typedef struct nyas_draw_cmdata {
 	nyas_mat material;
 } nyas_draw_cmdata;
 
-enum nyas_blendfn_opt {
-	// TODO: Add as needed.
-	NYAS_BLEND_FUNC_CURRENT = 0,
-	NYAS_BLEND_FUNC_ONE,
-	NYAS_BLEND_FUNC_SRC_ALPHA,
-	NYAS_BLEND_FUNC_ONE_MINUS_SRC_ALPHA,
-	NYAS_BLEND_FUNC_ZERO,
-};
-
-typedef struct nyas_blend_fn {
-	enum nyas_blendfn_opt src;
-	enum nyas_blendfn_opt dst;
-} nyas_blend_fn;
-
-typedef enum nyas_cullface_opt {
-	NYAS_CULL_FACE_CURRENT = 0,
-	NYAS_CULL_FACE_FRONT,
-	NYAS_CULL_FACE_BACK,
-	NYAS_CULL_FACE_FRONT_AND_BACK,
-} nyas_cullface_opt;
-
-typedef enum nyas_depthfn_opt {
-	// TODO: Add as needed.
-	NYAS_DEPTH_FUNC_CURRENT = 0,
-	NYAS_DEPTH_FUNC_LEQUAL,
-	NYAS_DEPTH_FUNC_LESS,
-} nyas_depthfn_opt;
-
 typedef enum nyas_rops_opt {
 	NYAS_ROPS_NONE = 0,
 	NYAS_BLEND = 1 << 0,
@@ -158,16 +133,11 @@ typedef enum nyas_rops_opt {
 typedef struct nyas_rops_cmdata {
 	int enable_flags;
 	int disable_flags;
-	nyas_blend_fn blend_func;
-	nyas_cullface_opt cull_face;
-	nyas_depthfn_opt depth_func;
+	enum nyas_blend_func blend_src;
+	enum nyas_blend_func blend_dst;
+	enum nyas_cull_face cull_face;
+	enum nyas_depth_func depth_func;
 } nyas_rops_cmdata;
-
-typedef enum nyas_attach_slot {
-	NYAS_ATTACH_IGNORE,
-	NYAS_ATTACH_DEPTH,
-	NYAS_ATTACH_COLOR
-} nyas_attach_slot;
 
 typedef struct nyas_fb_slot {
 	nyas_tex tex;

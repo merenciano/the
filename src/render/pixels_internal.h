@@ -1,6 +1,8 @@
 #ifndef NYASPIX_H
 #define NYASPIX_H
 
+#include "pixels_defs.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -14,26 +16,10 @@ typedef uint32_t nypx_index;
 #define NYPX_HALF_INDEX 0
 #define NYPX_WORD_INDEX 1
 
-enum nypx_blend_func {
-	NYPX_BLEND_INVALID = 0,
-	NYPX_BLEND_ONE,
-	NYPX_BLEND_SRC_ALPHA,
-	NYPX_BLEND_ONE_MINUS_SRC_ALPHA,
-	NYPX_BLEND_ZERO,
-};
-
-enum nypx_cull_face {
-	NYPX_CULL_CURRENT = 0,
-	NYPX_CULL_FRONT,
-	NYPX_CULL_BACK,
-	NYPX_CULL_FRONT_AND_BACK,
-};
-
-enum nypx_depth_func {
-	// TODO: Add as needed.
-	NYPX_DEPTH_CURRENT = 0,
-	NYPX_DEPTH_LEQUAL,
-	NYPX_DEPTH_LESS,
+enum nyas_internal_resource_flags {
+	NYAS_IRF_DIRTY = 1U << 3,
+	NYAS_IRF_CREATED = 1U << 4,
+	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
 };
 
 enum nypx_vertex_attributes {
@@ -43,47 +29,6 @@ enum nypx_vertex_attributes {
 	VA_BITANGENT,
 	VA_UV,
 	VTXATTR_COUNT
-};
-
-enum nypx_texture_flags {
-	TF_CHANNELS = 0, // 0 and 1 bits
-	TF_CUBE = 1 << 2,
-	TF_DEPTH = 1 << 3,
-	TF_MIPMAP = 1 << 4,
-	TF_FLOAT = 1 << 5,
-	TF_TILING = 1 << 6,
-	TF_MIN_FILTER_LERP = 1 << 7,
-	TF_MAG_FILTER_LERP = 1 << 8,
-	TF_MAG_MIP_FILTER_LERP = 1 << 9,
-	TF_LINEAR_COLOR = 1 << 10
-};
-
-enum nypx_framebuffer_slots {
-	NYPX_SLOT_DEPTH,
-	NYPX_SLOT_STENCIL,
-	NYPX_SLOT_DEPTH_STENCIL,
-	NYPX_SLOT_COLOR0,
-	NYPX_SLOT_COLOR1,
-	NYPX_SLOT_COLOR2,
-	NYPX_SLOT_COLOR3,
-	NYPX_SLOT_COLOR4,
-	NYPX_SLOT_COLOR5,
-};
-
-enum nypx_cube_faces {
-	NYPX_CUBE_POS_X,
-	NYPX_CUBE_NEG_X,
-	NYPX_CUBE_POS_Y,
-	NYPX_CUBE_NEG_Y,
-	NYPX_CUBE_POS_Z,
-	NYPX_CUBE_NEG_Z,
-	NYPX_CUBE_FACE_COUNT
-};
-
-enum nyas_internal_resource_flags {
-	NYAS_IRF_DIRTY = 1U << 3,
-	NYAS_IRF_CREATED = 1U << 4,
-	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
 };
 
 struct nyas_internal_resource {

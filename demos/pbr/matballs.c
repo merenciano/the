@@ -1,6 +1,5 @@
 #include "nyas.h"
 #include "pbr.h"
-#include "pbr_types.h"
 #include "gui.h"
 #include <mathc.h>
 #include <string.h>
@@ -8,9 +7,6 @@
 struct Shaders {
 	nyas_shader fullscreen_img;
 	nyas_shader skybox;
-	nyas_shader eqr_to_cube;
-	nyas_shader prefilter_env;
-	nyas_shader lut_gen;
 	nyas_shader pbr;
 };
 
@@ -79,16 +75,10 @@ Init(void)
 
 	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
-	g_shaders.eqr_to_cube = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
-	g_shaders.prefilter_env = nyas_shader_create(g_shader_descriptors.prefilter);
-	g_shaders.lut_gen = nyas_shader_create(g_shader_descriptors.lut);
 	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
 
-	g_mesh = nyas_mesh_load_file("assets/obj/matball.obj");
-	g_tex.sky = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
-	g_tex.irradiance = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	g_tex.prefilter = nyas_tex_empty(256, 256, g_tex_flags.prefilter);
-	g_tex.lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
+	g_mesh = nyas_mesh_load_file("assets/obj/matball.msh");
+	nyas_load_env("assets/env/helipad.env", &g_tex.lut, &g_tex.sky, &g_tex.irradiance, &g_tex.prefilter);
 
 	g_tex.gold_a = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_A.png", 1, g_tex_flags.albedo);
 	g_tex.gold_n = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_N.png", 1, g_tex_flags.normal);
@@ -319,7 +309,7 @@ Init(void)
 	common_pbr->sunlight[0] = 0.0f;
 	common_pbr->sunlight[1] = -1.0f;
 	common_pbr->sunlight[2] = -0.1f;
-	common_pbr->sunlight[4] = 0.0f;
+	common_pbr->sunlight[3] = 0.0f;
 
 	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
 	pbr_scene_tex[0] = g_tex.lut;
@@ -327,23 +317,6 @@ Init(void)
 	pbr_scene_tex[2] = g_tex.prefilter;
 
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
-
-	nyas_tex eqr_in_tex = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
-	nyas_tex irr_in_tex = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
-
-	GenEnv env = {
-		.eqr_sh = g_shaders.eqr_to_cube,
-		.lut_sh = g_shaders.lut_gen,
-		.pref_sh = g_shaders.prefilter_env,
-		.eqr_in = eqr_in_tex,
-		.eqr_out = g_tex.sky,
-		.irr_in = irr_in_tex,
-		.irr_out = g_tex.irradiance,
-		.pref_out = g_tex.prefilter,
-		.lut = g_tex.lut
-	};
-
-	GeneratePbrEnv(&env);
 	fb_tex = InitMainFramebuffer(g_fb);
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
 }
@@ -377,10 +350,10 @@ Update(nyas_chrono *chrono)
 	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
 	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST |
 	  NYAS_DEPTH_WRITE;
-	rops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
-	rops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LESS;
-	rops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
+	rops->data.rend_opts.blend_src = NYAS_BLEND_ONE;
+	rops->data.rend_opts.blend_dst = NYAS_BLEND_ZERO;
+	rops->data.rend_opts.depth_func = NYAS_DEPTH_LESS;
+	rops->data.rend_opts.cull_face = NYAS_CULL_BACK;
 	rops->execute = nyas_rops_fn;
 	fbuff->next = rops;
 
@@ -405,7 +378,7 @@ Update(nyas_chrono *chrono)
 	rops = nyas_cmd_alloc();
 	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
 	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
+	rops->data.rend_opts.depth_func = NYAS_DEPTH_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
 	nyas_camera_static_vp(nyas_shader_data(g_shaders.skybox), &camera);
@@ -478,6 +451,9 @@ main(int argc, char **argv)
 	Init();
 
 	nyas_chrono frame_chrono = nyas_time();
+	Update(&frame_chrono);
+	nyas_frame_end();
+	Render();
 	while (!nyas_window_closed()) {
 		Update(&frame_chrono);
 		Render();

@@ -15,7 +15,7 @@
 #define NYAS_ARRAY_ASSERT assert
 #endif
 
-struct arr_head {
+struct internal_arr_head {
 	int cap;
 	int count;
 	char buf[];
@@ -24,8 +24,8 @@ struct arr_head {
 static inline void *
 internal_arr_create(int elem_size, int capacity)
 {
-	struct arr_head *h =
-	  NYAS_ARRAY_MALLOC(sizeof(struct arr_head) + capacity * elem_size);
+	struct internal_arr_head *h = NYAS_ARRAY_MALLOC(
+	  sizeof(struct internal_arr_head) + capacity * elem_size);
 	h->cap = capacity;
 	h->count = 0;
 	return h->buf;
@@ -34,7 +34,7 @@ internal_arr_create(int elem_size, int capacity)
 static inline void *
 internal_arr_push(void **arr, int count, int elem_size)
 {
-	struct arr_head *h = (*(struct arr_head **)arr) - 1;
+	struct internal_arr_head *h = (*(struct internal_arr_head **)arr) - 1;
 	if ((h->count += count) > h->cap) {
 		while ((h->cap *= 2) < h->count)
 			;
@@ -49,14 +49,14 @@ internal_arr_push(void **arr, int count, int elem_size)
 static inline void
 internal_arr_pop(void *arr, int count)
 {
-	struct arr_head *h = (struct arr_head *)arr - 1;
+	struct internal_arr_head *h = (struct internal_arr_head *)arr - 1;
 	h->count = (h->count - count) * ((h->count - count) > 0);
 }
 
 static inline void
 internal_arr_rm(void *arr, void *elem, int elem_size)
 {
-	struct arr_head *h = (struct arr_head *)arr - 1;
+	struct internal_arr_head *h = (struct internal_arr_head *)arr - 1;
 	memcpy(elem, &h->buf[(--h->count) * elem_size], elem_size);
 }
 
@@ -65,7 +65,7 @@ typedef int (*callback)(void *elem, void *ctx);
 static inline int
 internal_arr_find(void *arr, int elem_size, callback fn, void *ctx)
 {
-	struct arr_head *h = (struct arr_head *)arr - 1;
+	struct internal_arr_head *h = (struct internal_arr_head *)arr - 1;
 	int i = 0;
 	while ((i < h->count) && !(fn(&h->buf[i * elem_size], ctx))) {
 		++i;

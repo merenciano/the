@@ -432,13 +432,13 @@ static GLenum
 nypx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
-	case NYPX_BLEND_ONE:
+	case NYAS_BLEND_ONE:
 		return GL_ONE;
-	case NYPX_BLEND_SRC_ALPHA:
+	case NYAS_BLEND_SRC_ALPHA:
 		return GL_SRC_ALPHA;
-	case NYPX_BLEND_ONE_MINUS_SRC_ALPHA:
+	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA:
 		return GL_ONE_MINUS_SRC_ALPHA;
-	case NYPX_BLEND_ZERO:
+	case NYAS_BLEND_ZERO:
 		return GL_ZERO;
 	default:
 		return -1;
@@ -465,7 +465,7 @@ nypx_cull_disable(void)
 }
 
 static GLenum
-nypx__gl_cull(enum nypx_cull_face cull)
+nypx__gl_cull(enum nyas_cull_face cull)
 {
 	switch (cull) {
 	case NYPX_CULL_BACK:
@@ -510,7 +510,7 @@ nypx_depth_disable_mask(void)
 }
 
 static GLenum
-nypx__gl_depth(enum nypx_depth_func df)
+nypx__gl_depth(enum nyas_depth_func df)
 {
 	switch (df) {
 	case NYPX_DEPTH_LEQUAL:

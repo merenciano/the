@@ -344,6 +344,86 @@ nyas_tex_size(nyas_tex tex, int *out)
 	return out;
 }
 
+void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
+{
+	FILE *f = fopen(path, "r");
+	char hdr[9];
+	fread(hdr, 8, 1, f);
+	hdr[8] = '\0';
+	printf("%s\n", hdr);
+
+	*sky = nyas__create_tex_handle();
+	tex_t *t = &tex_pool[*sky];
+	t->res.id = 0;
+	t->res.flags = NYAS_IRF_DIRTY;
+	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+	t->type |= TF_HALF_FLOAT;
+	t->width = 1024;
+	t->height = 1024;
+
+	size_t size = 1024 * 1024 * 3 * 2;
+	for (int i = 0; i < 6; ++i) {
+		t->pix[i] = malloc(size);
+		fread(t->pix[i], size, 1, f);
+		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+	}
+
+	*irr = nyas__create_tex_handle();
+	t = &tex_pool[*irr];
+	t->res.id = 0;
+	t->res.flags = NYAS_IRF_DIRTY;
+	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+	t->type |= TF_HALF_FLOAT;
+	t->width = 1024;
+	t->height = 1024;
+
+	for (int i = 0; i < 6; ++i) {
+		t->pix[i] = malloc(size);
+		fread(t->pix[i], size, 1, f);
+		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+	}
+
+	*pref = nyas__create_tex_handle();
+	t = &tex_pool[*pref];
+	t->res.id = 0;
+	t->res.flags = NYAS_IRF_DIRTY;
+	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
+	t->type |= TF_HALF_FLOAT;
+	t->width = 256;
+	t->height = 256;
+
+	size = 256 * 256 * 3 * 2;
+	for (int i = 0; i < 6; ++i) {
+		t->pix[i] = malloc(size);
+		fread(t->pix[i], size, 1, f);
+		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+	}
+	for (int level = 1; level < 7; ++level) {
+		size /= 4;
+		for (int i = 0; i < 6; ++i) {
+			char tmp[256 * 256 * 3 * 2];
+			fread(tmp, size, 1, f);
+		}
+	}
+
+	*lut = nyas__create_tex_handle();
+	t = &tex_pool[*lut];
+	t->res.id = 0;
+	t->res.flags = NYAS_IRF_DIRTY;
+	t->type = NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
+	t->type |= TF_HALF_FLOAT;
+	t->width = 512;
+	t->height = 512;
+	size = 512 * 512 * 2 * 2;
+	t->pix[0] = malloc(size);
+	fread(t->pix[0], size, 1, f);
+	NYAS_ASSERT(t->pix[0] && "The image couldn't be loaded");
+
+	fread(hdr, 8, 1, f);
+	printf("%s\n", hdr);
+}
+
+
 nyas_shader
 nyas_shader_create(const nyas_shader_desc *desc)
 {
@@ -1037,20 +1117,17 @@ nyas_rops_fn(nyas_cmdata *data)
 		}
 	}
 
-	nyas_blend_fn blend = data->rend_opts.blend_func;
 	/* Ignore unless both have a value assigned. */
-	if (blend.src && blend.dst) {
-		nypx_blend_set(blend.src, blend.dst);
+	if (data->rend_opts.blend_src && data->rend_opts.blend_dst) {
+		nypx_blend_set(data->rend_opts.blend_src, data->rend_opts.blend_dst);
 	}
 
-	nyas_cullface_opt cull = data->rend_opts.cull_face;
-	if (cull) {
-		nypx_cull_set(cull);
+	if (data->rend_opts.cull_face) {
+		nypx_cull_set(data->rend_opts.cull_face);
 	}
 
-	nyas_depthfn_opt depth = data->rend_opts.depth_func;
-	if (depth) {
-		nypx_depth_set(depth);
+	if (data->rend_opts.depth_func) {
+		nypx_depth_set(data->rend_opts.depth_func);
 	}
 }
 

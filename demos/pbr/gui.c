@@ -1,11 +1,10 @@
 #include "gui.h"
+#include "pbr.h"
 
 #include "core/io.h"
 #include "render/pixels_internal.h"
 #include "scene/entity.h"
 #include "utils/array.h"
-
-#include "pbr_types.h"
 
 #include <glad/glad.h>
 
