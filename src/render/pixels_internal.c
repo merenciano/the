@@ -185,6 +185,7 @@ nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
 void
 nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s)
 {
+	(void)s;
 	if (m) {
 		glBindVertexArray(m->res.id);
 	} else {

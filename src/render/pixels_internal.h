@@ -205,10 +205,9 @@ void nypx_depth_set(int depth_func);
 
 void nypx_viewport(int x, int y, int width, int height);
 
-#include "utils/array.h"
-extern nyas_arr mesh_pool;
-extern nyas_arr tex_pool;
-extern nyas_arr shader_pool;
-extern nyas_arr framebuffer_pool;
+extern struct nyas_internal_mesh *mesh_pool;
+extern struct nyas_internal_texture *tex_pool;
+extern struct nyas_internal_shader *shader_pool;
+extern struct nyas_internal_framebuffer *framebuffer_pool;
 
 #endif // NYASPIX_H

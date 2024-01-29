@@ -3,11 +3,11 @@
 #include "core/io.h"
 #include "render/pixels_internal.h"
 #include "scene/entity.h"
+#include "utils/array.h"
 
 #include "pbr_types.h"
 
 #include <glad/glad.h>
-#include <stdio.h>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -74,13 +74,13 @@ nuklear_draw(void)
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED)) {
 				nyas_pbr_desc_unit *unit = e->mat.ptr;
 				nyas_pbr_desc_scene *scene =
-				  ((struct nyas_internal_shader *)shader_pool + e->mat.shader)->common;
+				  (shader_pool + e->mat.shader)->common;
 				struct nyas_internal_texture *tex =
-				  nyas_arr_at(tex_pool, *nyas_mat_tex(e->mat));
+				  &tex_pool[*nyas_mat_tex(e->mat)];
 
 				if (nk_tree_push(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED)) {
 					struct nyas_internal_texture *tex =
-					  nyas_arr_at(tex_pool, *nyas_mat_tex(e->mat));
+					  &tex_pool[*nyas_mat_tex(e->mat)];
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex->res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
@@ -153,23 +153,23 @@ nuklear_draw(void)
 		}
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
-			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %lu / %lu (%lu Bytes)",
-			          nyas_arr_len(tex_pool), nyas_arr_cap(tex_pool),
+			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %d (%lu Bytes)",
+			          nyas_arr_count(tex_pool), nyas_arr_capacity(tex_pool),
 			          sizeof(struct nyas_internal_texture));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %lu / %lu (%lu Bytes)",
-			          nyas_arr_len(mesh_pool), nyas_arr_cap(mesh_pool),
+			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %d (%lu Bytes)",
+			  nyas_arr_count(mesh_pool), nyas_arr_capacity(mesh_pool),
 			          sizeof(struct nyas_internal_mesh));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %lu / %lu (%lu Bytes)",
-			          nyas_arr_len(framebuffer_pool),
-			          nyas_arr_cap(framebuffer_pool), sizeof(struct nyas_internal_framebuffer *));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Shaders: %lu / %lu (%lu Bytes)",
-			          nyas_arr_len(shader_pool), nyas_arr_cap(shader_pool),
+			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %d (%lu Bytes)",
+			  nyas_arr_count(framebuffer_pool),
+			  nyas_arr_capacity(framebuffer_pool), sizeof(struct nyas_internal_framebuffer));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Shaders: %d / %d (%lu Bytes)",
+			  nyas_arr_count(shader_pool), nyas_arr_capacity(shader_pool),
 			          sizeof(struct nyas_internal_shader));
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
-				for (size_t i = 0; i < nyas_arr_len(shader_pool); ++i) {
+				for (int i = 0; i < nyas_arr_count(shader_pool); ++i) {
 					nk_label(
 					  ctx,
-					  ((struct nyas_internal_shader *)shader_pool)[i].name,
+					  shader_pool[i].name,
 					  NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
 						nyas_shader_reload(i);
