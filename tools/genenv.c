@@ -116,7 +116,7 @@ GenerateRenderToCubeVP(void)
 		              svec3(0.0f, -1.0f, 0.0f)),
 	};
 
-	float *vp = nyas_alloc_frame(16 * 6 * sizeof(float));
+	float *vp = malloc(16 * 6 * sizeof(float)); // Not freeing this
 	for (int i = 0; i < 6; ++i) {
 		float *view = (float *)&views[i];
 		mat4_multiply(vp + 16 * i, proj, view);
@@ -297,12 +297,16 @@ GeneratePbrEnv(GenEnv *env)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
-	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
+	if (argc != 4) {
+		printf("genenv xxx-env.hdr xxx-dif.hdr out.env\n");
+		return 1;
+	}
+
+	nyas_mem_init(NYAS_MB(512));
+	nyas_io_init("...", 1920, 1080, true);
 	nyas_px_init();
-	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 
 	nyas_shader eqr_to_cube =
 	  nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
@@ -316,9 +320,9 @@ main(void)
 	nyas_tex lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
 
 	nyas_tex eqr_in_tex =
-	  nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
+	  nyas_tex_load(argv[1], 1, g_tex_flags.env);
 	nyas_tex irr_in_tex =
-	  nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
+	  nyas_tex_load(argv[2], 1, g_tex_flags.env);
 
 	GenEnv env = {
 		.eqr_sh = eqr_to_cube,
@@ -342,7 +346,7 @@ main(void)
 	nyas_window_swap();
 	nyas_frame_end();
 
-	FILE *f = fopen("out.env", "w");
+	FILE *f = fopen(argv[3], "w");
 	const char *hdr = "NYAS_ENV";
 	fwrite(hdr, 8, 1, f);
 
