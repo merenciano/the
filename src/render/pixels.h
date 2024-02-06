@@ -1,6 +1,7 @@
 #ifndef NYAS_PIXELS_H
 #define NYAS_PIXELS_H
 
+#include "core/nyas_core.h"
 #include "pixels_defs.h"
 
 #include <stdbool.h>
@@ -66,16 +67,13 @@ void *nyas_alloc_frame(unsigned int size);
 	| (TF_TILING * (TILE)) | (TF_MIPMAP * (MIPS)) | (TF_LINEAR_COLOR * (LINEAR)) \
 	| TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | (TF_MAG_MIP_FILTER_LERP * (MIPS)))
 
-int nyas_tex_flags(int nchann,
-                   bool fp,
-                   bool linear,
-                   bool cube,
-                   bool depth,
-                   bool tile,
-                   bool mipmap);
-nyas_tex nyas_tex_empty(int width, int height, int tex_flags);
-nyas_tex nyas_tex_load(const char *path, int flip, int tex_flags);
-int *nyas_tex_size(nyas_tex tex, int *out_vec2i);
+struct nyas_texture_desc nyas_tex_default_desc(nyas_texture_type type);
+struct nyas_texture_desc nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h);
+struct nyas_texture_desc nyas_tex_lod_desc(nyas_texture_type type, int levels, bool gen_mipmaps);
+nyas_tex nyas_tex_empty(struct nyas_texture_desc *desc);
+nyas_tex nyas_tex_load(struct nyas_texture_desc *desc, const char *path);
+nyas_tex nyas_tex_loadf(struct nyas_texture_desc *desc, const char *path, bool flip);
+struct nyas_vec2i nyas_tex_size(nyas_tex tex);
 void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
 
 nyas_framebuffer nyas_fb_create(void);

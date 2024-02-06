@@ -39,15 +39,18 @@
 static void
 nypx__check_handle(int h, void *arr)
 {
+	(void)h;
+	(void)arr;
 	NYAS_ASSERT(h >= 0 && "Bad resource state");
-	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_count(arr) &&
-	            "Out of bounds handle");
+	NYAS_ASSERT(h < (nyas_resource_handle)nyas_arr_count(arr) && "Out of bounds handle");
 }
 
-typedef struct nyas_internal_shader shdr_t;
-typedef struct nyas_internal_texture tex_t;
-typedef struct nyas_internal_mesh mesh_t;
-typedef struct nyas_internal_framebuffer fb_t;
+typedef struct nyas_shader_internal shdr_t;
+typedef struct nyas_texture_internal tex_t;
+typedef struct nyas_texture_image teximg_t;
+typedef struct nyas_texture_config texcfg_t;
+typedef struct nyas_mesh_internal mesh_t;
+typedef struct nyas_framebuffer_internal fb_t;
 
 nyas_mesh SPHERE_MESH;
 nyas_mesh CUBE_MESH;
@@ -57,6 +60,9 @@ mesh_t *mesh_pool;
 tex_t *tex_pool;
 shdr_t *shader_pool;
 fb_t *framebuffer_pool;
+
+texcfg_t *tex_cfgs;
+teximg_t *tex_imgs;
 
 typedef struct nyas_cmd_queue {
 	nyas_cmd *curr;
@@ -77,12 +83,13 @@ static int8_t *frame_pool_last;
 static int frame_switch;
 
 static void
-nyas__file_reader(void *ctx,
-                  const char *path,
-                  int is_mtl,
-                  const char *obj_path,
-                  char **buf,
-                  size_t *size)
+nyas__file_reader(
+  void *ctx,
+  const char *path,
+  int is_mtl,
+  const char *obj_path,
+  char **buf,
+  size_t *size)
 {
 	(void)ctx;
 	(void)is_mtl;
@@ -153,6 +160,9 @@ nyas_px_init(void)
 	tex_pool = nyas_arr_create(tex_t, NYAS_TEX_RESERVE);
 	framebuffer_pool = nyas_arr_create(fb_t, NYAS_FB_RESERVE);
 	shader_pool = nyas_arr_create(shdr_t, NYAS_SHADER_RESERVE);
+
+	tex_cfgs = nyas_arr_create(texcfg_t, 32);
+	tex_imgs = nyas_arr_create(teximg_t, 32);
 
 	/*
 	2 Frame allocator (2 frame since is the lifetime of render resources)
@@ -230,8 +240,7 @@ nyas_frame_end(void)
 nyas_cmd *
 nyas_cmd_alloc(void)
 {
-	NYAS_ASSERT((next_pool_tail - next_pool) <
-	              NYAS_RENDER_QUEUE_CAPACITY - 1 &&
+	NYAS_ASSERT((next_pool_tail - next_pool) < NYAS_RENDER_QUEUE_CAPACITY - 1 &&
 	            "Not enough memory in the RenderQueue pool");
 	return next_pool_tail++;
 }
@@ -239,190 +248,321 @@ nyas_cmd_alloc(void)
 void *
 nyas_alloc_frame(unsigned int size)
 {
-	NYAS_ASSERT(((frame_pool_last + size) - frame_pool[frame_switch]) <
-	              NYAS_FRAME_POOL_SIZE / 2 &&
+	NYAS_ASSERT(((frame_pool_last + size) - frame_pool[frame_switch]) < NYAS_FRAME_POOL_SIZE / 2 &&
 	            "Not enough memory in the frame pool");
 	void *ret = frame_pool_last;
 	frame_pool_last += size;
 	return ret;
 }
 
-int
-nyas_tex_flags(int ch,
-               bool fp,
-               bool lin,
-               bool cube,
-               bool depth,
-               bool tile,
-               bool mips)
+struct nyas_texture_desc
+nyas_tex_default_desc(nyas_texture_type type)
 {
-	int flags = ((ch - 1) & 0x03); // TODO: Cambiar a que 0 sean 4
-	flags |= (TF_FLOAT * fp) | (TF_CUBE * cube) | (TF_DEPTH * depth);
-	flags |= (TF_TILING * tile) | (TF_MIPMAP * mips) | (TF_LINEAR_COLOR * lin);
-	flags |= TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP;
-	flags |= (TF_MAG_MIP_FILTER_LERP * mips);
-	return flags;
+	return (struct nyas_texture_desc){
+		.flags = NYAS_TEX_FLAG_DEFAULT,
+		.type = type,
+		.width = 0,
+		.height = 0,
+		.levels = 1,
+		.desired_channels = 3,
+		.fmt = NYAS_TEX_FMT_SRGB,
+		.min_filter = NYAS_TEX_FLTR_LINEAR,
+		.mag_filter = NYAS_TEX_FLTR_LINEAR,
+		.wrap_s = NYAS_TEX_WRAP_REPEAT,
+		.wrap_t = NYAS_TEX_WRAP_REPEAT,
+		.wrap_r = NYAS_TEX_WRAP_DEFAULT,
+		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+}
+
+struct nyas_texture_desc
+nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h)
+{
+	return (struct nyas_texture_desc){
+		.flags = NYAS_TEX_FLAG_DEFAULT,
+		.type = type,
+		.width = w,
+		.height = h,
+		.levels = 1,
+		.desired_channels = 0,
+		.fmt = fmt,
+		.min_filter = NYAS_TEX_FLTR_LINEAR,
+		.mag_filter = NYAS_TEX_FLTR_LINEAR,
+		.wrap_s = NYAS_TEX_WRAP_REPEAT,
+		.wrap_t = NYAS_TEX_WRAP_REPEAT,
+		.wrap_r = NYAS_TEX_WRAP_REPEAT,
+		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+}
+
+struct nyas_texture_desc
+nyas_tex_lod_desc(nyas_texture_type type, int levels, bool gen_mipmaps)
+{
+	return (struct nyas_texture_desc){
+		.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS * gen_mipmaps,
+		.type = type,
+		.width = 0,
+		.height = 0,
+		.levels = levels,
+		.desired_channels = 0,
+		.fmt = NYAS_TEX_FMT_RGB8,
+		.min_filter = NYAS_TEX_FLTR_LINEAR,
+		.mag_filter = NYAS_TEX_FLTR_LINEAR,
+		.wrap_s = NYAS_TEX_WRAP_REPEAT,
+		.wrap_t = NYAS_TEX_WRAP_REPEAT,
+		.wrap_r = NYAS_TEX_WRAP_REPEAT,
+		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
 }
 
 const char *
 nyas__face_img_path(const char *path, const char *suffixes, int face)
 {
-	static char buffer[512];
-	if (!face) {
-		if (!suffixes) {
-			return path;
-		} else {
-			memset(buffer, 0, 512);
-		}
-	}
-	int count = snprintf(buffer, 512, path, suffixes[face]);
-	NYAS_ASSERT(count <= 512 && "Xpand dat mf");
+	static char buffer[1024];
+	int count = snprintf(buffer, 1024, path, suffixes[face]);
+	(void)count;
+	NYAS_ASSERT(count < 1024 && "Xpand dat mf");
 	return buffer;
 }
 
+static texcfg_t
+texconfig_from_desc(nyas_tex t, struct nyas_texture_desc *desc)
+{
+	return (texcfg_t){
+		.idx = t,
+		.min = desc->min_filter,
+		.mag = desc->mag_filter,
+		.ws = desc->wrap_s,
+		.wt = desc->wrap_t,
+		.wr = desc->wrap_r,
+		.border_color = { desc->border_color[0], desc->border_color[1], desc->border_color[2],
+		                  desc->border_color[3] }
+	};
+}
+
+static texcfg_t
+texconfig(nyas_tex t, nyas_texture_filter f, nyas_texture_wrap w)
+{
+	return (texcfg_t){
+		.idx = t,
+		.min = f,
+		.mag = f,
+		.ws = w,
+		.wt = w,
+		.wr = w,
+		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+}
+
 nyas_tex
-nyas_tex_load(const char *path, int flip, int flags)
+nyas_tex_load(struct nyas_texture_desc *desc, const char *path)
 {
 	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_empty");
 
 	nyas_tex tex = nyas__create_tex_handle();
 	tex_t *t = &tex_pool[tex];
 	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = flags;
-	int fmtchannels = t->type & 0x03; // 2 lsb for nchannels per pixel (0~4)
-	++fmtchannels;
+	t->res.flags = NYAS_IRF_GENERATE_MIPMAPS *
+	  ((desc->flags & NYAS_TEX_FLAG_GENERATE_MIPMAPS) != 0);
+	t->res.flags |= NYAS_IRF_DIRTY;
+	t->type = desc->type;
 
-	int nchannels = fmtchannels;
-	int *width = &t->width;
-	int *height = &t->height;
-	int faces = flags & TF_CUBE ? 6 : 1;
-	const char *suffixes = flags & TF_CUBE ? "RLUDFB" : NULL;
+	teximg_t *img = nyas_arr_push(tex_imgs);
+	img->idx = tex;
+	img->lod = 0;
 
-	stbi_set_flip_vertically_on_load(flip);
-	if (flags & TF_FLOAT) {
-		for (int i = 0; i < faces; ++i) {
+	stbi_set_flip_vertically_on_load(desc->flags & NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD);
+	int channels = 0;
+	if (desc->type == NYAS_TEX_2D) {
+		img->pix[0] = stbi_load(path, &t->w, &t->h, &channels, desc->desired_channels);
+		NYAS_ASSERT(img->pix[0] && "The image couldn't be loaded");
+	} else if (desc->type == NYAS_TEX_CUBEMAP) {
+		const char *suffixes = "RLUDFB";
+		for (int i = 0; i < 6; ++i) {
 			const char *p = nyas__face_img_path(path, suffixes, i);
-			t->pix[i] = stbi_loadf(p, width, height, &nchannels, 0);
-			NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
-		}
-	} else {
-		for (int i = 0; i < faces; ++i) {
-			const char *p = nyas__face_img_path(path, suffixes, i);
-			t->pix[i] = stbi_load(p, width, height, &nchannels, fmtchannels);
-			NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+			img->pix[i] = stbi_load(p, &t->w, &t->h, &channels, desc->desired_channels);
+			NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
 		}
 	}
 
+	switch (desc->desired_channels ? desc->desired_channels : channels) {
+	case 4: desc->fmt = NYAS_TEX_FMT_RGBA8; break;
+	case 3: if (desc->fmt != NYAS_TEX_FMT_RGB8) desc->fmt = NYAS_TEX_FMT_SRGB; break;
+	case 2: desc->fmt = NYAS_TEX_FMT_RG8; break;
+	case 1: desc->fmt = NYAS_TEX_FMT_R8; break;
+	default: NYAS_ASSERT(!"Invalid channel count after loading img from file.");
+	}
+
+	t->fmt = desc->fmt;
+	texcfg_t *new = nyas_arr_push(tex_cfgs);
+	*new = texconfig_from_desc(tex, desc);
 	return tex;
 }
 
 nyas_tex
-nyas_tex_empty(int width, int height, int tex_flags)
+nyas_tex_loadf(struct nyas_texture_desc *desc, const char *path, bool flip)
 {
-	NYAS_ASSERT(width > 0 && height > 0 && "Incorrect dimensions");
+	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_empty");
+
 	nyas_tex tex = nyas__create_tex_handle();
 	tex_t *t = &tex_pool[tex];
 	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->width = width;
-	t->height = height;
-	t->type = tex_flags;
+	t->res.flags = NYAS_IRF_GENERATE_MIPMAPS *
+	               ((desc->flags & NYAS_TEX_FLAG_GENERATE_MIPMAPS) != 0);
+	t->res.flags |= NYAS_IRF_DIRTY;
+	t->type = desc->type;
 
-	for (int face = 0; face < 6; ++face) {
-		t->pix[face] = NULL;
+	teximg_t *img = nyas_arr_push(tex_imgs);
+	img->idx = tex;
+	img->lod = 0;
+
+	stbi_set_flip_vertically_on_load(flip);
+	int channels = 0;
+	if (desc->type == NYAS_TEX_2D) {
+		img->pix[0] = stbi_loadf(path, &t->w, &t->h, &channels, desc->desired_channels);
+		NYAS_ASSERT(img->pix[0] && "The image couldn't be loaded");
 	}
 
+	switch (desc->desired_channels ? desc->desired_channels : channels) {
+	case 4: desc->fmt = NYAS_TEX_FMT_RGBA16F; break;
+	case 3: desc->fmt = NYAS_TEX_FMT_RGB32F; break;
+	case 2: desc->fmt = NYAS_TEX_FMT_RG16F; break;
+	case 1: desc->fmt = NYAS_TEX_FMT_R16F; break;
+	default: NYAS_ASSERT(!"Invalid channel count after loading img from file.");
+	}
+
+	t->fmt = desc->fmt;
+	texcfg_t *new = nyas_arr_push(tex_cfgs);
+	*new = texconfig_from_desc(tex, desc);
 	return tex;
 }
 
-int *
-nyas_tex_size(nyas_tex tex, int *out)
+nyas_tex
+nyas_tex_empty(struct nyas_texture_desc *desc)
 {
-	out[0] = tex_pool[tex].width;
-	out[1] = tex_pool[tex].height;
-	return out;
+	NYAS_ASSERT(desc->width > 0 && desc->height > 0 && "Incorrect dimensions");
+	nyas_tex tex = nyas__create_tex_handle();
+	tex_t *t = &tex_pool[tex];
+	t->res.id = 0;
+	t->res.flags = NYAS_IRF_GENERATE_MIPMAPS *
+	               ((desc->flags & NYAS_TEX_FLAG_GENERATE_MIPMAPS) != 0);
+	t->res.flags |= NYAS_IRF_DIRTY;
+	t->w = desc->width;
+	t->h = desc->height;
+	t->type = desc->type;
+	t->fmt = desc->fmt;
+
+	texcfg_t *new = nyas_arr_push(tex_cfgs);
+	*new = texconfig_from_desc(tex, desc);
+	return tex;
 }
 
-void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
+struct nyas_vec2i
+nyas_tex_size(nyas_tex tex)
+{
+	return (struct nyas_vec2i){ tex_pool[tex].w, tex_pool[tex].h };
+}
+
+void
+nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
 {
 	FILE *f = fopen(path, "r");
 	char hdr[9];
 	fread(hdr, 8, 1, f);
 	hdr[8] = '\0';
-	printf("%s\n", hdr);
+	if (strncmp("NYAS_ENV", hdr, 9) != 0) {
+		NYAS_LOG_ERR("Header of .env file is invalid. Aborting load_env of %s.", path);
+		return;
+	}
 
 	*sky = nyas__create_tex_handle();
 	tex_t *t = &tex_pool[*sky];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-	t->type |= TF_HALF_FLOAT;
-	t->width = 1024;
-	t->height = 1024;
+	t->type = NYAS_TEX_CUBEMAP;
+	t->fmt = NYAS_TEX_FMT_RGB16F;
+	t->w = 1024;
+	t->h = 1024;
 
-	size_t size = 1024 * 1024 * 3 * 2;
+	texcfg_t *cfg = nyas_arr_push(tex_cfgs);
+	*cfg = texconfig(*sky, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
+
+	teximg_t *img = nyas_arr_push(tex_imgs);
+	img->idx = *sky;
+	img->lod = 0;
+	size_t size = 1024 * 1024 * 3 * 2; // size * nchannels * sizeof(channel)
 	for (int i = 0; i < 6; ++i) {
-		t->pix[i] = malloc(size);
-		fread(t->pix[i], size, 1, f);
-		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+		img->pix[i] = nyas_alloc(size);
+		fread(img->pix[i], size, 1, f);
+		NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
 	}
 
 	*irr = nyas__create_tex_handle();
 	t = &tex_pool[*irr];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-	t->type |= TF_HALF_FLOAT;
-	t->width = 1024;
-	t->height = 1024;
+	t->type = NYAS_TEX_CUBEMAP;
+	t->fmt = NYAS_TEX_FMT_RGB16F;
+	t->w = 1024;
+	t->h = 1024;
 
+	cfg = nyas_arr_push(tex_cfgs);
+	*cfg = texconfig(*irr, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
+
+	img = nyas_arr_push(tex_imgs);
+	img->idx = *irr;
+	img->lod = 0;
 	for (int i = 0; i < 6; ++i) {
-		t->pix[i] = malloc(size);
-		fread(t->pix[i], size, 1, f);
-		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
+		img->pix[i] = nyas_alloc(size);
+		fread(img->pix[i], size, 1, f);
+		NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
 	}
 
 	*pref = nyas__create_tex_handle();
 	t = &tex_pool[*pref];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
-	t->type |= TF_HALF_FLOAT;
-	t->width = 256;
-	t->height = 256;
+	t->type = NYAS_TEX_CUBEMAP;
+	t->fmt = NYAS_TEX_FMT_RGB16F;
+	t->w = 256;
+	t->h = 256;
+
+	cfg = nyas_arr_push(tex_cfgs);
+	*cfg = texconfig(*pref, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
+	cfg->min = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
 
 	size = 256 * 256 * 3 * 2;
-	for (int i = 0; i < 6; ++i) {
-		t->pix[i] = malloc(size);
-		fread(t->pix[i], size, 1, f);
-		NYAS_ASSERT(t->pix[i] && "The image couldn't be loaded");
-	}
-	for (int level = 1; level < 7; ++level) {
-		size /= 4;
+	for (int lod = 0; lod < 9; ++lod) {
+		img = nyas_arr_push(tex_imgs);
+		img->idx = *pref;
+		img->lod = lod;
 		for (int i = 0; i < 6; ++i) {
-			char tmp[256 * 256 * 3 * 2];
-			fread(tmp, size, 1, f);
+			img->pix[i] = nyas_alloc(size);
+			fread(img->pix[i], size, 1, f);
+			NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
 		}
+		size /= 4;
 	}
 
 	*lut = nyas__create_tex_handle();
 	t = &tex_pool[*lut];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
-	t->type |= TF_HALF_FLOAT;
-	t->width = 512;
-	t->height = 512;
+	t->type = NYAS_TEX_2D;
+	t->fmt = NYAS_TEX_FMT_RG16F;
+	t->w = 512;
+	t->h = 512;
 	size = 512 * 512 * 2 * 2;
-	t->pix[0] = malloc(size);
-	fread(t->pix[0], size, 1, f);
-	NYAS_ASSERT(t->pix[0] && "The image couldn't be loaded");
-
-	fread(hdr, 8, 1, f);
-	printf("%s\n", hdr);
+	cfg = nyas_arr_push(tex_cfgs);
+	*cfg = texconfig(*lut, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
+	img = nyas_arr_push(tex_imgs);
+	img->idx = *lut;
+	img->lod = 0;
+	img->pix[0] = nyas_alloc(size);
+	fread(img->pix[0], size, 1, f);
+	NYAS_ASSERT(img->pix[0] && "The image couldn't be loaded");
+	fclose(f);
 }
-
 
 nyas_shader
 nyas_shader_create(const nyas_shader_desc *desc)
@@ -437,10 +577,9 @@ nyas_shader_create(const nyas_shader_desc *desc)
 	shader_pool[ret].count[1].data = desc->common_data_count;
 	shader_pool[ret].count[1].tex = desc->common_tex_count;
 	shader_pool[ret].count[1].cubemap = desc->common_cubemap_count;
-	shader_pool[ret].common =
-	  nyas_alloc((desc->common_data_count + desc->common_tex_count +
-	              desc->common_cubemap_count) *
-	             sizeof(float));
+	shader_pool[ret].common = nyas_alloc(
+	  (desc->common_data_count + desc->common_tex_count + desc->common_cubemap_count) *
+	  sizeof(float));
 	return ret;
 }
 
@@ -475,35 +614,29 @@ nyas__mesh_set_cube(mesh_t *mesh)
 {
 	static const float VERTICES[] = {
 		// positions          // normals           // uv
-		-0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 0.0f,
-		0.5f,  -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 0.0f,
-		0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 1.0f,
-		-0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  0.0f,  0.5f,  -0.5f, -0.5f,
+		0.0f,  0.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f,
+		1.0f,  1.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  1.0f,
 
-		-0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
-		0.5f,  -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
-		-0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,  0.5f,  -0.5f, 0.5f,
+		0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		1.0f,  1.0f,  -0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
 
-		-0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f, 0.0f,
-		-0.5f, 0.5f,  -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  -0.5f,
+		-1.0f, 0.0f,  0.0f,  1.0f,  1.0f,  -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,
+		0.0f,  1.0f,  -0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f,  0.0f,
 
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-		0.5f,  0.5f,  -0.5f, 1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-		0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-		0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  0.5f,  0.5f,  -0.5f,
+		1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,
+		0.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
 
-		-0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 1.0f,
-		0.5f,  -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  1.0f, 1.0f,
-		0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 0.0f,
-		-0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.5f,  -0.5f, -0.5f,
+		0.0f,  -1.0f, 0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,
+		1.0f,  0.0f,  -0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  0.0f,  0.0f,
 
-		-0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-		0.5f,  0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-		-0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  0.5f,  0.5f,  -0.5f,
+		0.0f,  1.0f,  0.0f,  1.0f,  1.0f,  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		1.0f,  0.0f,  -0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
 	};
 
 	static const nyas_idx INDICES[] = {
@@ -531,8 +664,7 @@ nyas__mesh_set_cube(mesh_t *mesh)
 static void
 nyas__mesh_set_sphere(mesh_t *mesh, int x_segments, int y_segments)
 {
-	NYAS_ASSERT(y_segments > 2 && x_segments > 2 &&
-	            "Invalid number of segments");
+	NYAS_ASSERT(y_segments > 2 && x_segments > 2 && "Invalid number of segments");
 
 	const float x_step = 1.0f / (float)(y_segments - 1);
 	const float y_step = 1.0f / (float)(x_segments - 1);
@@ -555,10 +687,8 @@ nyas__mesh_set_sphere(mesh_t *mesh, int x_segments, int y_segments)
 	for (int y = 0; y < x_segments; ++y) {
 		float py = sinf((float)-M_PI_2 + (float)M_PI * (float)y * x_step);
 		for (int x = 0; x < y_segments; ++x) {
-			float px = cosf(M_PI * 2.0f * x * y_step) *
-			  sinf(M_PI * y * x_step);
-			float pz = sinf(M_PI * 2.0f * x * y_step) *
-			  sinf(M_PI * y * x_step);
+			float px = cosf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
+			float pz = sinf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
 
 			*v++ = px;
 			*v++ = py;
@@ -588,10 +718,9 @@ static void
 nyas__mesh_set_quad(mesh_t *mesh)
 {
 	static const float VERTICES[] = {
-		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-		1.0f,  -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-		1.0f,  1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+		-1.0f, -1.0f, 0.0f,  0.0f, 0.0f, -1.0f, 0.0f, 0.0f,  1.0f, -1.0f, 0.0f,
+		0.0f,  0.0f,  -1.0f, 1.0f, 0.0f, 1.0f,  1.0f, 0.0f,  0.0f, 0.0f,  -1.0f,
+		1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
 	};
 
 	static const nyas_idx INDICES[] = { 0, 1, 2, 0, 2, 3 };
@@ -618,9 +747,8 @@ check_vertex(float *v, float *end, float *newvtx)
 {
 	nyas_idx i = 0;
 	for (; v < end; ++i, v += 14) {
-		if ((v[0] == newvtx[0]) && (v[1] == newvtx[1]) &&
-		    (v[2] == newvtx[2]) && (v[3] == newvtx[3]) &&
-		    (v[4] == newvtx[4]) && (v[5] == newvtx[5]) &&
+		if ((v[0] == newvtx[0]) && (v[1] == newvtx[1]) && (v[2] == newvtx[2]) &&
+		    (v[3] == newvtx[3]) && (v[4] == newvtx[4]) && (v[5] == newvtx[5]) &&
 		    (v[12] == newvtx[12]) && (v[13] == newvtx[13])) {
 			return i;
 		}
@@ -637,9 +765,9 @@ nyas__mesh_set_obj(mesh_t *mesh, const char *path)
 	tinyobj_material_t *mats = NULL;
 	size_t mats_count;
 
-	int result = tinyobj_parse_obj(&attrib, &shapes, &shape_count, &mats,
-	                               &mats_count, path, nyas__file_reader, NULL,
-	                               TINYOBJ_FLAG_TRIANGULATE);
+	int result = tinyobj_parse_obj(
+	  &attrib, &shapes, &shape_count, &mats, &mats_count, path, nyas__file_reader, NULL,
+	  TINYOBJ_FLAG_TRIANGULATE);
 
 	NYAS_ASSERT(result == TINYOBJ_SUCCESS && "Obj loader failed.");
 	if (result != TINYOBJ_SUCCESS) {
@@ -706,8 +834,7 @@ nyas__mesh_set_obj(mesh_t *mesh, const char *path)
 			vec3_subtract(delta_p2, v3, v1);
 			vec2_subtract(delta_uv1, &v2[12], &v1[12]);
 			vec2_subtract(delta_uv2, &v3[12], &v1[12]);
-			float r = 1.0f /
-			  (delta_uv1[0] * delta_uv2[1] - delta_uv1[1] * delta_uv2[0]);
+			float r = 1.0f / (delta_uv1[0] * delta_uv2[1] - delta_uv1[1] * delta_uv2[0]);
 
 			float tn[3], bitn[3], tmp[3];
 			vec3_multiply_f(tn, delta_p1, delta_uv2[1]);
@@ -797,8 +924,7 @@ nyas__mesh_set_msh(mesh_t *mesh, const char *path)
 	memcpy(mesh->vtx, data, mesh->vtx_size);
 	data += mesh->vtx_size;
 
-	mesh->elem_count = (*(size_t *)data) /
-	  sizeof(nyas_idx); // *(((size_t *)data)++)
+	mesh->elem_count = (*(size_t *)data) / sizeof(nyas_idx); // *(((size_t *)data)++)
 	data += sizeof(size_t);
 	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nyas_idx));
 	memcpy(mesh->idx, data, mesh->elem_count * sizeof(nyas_idx));
@@ -812,8 +938,7 @@ nyas_mesh_reload_file(nyas_mesh mesh, const char *path)
 	mesh_t *m = &mesh_pool[mesh];
 	size_t len = strlen(path);
 	const char *extension = path + len;
-	while (*--extension != '.') {
-	}
+	while (*--extension != '.') {}
 	extension++;
 	if (!strcmp(extension, "obj")) {
 		nyas__mesh_set_obj(m, path);
@@ -832,22 +957,17 @@ nyas_mesh_reload_geometry(nyas_mesh mesh, enum nyas_geometry geo)
 	mesh_t *m = &mesh_pool[mesh];
 
 	switch (geo) {
-	case NYAS_QUAD:
-		nyas__mesh_set_quad(m);
-		break;
+	case NYAS_QUAD: nyas__mesh_set_quad(m); break;
 
-	case NYAS_CUBE:
-		nyas__mesh_set_cube(m);
-		break;
+	case NYAS_CUBE: nyas__mesh_set_cube(m); break;
 
-	case NYAS_SPHERE:
-		nyas__mesh_set_sphere(m, 32, 32);
-		break;
+	case NYAS_SPHERE: nyas__mesh_set_sphere(m, 32, 32); break;
 	}
 	m->res.flags |= NYAS_IRF_DIRTY;
 }
 
-static nyas_mesh nyas__mesh_create(void)
+static nyas_mesh
+nyas__mesh_create(void)
 {
 	nyas_mesh mesh_handle = nyas__create_mesh_handle();
 	mesh_pool[mesh_handle].res.id = 0;
@@ -958,8 +1078,8 @@ nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 	}
 
 	if (m->res.flags & NYAS_IRF_DIRTY) {
-		nypx_mesh_set(m->res.id, m->res_vb.id, m->res_ib.id, shader_pool[shader].res.id,
-		              m->attrib, m->vtx, m->vtx_size, m->idx, m->elem_count);
+		nypx_mesh_set(m->res.id, m->res_vb.id, m->res_ib.id, shader_pool[shader].res.id, m->attrib,
+		              m->vtx, m->vtx_size, m->idx, m->elem_count);
 	}
 	m->res.flags = NYAS_IRF_CREATED;
 }
@@ -970,14 +1090,33 @@ nyas__sync_gpu_tex(nyas_tex tex)
 	CHECK_HANDLE(tex, tex);
 	tex_t *t = &tex_pool[tex];
 	if (!(t->res.flags & NYAS_IRF_CREATED)) {
-		nypx_tex_create(&t->res.id, t->type);
-		t->res.flags |= NYAS_IRF_DIRTY;
+		for (int i = 0; i < nyas_arr_count(tex_cfgs); ++i) {
+			if (tex_cfgs[i].idx == tex) {
+				nypx_tex_create(t, tex_cfgs + i);
+				t->res.flags |= NYAS_IRF_CREATED;
+				t->res.flags |= NYAS_IRF_DIRTY;
+				//nyas_arr_rm(tex_cfgs, i);
+				break;
+			}
+		}
 	}
 
 	if (t->res.flags & NYAS_IRF_DIRTY) {
-		nypx_tex_set(t->res.id, t->type, t->width, t->height, t->pix);
+		int count = 0;
+		for (int i = 0; i < nyas_arr_count(tex_imgs); ++i) {
+			if (tex_imgs[i].idx == tex) {
+				nypx_tex_set(t, tex_imgs + i);
+				//nyas_arr_rm(tex_imgs, i);
+				//--i;
+				++count;
+			}
+		}
+		if (!count) {
+			struct nyas_texture_image img = {.idx = tex, .lod = 0, .pix = {NULL, NULL, NULL, NULL, NULL, NULL}};
+			nypx_tex_set(t, &img);
+		}
+		t->res.flags &= ~NYAS_IRF_DIRTY;
 	}
-	t->res.flags = NYAS_IRF_CREATED;
 	return t;
 }
 
@@ -995,10 +1134,6 @@ nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
 	int tex_unit = NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA * common;
 
 	NYAS_ASSERT((dc >= 0) && (tc >= 0) && (cc >= 0));
-	// Check that if there is no data, the uniform location is negative
-	NYAS_ASSERT((dc && dl >= 0) || (!dc && dl < 0));
-	NYAS_ASSERT((tc && tl >= 0) || (!tc && tl < 0));
-	NYAS_ASSERT((cc && cl >= 0) || (!cc && cl < 0));
 	NYAS_ASSERT(tex_unit >= 0 && tex_unit < 128);
 
 	if (!(dc + tc + cc)) {
@@ -1029,9 +1164,9 @@ nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
 void
 nyas_setshader_fn(nyas_cmdata *data)
 {
-	static const char *uniforms[] = { "u_data",       "u_tex",
-		                              "u_cube",       "u_common_data",
-		                              "u_common_tex", "u_common_cube" };
+	static const char *uniforms[] = {
+		"u_data", "u_tex", "u_cube", "u_common_data", "u_common_tex", "u_common_cube"
+	};
 
 	CHECK_HANDLE(shader, data->mat.shader);
 	shdr_t *s = &shader_pool[data->mat.shader];
@@ -1054,10 +1189,9 @@ nyas_setshader_fn(nyas_cmdata *data)
 void
 nyas_clear_fn(nyas_cmdata *data)
 {
-	nypx_clear_color(data->clear.color[0], data->clear.color[1],
-	                 data->clear.color[2], data->clear.color[3]);
-	nypx_clear(data->clear.color_buffer, data->clear.depth_buffer,
-	           data->clear.stencil_buffer);
+	nypx_clear_color(
+	  data->clear.color[0], data->clear.color[1], data->clear.color[2], data->clear.color[3]);
+	nypx_clear(data->clear.color_buffer, data->clear.depth_buffer, data->clear.stencil_buffer);
 }
 
 void
@@ -1086,34 +1220,18 @@ nyas_rops_fn(nyas_cmdata *data)
 	for (int i = 1; i < NYAS_REND_OPTS_COUNT; ++i) {
 		// Check disable first for bad configs (both on)
 		switch (disable & (1 << i)) {
-		case NYAS_BLEND:
-			nypx_blend_disable();
-			continue;
-		case NYAS_CULL_FACE:
-			nypx_cull_disable();
-			continue;
-		case NYAS_DEPTH_TEST:
-			nypx_depth_disable_test();
-			continue;
-		case NYAS_DEPTH_WRITE:
-			nypx_depth_disable_mask();
-			continue;
+		case NYAS_BLEND: nypx_blend_disable(); continue;
+		case NYAS_CULL_FACE: nypx_cull_disable(); continue;
+		case NYAS_DEPTH_TEST: nypx_depth_disable_test(); continue;
+		case NYAS_DEPTH_WRITE: nypx_depth_disable_mask(); continue;
 		}
 
 		// Check if the option is in the enable group
 		switch (enable & (1 << i)) {
-		case NYAS_BLEND:
-			nypx_blend_enable();
-			continue;
-		case NYAS_CULL_FACE:
-			nypx_cull_enable();
-			continue;
-		case NYAS_DEPTH_TEST:
-			nypx_depth_enable_test();
-			continue;
-		case NYAS_DEPTH_WRITE:
-			nypx_depth_enable_mask();
-			continue;
+		case NYAS_BLEND: nypx_blend_enable(); continue;
+		case NYAS_CULL_FACE: nypx_cull_enable(); continue;
+		case NYAS_DEPTH_TEST: nypx_depth_enable_test(); continue;
+		case NYAS_DEPTH_WRITE: nypx_depth_enable_mask(); continue;
 		}
 	}
 
@@ -1150,10 +1268,9 @@ nyas_setfb_fn(nyas_cmdata *data)
 		nypx_fb_use(ifb->res.id);
 		if (d->attach.type != NYAS_IGNORE) {
 			tex_t *t = nyas__sync_gpu_tex(d->attach.tex);
-			nypx_fb_set(ifb->res.id, t->res.id, d->attach.type,
-			            d->attach.mip_level, d->attach.face);
+			nypx_fb_set(
+			  ifb->res.id, t->res.id, d->attach.type, d->attach.mip_level, d->attach.face);
 		}
 	}
 	nypx_viewport(0, 0, d->vp_x, d->vp_y);
 }
-

@@ -56,32 +56,16 @@ static const struct ShaderDescriptors g_shader_descriptors = {
 	.lut = &lut_shader_desc
 };
 
-static const int environment_flags =
-  NYAS_TEX_FLAGS(3, true, true, false, false, false, false);
-static const int skybox_flags =
-  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-static const int lut_flags =
-  NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
-static const int irr_flags =
-  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-static const int pref_flags =
-  NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
 
-struct TexFlags {
-	int env;
-	int sky;
-	int lut;
-	int irr;
-	int prefilter;
+struct pbr_tex_desc {
+	struct nyas_texture_desc env;
+	struct nyas_texture_desc sky;
+	struct nyas_texture_desc lut;
+	struct nyas_texture_desc irr;
+	struct nyas_texture_desc prefilter;
 };
 
-static const struct TexFlags g_tex_flags = {
-	.env = environment_flags,
-	.sky = skybox_flags,
-	.lut = lut_flags,
-	.irr = irr_flags,
-	.prefilter = pref_flags
-};
+static struct pbr_tex_desc g_tex_flags;
 
 typedef struct GenEnv {
 	nyas_shader eqr_sh;
@@ -141,13 +125,12 @@ ConvertEqrToCubeCommandList(
 
 	nyas_cmd *last = use_tocube;
 	float *vp = GenerateRenderToCubeVP();
-	int vp_size[2];
-	nyas_tex_size(tex_out, vp_size);
+	struct nyas_vec2i vp_size = nyas_tex_size(tex_out);
 	for (int i = 0; i < 6; ++i) {
 		nyas_cmd *cube_fb = nyas_cmd_alloc();
 		cube_fb->data.set_fb.fb = fb;
-		cube_fb->data.set_fb.vp_x = vp_size[0];
-		cube_fb->data.set_fb.vp_y = vp_size[1];
+		cube_fb->data.set_fb.vp_x = vp_size.x;
+		cube_fb->data.set_fb.vp_y = vp_size.y;
 		cube_fb->data.set_fb.attach.tex = tex_out;
 		cube_fb->data.set_fb.attach.type = NYAS_SLOT_COLOR0;
 		cube_fb->data.set_fb.attach.mip_level = 0;
@@ -182,16 +165,15 @@ GeneratePrefilterCommandList(
 	float clearcolor[] = { 0.0f, 0.0f, 1.0f, 1.0f };
 
 	float *vp = GenerateRenderToCubeVP();
-	int tex_size[2];
-	nyas_tex_size(env->pref_out, tex_size);
-	for (int i = 0; i < 7; ++i) {
+	struct nyas_vec2i tex_size = nyas_tex_size(env->pref_out);
+	for (int i = 0; i < 9; ++i) {
 		float roughness = (float)i / 6.0f;
 
 		for (int side = 0; side < 6; ++side) {
 			nyas_cmd *fb_comm = nyas_cmd_alloc();
 			fb_comm->data.set_fb.fb = fb;
-			fb_comm->data.set_fb.vp_x = tex_size[0] >> i;
-			fb_comm->data.set_fb.vp_y = tex_size[1] >> i;
+			fb_comm->data.set_fb.vp_x = tex_size.x >> i;
+			fb_comm->data.set_fb.vp_y = tex_size.y >> i;
 			fb_comm->data.set_fb.attach.tex = env->pref_out;
 			fb_comm->data.set_fb.attach.type = NYAS_SLOT_COLOR0;
 			fb_comm->data.set_fb.attach.face = side;
@@ -235,12 +217,11 @@ GenerateLutCommandlist(
   nyas_cmd *last_command,
   GenEnv *env)
 {
-	int vp_size[2];
-	nyas_tex_size(env->lut, vp_size);
+	struct nyas_vec2i vp_size = nyas_tex_size(env->lut);
 	nyas_cmd *set_init_fb = nyas_cmd_alloc();
 	set_init_fb->data.set_fb.fb = fb;
-	set_init_fb->data.set_fb.vp_x = vp_size[0];
-	set_init_fb->data.set_fb.vp_y = vp_size[1];
+	set_init_fb->data.set_fb.vp_x = vp_size.x;
+	set_init_fb->data.set_fb.vp_y = vp_size.y;
 	set_init_fb->data.set_fb.attach.type = NYAS_SLOT_COLOR0;
 	set_init_fb->data.set_fb.attach.tex = env->lut;
 	set_init_fb->data.set_fb.attach.face = -1;
@@ -296,13 +277,43 @@ GeneratePbrEnv(GenEnv *env)
 	nyas_cmd_add(rendops);
 }
 
-int
-main(void)
+static void write_cubemap_data(FILE *f, unsigned int texid, const size_t side_size, int lod_level)
 {
+	char buffer[side_size];
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+	for (int i = 0; i < 6; ++i) {
+		glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, lod_level, GL_RGB, GL_HALF_FLOAT, buffer);
+		fwrite(buffer, side_size, 1, f);
+	}
+}
+
+int
+main(int argc, char **argv)
+{
+	if (argc != 4) {
+		printf("Usage: genenv <envfile>.hdr <diffile>.hdr <output>.env\n");
+		return 1;
+	}
+
+	static const int environment_flags =
+	  NYAS_TEX_FLAGS(3, true, true, false, false, false, false);
+	static const int skybox_flags =
+	  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+	static const int lut_flags =
+	  NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
+	static const int irr_flags =
+	  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
+	static const int pref_flags =
+	  NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
+
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
+	nyas_io_init("Environment file generation tool", 600, 400, true);
 	nyas_px_init();
 	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
+
+	g_tex_flags.env = nyas_tex_default_desc(NYAS_TEX_2D);
+	g_tex_flags.env.min_filter = NYAS_TEX_FLTR_LINEAR;
+	g_tex_flags.env.desired_channels = 3;
 
 	nyas_shader eqr_to_cube =
 	  nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
@@ -310,15 +321,23 @@ main(void)
 	  nyas_shader_create(g_shader_descriptors.prefilter);
 	nyas_shader lut_gen = nyas_shader_create(g_shader_descriptors.lut);
 
-	nyas_tex sky = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
-	nyas_tex irradiance = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	nyas_tex prefilter = nyas_tex_empty(256, 256, g_tex_flags.prefilter);
-	nyas_tex lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
+	g_tex_flags.sky = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEX_FMT_RGB16F, 1024, 1024);
+	g_tex_flags.sky.min_filter = NYAS_TEX_FLTR_LINEAR;
+	g_tex_flags.prefilter = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEX_FMT_RGB16F, 256, 256);
+	g_tex_flags.prefilter.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
+	g_tex_flags.prefilter.mag_filter = NYAS_TEX_FLTR_LINEAR;
+	g_tex_flags.prefilter.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS;
+	g_tex_flags.prefilter.levels = 9;
+	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RG16F, 512, 512);
+	nyas_tex sky = nyas_tex_empty(&g_tex_flags.sky);
+	nyas_tex irradiance = nyas_tex_empty(&g_tex_flags.sky);
+	nyas_tex prefilter = nyas_tex_empty(&g_tex_flags.prefilter);
+	nyas_tex lut = nyas_tex_empty(&g_tex_flags.lut);
 
 	nyas_tex eqr_in_tex =
-	  nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
+	  nyas_tex_loadf(&g_tex_flags.env, argv[1], true);
 	nyas_tex irr_in_tex =
-	  nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
+	  nyas_tex_loadf(&g_tex_flags.env, argv[2], true);
 
 	GenEnv env = {
 		.eqr_sh = eqr_to_cube,
@@ -342,46 +361,31 @@ main(void)
 	nyas_window_swap();
 	nyas_frame_end();
 
-	FILE *f = fopen("out.env", "w");
+	FILE *f = fopen(argv[3], "w");
 	const char *hdr = "NYAS_ENV";
 	fwrite(hdr, 8, 1, f);
 
-	size_t size = 1024 * 1024 * 3 * 2;
-	void *buffer = malloc(size);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, tex_pool[sky].res.id);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
-	glGetTexImage(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
+	{
+		const size_t size = 1024 * 1024 * 3 * 2;
+		write_cubemap_data(f, tex_pool[sky].res.id, size, 0);
+		write_cubemap_data(f, tex_pool[irradiance].res.id, size, 0);
+	}
 
-	glBindTexture(GL_TEXTURE_CUBE_MAP, tex_pool[irradiance].res.id);
-	for (int i = 0; i < 6; ++i) {
-		glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, GL_HALF_FLOAT, buffer);
+	{
+		size_t size = 256 * 256 * 3 * 2;
+		for (int level = 0; level < 9; ++level) {
+			write_cubemap_data(f, tex_pool[prefilter].res.id, size, level);
+			size /= 4;
+		}
+	}
+
+	{
+		const size_t size = 512 * 512 * 2 * 2;
+		char buffer[size];
+		glBindTexture(GL_TEXTURE_2D, tex_pool[lut].res.id);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_HALF_FLOAT, buffer);
 		fwrite(buffer, size, 1, f);
 	}
-
-	size = 256 * 256 * 3 * 2;
-	glBindTexture(GL_TEXTURE_CUBE_MAP, tex_pool[prefilter].res.id);
-	for (int level = 0; level < 7; ++level) {
-		for (int i = 0; i < 6; ++i) {
-			glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, level, GL_RGB, GL_HALF_FLOAT, buffer);
-			fwrite(buffer, size, 1, f);
-		}
-		size /= 4;
-	}
-
-	size = 512 * 512 * 2 * 2;
-	glBindTexture(GL_TEXTURE_2D, tex_pool[lut].res.id);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_HALF_FLOAT, buffer);
-	fwrite(buffer, size, 1, f);
 
 	const char *eof = "_END_ENV";
 	fwrite(eof, 8, 1, f);

@@ -16,10 +16,12 @@ typedef uint32_t nypx_index;
 #define NYPX_HALF_INDEX 0
 #define NYPX_WORD_INDEX 1
 
-enum nyas_internal_resource_flags {
+enum nyas_resource_flags {
 	NYAS_IRF_DIRTY = 1U << 3,
 	NYAS_IRF_CREATED = 1U << 4,
-	NYAS_IRF_RELEASE_RAM_BUFFER = 1U << 5,
+	NYAS_IRF_RELEASE_APP_STORAGE = 1U << 5,
+	NYAS_IRF_GENERATE_MIPMAPS = 1U << 6,
+	NYAS_IRF_MAPPED = 1U << 7,
 };
 
 enum nypx_vertex_attributes {
@@ -31,15 +33,15 @@ enum nypx_vertex_attributes {
 	VTXATTR_COUNT
 };
 
-struct nyas_internal_resource {
+struct nyas_resource_internal {
 	uint32_t id;
 	int flags;
 };
 
-struct nyas_internal_mesh {
-	struct nyas_internal_resource res;
-	struct nyas_internal_resource res_vb; // vertex buffer resource
-	struct nyas_internal_resource res_ib; // index buffer resource
+struct nyas_mesh_internal {
+	struct nyas_resource_internal res;
+	struct nyas_resource_internal res_vb; // vertex buffer resource
+	struct nyas_resource_internal res_ib; // index buffer resource
 	float *vtx;
 	nypx_index *idx;
 	int64_t elem_count;
@@ -47,16 +49,32 @@ struct nyas_internal_mesh {
 	int attrib;
 };
 
-struct nyas_internal_texture {
-	struct nyas_internal_resource res;
-	void *pix[6];
-	int width;
-	int height;
-	int type;
+struct nyas_texture_config {
+	int idx;
+	nyas_texture_filter min;
+	nyas_texture_filter mag;
+	nyas_texture_wrap ws;
+	nyas_texture_wrap wt;
+	nyas_texture_wrap wr;
+	float border_color[4];
 };
 
-struct nyas_internal_shader {
-	struct nyas_internal_resource res;
+struct nyas_texture_image {
+	int idx; // In tex_pool
+	int lod;
+	void *pix[6];
+};
+
+struct nyas_texture_internal {
+	struct nyas_resource_internal res;
+	nyas_texture_type type;
+	int w;
+	int h;
+	nyas_texture_format fmt;
+};
+
+struct nyas_shader_internal {
+	struct nyas_resource_internal res;
 	const char *name;
 	struct {
 		int data, tex, cubemap;
@@ -64,19 +82,19 @@ struct nyas_internal_shader {
 	void *common;
 };
 
-struct nyas_internal_framebuffer {
-	struct nyas_internal_resource res;
+struct nyas_framebuffer_internal {
+	struct nyas_resource_internal res;
 };
 
-void nypx_tex_create(uint32_t *id, int type);
 
-void nypx_tex_set(uint32_t id, int type, int width, int height, void **pix);
+void nypx_tex_create(struct nyas_texture_internal *t, struct nyas_texture_config *cfg);
+void nypx_tex_set(struct nyas_texture_internal *t, struct nyas_texture_image *img);
 
 void nypx_tex_release(uint32_t *id);
 
 void nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
-void nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s);
+void nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s);
 
 void nypx_mesh_set(uint32_t id,
                    uint32_t vid,
@@ -150,9 +168,9 @@ void nypx_depth_set(int depth_func);
 
 void nypx_viewport(int x, int y, int width, int height);
 
-extern struct nyas_internal_mesh *mesh_pool;
-extern struct nyas_internal_texture *tex_pool;
-extern struct nyas_internal_shader *shader_pool;
-extern struct nyas_internal_framebuffer *framebuffer_pool;
+extern struct nyas_mesh_internal *mesh_pool;
+extern struct nyas_texture_internal *tex_pool;
+extern struct nyas_shader_internal *shader_pool;
+extern struct nyas_framebuffer_internal *framebuffer_pool;
 
 #endif // NYASPIX_H

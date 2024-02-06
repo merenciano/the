@@ -94,7 +94,7 @@ nypx__texcnfg(int flags)
 }
 
 void
-nypx_tex_create(uint32_t *id, int type)
+deprecated_nypx_tex_create(uint32_t *id, int type)
 {
 	struct texcnfg cnfg = nypx__texcnfg(type);
 	glGenTextures(1, id);
@@ -107,7 +107,7 @@ nypx_tex_create(uint32_t *id, int type)
 }
 
 void
-nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
+deprecated_nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
 {
 	struct texcnfg cnfg = nypx__texcnfg(type);
 	int sides = 1;
@@ -157,7 +157,7 @@ nypx__get_attrib_stride(int32_t attr_flags)
 }
 
 void
-nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s)
+nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s)
 {
 	if (!m || !s) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

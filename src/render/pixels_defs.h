@@ -23,7 +23,7 @@ enum nyas_depth_func {
 	NYAS_DEPTH_LESS,
 };
 
-enum nyas_texture_flags {
+enum nyas_texture_flagggs {
 	TF_CHANNELS = 0, // 0 and 1 bits
 	TF_CUBE = 1 << 2,
 	TF_DEPTH = 1 << 3,
@@ -58,5 +58,82 @@ enum nyas_cube_faces {
 	NYAS_CUBE_NEG_Z,
 	NYAS_CUBE_FACE_COUNT
 };
+
+typedef int nyas_texture_flags;
+enum nyas_texture_flags {
+	NYAS_TEX_FLAG_DEFAULT = 0,
+	NYAS_TEX_FLAG_GENERATE_MIPMAPS = 1,
+	NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD = 1 << 1,
+	NYAS_TEX_FLAG_COUNT
+};
+
+typedef int nyas_texture_type;
+enum nyas_texture_type {
+	NYAS_TEX_DEFAULT = 0,
+	NYAS_TEX_2D,
+	NYAS_TEX_ARRAY_2D,
+	NYAS_TEX_CUBEMAP,
+	NYAS_TEX_ARRAY_CUBEMAP,
+	NYAS_TEX_COUNT
+};
+
+typedef int nyas_texture_format; // enum nyas_texture_formats
+enum nyas_texture_format {
+	NYAS_TEX_FMT_DEFAULT = 0,
+	NYAS_TEX_FMT_DEPTH,
+	NYAS_TEX_FMT_STENCIL,
+	NYAS_TEX_FMT_DEPTH_STENCIL,
+	NYAS_TEX_FMT_SRGB,
+	NYAS_TEX_FMT_SRGBA,
+	NYAS_TEX_FMT_R8,
+	NYAS_TEX_FMT_RG8,
+	NYAS_TEX_FMT_RGB8,
+	NYAS_TEX_FMT_RGBA8,
+	NYAS_TEX_FMT_R16F,
+	NYAS_TEX_FMT_RG16F,
+	NYAS_TEX_FMT_RGB16F,
+	NYAS_TEX_FMT_RGBA16F,
+	NYAS_TEX_FMT_RGB32F,
+	NYAS_TEX_FMT_COUNT
+};
+
+typedef int nyas_texture_filter; // enum nyas_texture_filters
+enum nyas_texture_filter {
+	NYAS_TEX_FLTR_DEFAULT = 0,
+	NYAS_TEX_FLTR_LINEAR,
+	NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR,
+	NYAS_TEX_FLTR_LINEAR_MIPMAP_NEAR,
+	NYAS_TEX_FLTR_NEAR,
+	NYAS_TEX_FLTR_NEAR_MIPMAP_NEAR,
+	NYAS_TEX_FLTR_NEAR_MIPMAP_LINEAR,
+	NYAS_TEX_FLTR_COUNT
+};
+
+typedef int nyas_texture_wrap;
+enum nyas_texture_wrap {
+	NYAS_TEX_WRAP_DEFAULT = 0,
+	NYAS_TEX_WRAP_CLAMP,
+	NYAS_TEX_WRAP_REPEAT,
+	NYAS_TEX_WRAP_MIRROR,
+	NYAS_TEX_WRAP_BORDER,
+	NYAS_TEX_WRAP_COUNT
+};
+
+struct nyas_texture_desc {
+	nyas_texture_flags flags;
+	nyas_texture_type type;
+	int width;
+	int height;
+	int levels;
+	int desired_channels;
+	nyas_texture_format fmt;
+	nyas_texture_filter min_filter;
+	nyas_texture_filter mag_filter;
+	nyas_texture_wrap wrap_s;
+	nyas_texture_wrap wrap_t;
+	nyas_texture_wrap wrap_r;
+	float border_color[4];
+};
+
 
 #endif // NYAS_PIXELS_DEFS_H

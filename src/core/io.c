@@ -117,13 +117,13 @@ nyas_window_swap(void)
 	glfwSwapBuffers(internal_window);
 }
 
-nyas_v2i
+struct nyas_vec2i
 nyas_window_size(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
-	nyas_v2i sz;
-	glfwGetWindowSize(internal_window, &sz.x, &sz.y);
-	return sz;
+	int x, y;
+	glfwGetWindowSize(internal_window, &x, &y);
+	return (struct nyas_vec2i){x, y};
 }
 
 int

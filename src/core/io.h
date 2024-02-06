@@ -1,7 +1,7 @@
 #ifndef NYAS_CORE_IO_H
 #define NYAS_CORE_IO_H
 
-#include "nyas_defs.h"
+#include "nyas_core.h"
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -31,7 +31,7 @@ void nyas_io_poll(void);
 
 int nyas_window_closed(void);
 void nyas_window_swap(void);
-nyas_v2i nyas_window_size(void);
+struct nyas_vec2i nyas_window_size(void);
 int nyas_window_width(void); // TODO: DEPRECATED: nyas_window_size instead
 int nyas_window_height(void); // TODO: DEPRECATED: nyas_window_size instead
 

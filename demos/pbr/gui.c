@@ -49,16 +49,12 @@ nuklear_draw(void)
 			nyas_entity *e = nyas_entities() + i;
 			// Mesh
 			nk_layout_row_dynamic(ctx, 30, 1);
-			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512,
-			                               NULL);
-			nk_layout_row_dynamic(ctx, 30, 2);
-			if (nk_button_label(ctx, "Load OBJ")) {
+			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);
+			nk_layout_row_dynamic(ctx, 30, 4);
+			if (nk_button_label(ctx, "Reload")) {
 				nyas_mesh_reload_file(e->mesh, mesh_path);
+				memset(mesh_path, 0, 512);
 			}
-			if (nk_button_label(ctx, "Load MSH")) {
-				nyas_mesh_reload_file(e->mesh, mesh_path);
-			}
-			nk_layout_row_dynamic(ctx, 30, 3);
 			if (nk_button_label(ctx, "Load Cube")) {
 				nyas_mesh_reload_geometry(e->mesh, NYAS_CUBE);
 			}
@@ -70,106 +66,87 @@ nuklear_draw(void)
 			}
 
 			// Material
-			if (nk_tree_push(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED)) {
+			if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED, NK_FILE_LINE,
+			                        nk_strlen(NK_FILE_LINE), i)) {
 				nyas_pbr_desc_unit *unit = e->mat.ptr;
-				nyas_pbr_desc_scene *scene =
-				  (shader_pool + e->mat.shader)->common;
-				struct nyas_internal_texture *tex =
-				  &tex_pool[*nyas_mat_tex(e->mat)];
+				nyas_pbr_desc_scene *scene = (shader_pool + e->mat.shader)->common;
+				struct nyas_texture_internal *tex = &tex_pool[*nyas_mat_tex(e->mat)];
 
-				if (nk_tree_push(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED)) {
-					struct nyas_internal_texture *tex =
-					  &tex_pool[*nyas_mat_tex(e->mat)];
+				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED, NK_FILE_LINE,
+				                        nk_strlen(NK_FILE_LINE), i)) {
+					struct nyas_texture_internal *tex = &tex_pool[*nyas_mat_tex(e->mat)];
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex->res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
 					nk_label(ctx, "Albedo texture intensity: ", NK_TEXT_LEFT);
-					unit->use_albedo_map = nk_slide_float(ctx, 0.0f,
-					                                      unit->use_albedo_map,
-					                                      1.0f, 0.01f);
+					unit->use_albedo_map =
+					  nk_slide_float(ctx, 0.0f, unit->use_albedo_map, 1.0f, 0.01f);
 					nk_label(ctx, "Color: ", NK_TEXT_LEFT);
 					*(struct nk_colorf *)unit->color =
-					  nk_color_picker(ctx, *(struct nk_colorf *)unit->color,
-					                  NK_RGB);
+					  nk_color_picker(ctx, *(struct nk_colorf *)unit->color, NK_RGB);
 					nk_tree_pop(ctx);
 				}
 
-				if (nk_tree_push(ctx, NK_TREE_TAB, "Normal map",
-				                 NK_MINIMIZED)) {
+				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Normal map", NK_MINIMIZED, NK_FILE_LINE,
+				                 nk_strlen(NK_FILE_LINE), i)) {
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex[1].res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
 					nk_label(ctx, "Normal map intensity: ", NK_TEXT_LEFT);
 					unit->normal_map_intensity =
-					  nk_slide_float(ctx, 0.0f, unit->normal_map_intensity,
-					                 1.0f, 0.01f);
+					  nk_slide_float(ctx, 0.0f, unit->normal_map_intensity, 1.0f, 0.01f);
 					nk_tree_pop(ctx);
 				}
 
-				if (nk_tree_push(ctx, NK_TREE_TAB, "Material maps",
-				                 NK_MINIMIZED)) {
+				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Material maps", NK_MINIMIZED, NK_FILE_LINE,
+				                 nk_strlen(NK_FILE_LINE), i)) {
 					nk_layout_row_static(ctx, 124, 124, 2);
 					nk_image(ctx, nk_image_id(tex[2].res.id));
 					nk_image(ctx, nk_image_id(tex[3].res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
-					nk_label(ctx,
-					         "Material texture intensity: ", NK_TEXT_LEFT);
-					unit->use_pbr_maps = nk_slide_float(ctx, 0.0f,
-					                                    unit->use_pbr_maps,
-					                                    1.0f, 0.01f);
+					nk_label(ctx, "Material texture intensity: ", NK_TEXT_LEFT);
+					unit->use_pbr_maps =
+					  nk_slide_float(ctx, 0.0f, unit->use_pbr_maps, 1.0f, 0.01f);
 					nk_label(ctx, "Roughness: ", NK_TEXT_LEFT);
-					unit->roughness =
-					  nk_slide_float(ctx, 0.0f, unit->roughness, 1.0f, 0.01f);
+					unit->roughness = nk_slide_float(ctx, 0.0f, unit->roughness, 1.0f, 0.01f);
 					nk_label(ctx, "Metalness: ", NK_TEXT_LEFT);
-					unit->metallic = nk_slide_float(ctx, 0.0f, unit->metallic,
-					                                1.0f, 0.01f);
+					unit->metallic = nk_slide_float(ctx, 0.0f, unit->metallic, 1.0f, 0.01f);
 					nk_tree_pop(ctx);
 				}
 
 				nk_layout_row_dynamic(ctx, 30, 3);
 				nk_label(ctx, "Tiling: ", NK_TEXT_LEFT);
-				nk_property_float(ctx, "#X", 0.0f, &unit->tiling_x, 100.0f,
-				                  0.01f, 0.01f);
-				nk_property_float(ctx, "#Y", 0.0f, &unit->tiling_y, 100.0f,
-				                  0.01f, 0.01f);
+				nk_property_float(ctx, "#X", 0.0f, &unit->tiling_x, 100.0f, 1.0f, 0.01f);
+				nk_property_float(ctx, "#Y", 0.0f, &unit->tiling_y, 100.0f, 1.0f, 0.01f);
 
 				nk_layout_row_dynamic(ctx, 30, 1);
 				nk_label(ctx, "Light direction: ", NK_TEXT_LEFT);
 				nk_layout_row_dynamic(ctx, 30, 3);
-				nk_property_float(ctx, "#X:", -100.0f, scene->sunlight, 100.0f,
-				                  0.01f, 0.01f);
-				nk_property_float(ctx, "#Y:", -100.0f, scene->sunlight + 1,
-				                  100.0f, 0.01f, 0.01f);
-				nk_property_float(ctx, "#Z:", -100.0f, scene->sunlight + 2,
-				                  100.0f, 0.01f, 0.01f);
+				nk_property_float(ctx, "#X:", -100.0f, scene->sunlight, 100.0f, 0.01f, 0.01f);
+				nk_property_float(ctx, "#Y:", -100.0f, scene->sunlight + 1, 100.0f, 0.01f, 0.01f);
+				nk_property_float(ctx, "#Z:", -100.0f, scene->sunlight + 2, 100.0f, 0.01f, 0.01f);
 				nk_layout_row_dynamic(ctx, 30, 2);
 				nk_label(ctx, "Light intensity: ", NK_TEXT_LEFT);
-				scene->sunlight[3] =
-				  nk_slide_float(ctx, 0.0f, scene->sunlight[3], 10.0f, 0.05f);
+				scene->sunlight[3] = nk_slide_float(ctx, 0.0f, scene->sunlight[3], 10.0f, 0.05f);
 
 				nk_tree_pop(ctx);
 			}
 		}
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
-			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %d (%lu Bytes)",
-			          nyas_arr_count(tex_pool), nyas_arr_capacity(tex_pool),
-			          sizeof(struct nyas_internal_texture));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %d (%lu Bytes)",
-			  nyas_arr_count(mesh_pool), nyas_arr_capacity(mesh_pool),
-			          sizeof(struct nyas_internal_mesh));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %d (%lu Bytes)", nyas_arr_count(tex_pool),
+			          nyas_arr_capacity(tex_pool), sizeof(struct nyas_texture_internal));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %d (%lu Bytes)", nyas_arr_count(mesh_pool),
+			          nyas_arr_capacity(mesh_pool), sizeof(struct nyas_mesh_internal));
 			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %d (%lu Bytes)",
-			  nyas_arr_count(framebuffer_pool),
-			  nyas_arr_capacity(framebuffer_pool), sizeof(struct nyas_internal_framebuffer));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Shaders: %d / %d (%lu Bytes)",
-			  nyas_arr_count(shader_pool), nyas_arr_capacity(shader_pool),
-			          sizeof(struct nyas_internal_shader));
+			          nyas_arr_count(framebuffer_pool), nyas_arr_capacity(framebuffer_pool),
+			          sizeof(struct nyas_framebuffer_internal));
+			nk_labelf(
+			  ctx, NK_TEXT_LEFT, "Shaders: %d / %d (%lu Bytes)", nyas_arr_count(shader_pool),
+			  nyas_arr_capacity(shader_pool), sizeof(struct nyas_shader_internal));
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
 				for (int i = 0; i < nyas_arr_count(shader_pool); ++i) {
-					nk_label(
-					  ctx,
-					  shader_pool[i].name,
-					  NK_TEXT_LEFT);
+					nk_label(ctx, shader_pool[i].name, NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
 						nyas_shader_reload(i);
 					}
@@ -181,6 +158,5 @@ nuklear_draw(void)
 	}
 	nk_end(ctx);
 
-	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER,
-	                MAX_ELEMENT_BUFFER);
+	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }

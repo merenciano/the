@@ -30,141 +30,148 @@ static const GLint attrib_sizes[VTXATTR_COUNT] = { 3, 3, 3, 3, 2 };
   The array's position must match with the attribute's
   value at enum nyas_VertexAttributes.
 */
-static const char *attrib_names[VTXATTR_COUNT] = { "a_position", "a_normal",
-	                                               "a_tangent", "a_bitangent",
-	                                               "a_uv" };
+static const char *attrib_names[VTXATTR_COUNT] = {
+	"a_position", "a_normal", "a_tangent", "a_bitangent", "a_uv"
+};
 
-static struct texcnfg
-nypx__texcnfg(int flags)
+typedef struct gl_tdesc_t {
+	GLenum target;
+	GLint min_f;
+	GLint mag_f;
+	GLint ws;
+	GLint wt;
+	GLint wr;
+	float border[4];
+} gl_tdesc_t;
+
+static GLenum
+glttarget(nyas_texture_type type)
 {
-	if (flags & TF_DEPTH) {
-		struct texcnfg depthcnfg = {
-			.target = GL_TEXTURE_2D,
-			.ifmt = GL_DEPTH_COMPONENT,
-			.fmt = GL_DEPTH_COMPONENT,
-			.type = GL_FLOAT,
-			.wrap = GL_CLAMP_TO_BORDER,
-			.min = GL_LINEAR,
-			.mag = GL_LINEAR,
-		};
-
-		return depthcnfg;
+	switch(type) {
+	case NYAS_TEX_2D: return GL_TEXTURE_2D;
+	case NYAS_TEX_CUBEMAP: return GL_TEXTURE_CUBE_MAP;
+	case NYAS_TEX_ARRAY_2D: return GL_TEXTURE_2D_ARRAY;
+	case NYAS_TEX_ARRAY_CUBEMAP: return GL_TEXTURE_CUBE_MAP_ARRAY;
+	default: return 0;
 	}
+}
 
-	struct texcnfg cnfg = {
-		.target = flags & TF_CUBE ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D,
-		.ifmt = flags & TF_LINEAR_COLOR ? GL_RGB8 : GL_SRGB8,
-		.fmt = GL_RGB,
-		.type = GL_UNSIGNED_BYTE,
-		.wrap = flags & TF_TILING ? GL_REPEAT : GL_CLAMP_TO_EDGE,
-		.min = flags & TF_MIN_FILTER_LERP ? GL_LINEAR : GL_NEAREST,
-		.mag = flags & TF_MAG_FILTER_LERP ? GL_LINEAR : GL_NEAREST
+static GLint
+gltfilter(nyas_texture_filter f)
+{
+	switch (f) {
+	case NYAS_TEX_FLTR_LINEAR: return GL_LINEAR;
+	case NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR: return GL_LINEAR_MIPMAP_LINEAR;
+	case NYAS_TEX_FLTR_LINEAR_MIPMAP_NEAR: return GL_LINEAR_MIPMAP_NEAREST;
+	case NYAS_TEX_FLTR_NEAR: return GL_NEAREST;
+	case NYAS_TEX_FLTR_NEAR_MIPMAP_NEAR: return GL_NEAREST_MIPMAP_NEAREST;
+	case NYAS_TEX_FLTR_NEAR_MIPMAP_LINEAR: return GL_NEAREST_MIPMAP_LINEAR;
+	default: return 0;
+	}
+}
+
+static GLint
+gltwrap(nyas_texture_wrap w)
+{
+	switch (w) {
+	case NYAS_TEX_WRAP_REPEAT: return GL_REPEAT;
+	case NYAS_TEX_WRAP_CLAMP: return GL_CLAMP_TO_EDGE;
+	case NYAS_TEX_WRAP_MIRROR: return GL_MIRRORED_REPEAT;
+	case NYAS_TEX_WRAP_BORDER: return GL_CLAMP_TO_BORDER;
+	default: return 0;
+	}
+}
+
+static gl_tdesc_t
+gltdesc(struct nyas_texture_config *c)
+{
+	gl_tdesc_t gldesc = {
+		.min_f = gltfilter(c->min),
+		.mag_f = gltfilter(c->mag),
+		.ws = gltwrap(c->ws),
+		.wt = gltwrap(c->wt),
+		.wr = gltwrap(c->wr),
+		.border = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
-
-	switch (flags & 0x3) {
-	case 0:
-		cnfg.ifmt = GL_R8;
-		cnfg.fmt = GL_RED;
-		break;
-
-	case 1:
-		cnfg.ifmt = GL_RG8;
-		cnfg.fmt = GL_RG;
-		break;
-
-	case 3:
-		cnfg.ifmt = GL_RGBA8;
-		cnfg.fmt = GL_RGBA;
-		break;
-	}
-
-	if (flags & TF_FLOAT) {
-		cnfg.type = flags & TF_HALF_FLOAT ? GL_HALF_FLOAT : GL_FLOAT;
-		switch (flags & 0x3) {
-		case 0:
-			cnfg.ifmt = GL_R16F;
-			break;
-
-		case 1:
-			cnfg.ifmt = GL_RG16F;
-			break;
-
-		case 2:
-			cnfg.ifmt = GL_RGB16F;
-			break;
-
-		case 3:
-			cnfg.ifmt = GL_RGBA16F;
-			break;
-		}
-	}
-
-	if ((flags & (TF_MIPMAP | TF_CUBE)) == (TF_MIPMAP | TF_CUBE)) {
-		if (flags & (TF_MAG_FILTER_LERP | TF_MAG_MIP_FILTER_LERP)) {
-			cnfg.min = GL_LINEAR_MIPMAP_LINEAR;
-		} else if (flags & TF_MAG_MIP_FILTER_LERP) {
-			cnfg.min = GL_NEAREST_MIPMAP_LINEAR;
-		} else if (flags & TF_MAG_FILTER_LERP) {
-			cnfg.min = GL_LINEAR_MIPMAP_NEAREST;
-		} else {
-			cnfg.min = GL_NEAREST_MIPMAP_NEAREST;
-		}
-
-		if (flags & (TF_MAG_FILTER_LERP | TF_MAG_MIP_FILTER_LERP)) {
-			cnfg.mag = GL_LINEAR_MIPMAP_LINEAR;
-		} else if (flags & TF_MAG_MIP_FILTER_LERP) {
-			cnfg.mag = GL_NEAREST_MIPMAP_LINEAR;
-		} else if (flags & TF_MAG_FILTER_LERP) {
-			cnfg.mag = GL_LINEAR_MIPMAP_NEAREST;
-		} else {
-			cnfg.mag = GL_NEAREST_MIPMAP_NEAREST;
-		}
-	}
-
-	return cnfg;
+	memcpy(gldesc.border, c->border_color, sizeof(gldesc.border));
+	return gldesc;
 }
 
-void
-nypx_tex_create(uint32_t *id, int type)
-{
-	struct texcnfg cnfg = nypx__texcnfg(type);
-	glGenTextures(1, id);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(cnfg.target, *id);
-	glTexParameteri(cnfg.target, GL_TEXTURE_MIN_FILTER, cnfg.min);
-	glTexParameteri(cnfg.target, GL_TEXTURE_MAG_FILTER, cnfg.mag);
-	glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_S, cnfg.wrap);
-	glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_T, cnfg.wrap);
+struct gltfmt_result {
+	GLint ifmt;
+	GLenum fmt;
+	GLenum type;
+};
 
-	if (type & TF_CUBE) { // TODO: Check if WrapR can be set for Tex2D
-		glTexParameteri(cnfg.target, GL_TEXTURE_WRAP_R, cnfg.wrap);
-	} else if (type & TF_DEPTH) {
-		float border[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		glTexParameterfv(cnfg.target, GL_TEXTURE_BORDER_COLOR, border);
+static struct gltfmt_result
+gltfmt(nyas_texture_format fmt)
+{
+	switch (fmt) {
+	case NYAS_TEX_FMT_R8: return (struct gltfmt_result){ GL_R8, GL_RED, GL_UNSIGNED_BYTE };
+	case NYAS_TEX_FMT_RG8: return (struct gltfmt_result){ GL_RG8, GL_RG, GL_UNSIGNED_BYTE };
+	case NYAS_TEX_FMT_RGB8: return (struct gltfmt_result){ GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE };
+	case NYAS_TEX_FMT_RGBA8: return (struct gltfmt_result){ GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE };
+	case NYAS_TEX_FMT_SRGB: return (struct gltfmt_result){ GL_SRGB8, GL_RGB, GL_UNSIGNED_BYTE };
+	case NYAS_TEX_FMT_R16F: return (struct gltfmt_result){ GL_R16F, GL_RED, GL_HALF_FLOAT };
+	case NYAS_TEX_FMT_RG16F: return (struct gltfmt_result){ GL_RG16F, GL_RG, GL_HALF_FLOAT };
+	case NYAS_TEX_FMT_RGB16F: return (struct gltfmt_result){ GL_RGB16F, GL_RGB, GL_HALF_FLOAT };
+	case NYAS_TEX_FMT_RGBA16F: return (struct gltfmt_result){ GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT };
+	case NYAS_TEX_FMT_RGB32F: return (struct gltfmt_result){ GL_RGB32F, GL_RGB, GL_FLOAT };
+	case NYAS_TEX_FMT_DEPTH: return (struct gltfmt_result){ GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT };
+	default: NYAS_LOG_ERR("Unrecognized texture format: (%d).", fmt); return (struct gltfmt_result){0,0,0};
 	}
 }
 
 void
-nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
+nypx_tex_create(struct nyas_texture_internal *t, struct nyas_texture_config *cfg)
 {
-	struct texcnfg cnfg = nypx__texcnfg(type);
-	int sides = 1;
-	GLenum target = cnfg.target;
+	gl_tdesc_t d = gltdesc(cfg);
+	d.target = glttarget(t->type);
+
+	glGenTextures(1, &t->res.id);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(cnfg.target, id);
+	glBindTexture(d.target, t->res.id);
+	if (d.min_f) {
+		glTexParameteri(d.target, GL_TEXTURE_MIN_FILTER, d.min_f);
+	}
+	if (d.mag_f) {
+		glTexParameteri(d.target, GL_TEXTURE_MAG_FILTER, d.mag_f);
+	}
+	if (d.ws) {
+		glTexParameteri(d.target, GL_TEXTURE_WRAP_S, d.ws);
+	}
+	if (d.wt) {
+		glTexParameteri(d.target, GL_TEXTURE_WRAP_T, d.wt);
+	}
+	if (d.wr) {
+		glTexParameteri(d.target, GL_TEXTURE_WRAP_R, d.wr);
+	}
+	if (d.border[3] > 0.0f) {
+		glTexParameterfv(d.target, GL_TEXTURE_BORDER_COLOR, d.border);
+	}
+}
 
-	if (type & TF_CUBE) {
-		sides = 6;
-		target = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+void
+nypx_tex_set(struct nyas_texture_internal *t, struct nyas_texture_image *img)
+{
+	GLenum target = glttarget(t->type);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(target, t->res.id);
+
+	struct gltfmt_result fmt = gltfmt(t->fmt);
+
+	if (t->type == NYAS_TEX_2D) {
+		glTexImage2D(
+		  GL_TEXTURE_2D, img->lod, fmt.ifmt, t->w >> img->lod, t->h >> img->lod, 0, fmt.fmt, fmt.type, img->pix[0]);
+	} else if (t->type == NYAS_TEX_CUBEMAP) {
+		for (int i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, img->lod, fmt.ifmt, t->w >> img->lod, t->h >> img->lod, 0,
+			             fmt.fmt, fmt.type, img->pix[i]);
+		}
 	}
 
-	for (int i = 0; i < sides; ++i) {
-		glTexImage2D(target + i, 0, cnfg.ifmt, width, height, 0, cnfg.fmt,
-		             cnfg.type, pix[i]);
-	}
-
-	if (type & TF_MIPMAP) {
-		glGenerateMipmap(cnfg.target);
+	if (t->res.flags & NYAS_IRF_GENERATE_MIPMAPS) {
+		glGenerateMipmap(target);
 	}
 }
 
@@ -183,7 +190,7 @@ nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
 }
 
 void
-nypx_mesh_use(struct nyas_internal_mesh *m, struct nyas_internal_shader *s)
+nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s)
 {
 	(void)s;
 	if (m) {
@@ -206,15 +213,16 @@ nypx__get_attrib_stride(int32_t attr_flags)
 }
 
 void
-nypx_mesh_set(uint32_t id,
-              uint32_t vid,
-              uint32_t iid,
-              uint32_t shader_id,
-              int attrib,
-              float *vtx,
-              size_t vsize,
-              nypx_index *idx,
-              size_t elements)
+nypx_mesh_set(
+  uint32_t id,
+  uint32_t vid,
+  uint32_t iid,
+  uint32_t shader_id,
+  int attrib,
+  float *vtx,
+  size_t vsize,
+  nypx_index *idx,
+  size_t elements)
 {
 	glBindVertexArray(id);
 	glBindBuffer(GL_ARRAY_BUFFER, vid);
@@ -231,15 +239,15 @@ nypx_mesh_set(uint32_t id,
 		GLint attrib_pos = glGetAttribLocation(shader_id, attrib_names[i]);
 		if (attrib_pos >= 0) {
 			glEnableVertexAttribArray(attrib_pos);
-			glVertexAttribPointer(attrib_pos, size, GL_FLOAT, GL_FALSE, stride,
-			                      (void *)(offset * sizeof(float)));
+			glVertexAttribPointer(
+			  attrib_pos, size, GL_FLOAT, GL_FALSE, stride, (void *)(offset * sizeof(float)));
 		}
 		offset += size;
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iid);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index),
-	             (const void *)idx, GL_STATIC_DRAW);
+	glBufferData(
+	  GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index), (const void *)idx, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -385,14 +393,10 @@ int
 nypx__fb_attach_gl(int slot)
 {
 	switch (slot) {
-	case NYAS_SLOT_DEPTH:
-		return GL_DEPTH_ATTACHMENT;
-	case NYAS_SLOT_STENCIL:
-		return GL_STENCIL_ATTACHMENT;
-	case NYAS_SLOT_DEPTH_STENCIL:
-		return GL_DEPTH_STENCIL_ATTACHMENT;
-	default:
-		return (GL_COLOR_ATTACHMENT0 - NYAS_SLOT_COLOR0) + slot;
+	case NYAS_SLOT_DEPTH: return GL_DEPTH_ATTACHMENT;
+	case NYAS_SLOT_STENCIL: return GL_STENCIL_ATTACHMENT;
+	case NYAS_SLOT_DEPTH_STENCIL: return GL_DEPTH_STENCIL_ATTACHMENT;
+	default: return (GL_COLOR_ATTACHMENT0 - NYAS_SLOT_COLOR0) + slot;
 	}
 }
 
@@ -400,8 +404,7 @@ void
 nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, id);
-	GLenum target = face >= 0 ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face :
-								GL_TEXTURE_2D;
+	GLenum target = face >= 0 ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face : GL_TEXTURE_2D;
 	slot = nypx__fb_attach_gl(slot);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, texid, level);
 }
@@ -431,8 +434,7 @@ nypx_clear(int color, int depth, int stencil)
 void
 nypx_draw(int elem_count, int index_type)
 {
-	glDrawElements(GL_TRIANGLES, elem_count,
-	               index_type ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, elem_count, index_type ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT, 0);
 }
 
 void
@@ -457,24 +459,18 @@ static GLenum
 nypx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
-	case NYAS_BLEND_ONE:
-		return GL_ONE;
-	case NYAS_BLEND_SRC_ALPHA:
-		return GL_SRC_ALPHA;
-	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA:
-		return GL_ONE_MINUS_SRC_ALPHA;
-	case NYAS_BLEND_ZERO:
-		return GL_ZERO;
-	default:
-		return -1;
+	case NYAS_BLEND_ONE: return GL_ONE;
+	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
+	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
+	case NYAS_BLEND_ZERO: return GL_ZERO;
+	default: return -1;
 	}
 }
 
 void
 nypx_blend_set(int blend_func_src, int blend_func_dst)
 {
-	glBlendFunc(nypx__gl_blend(blend_func_src),
-	            nypx__gl_blend(blend_func_dst));
+	glBlendFunc(nypx__gl_blend(blend_func_src), nypx__gl_blend(blend_func_dst));
 }
 
 void
@@ -493,14 +489,10 @@ static GLenum
 nypx__gl_cull(enum nyas_cull_face cull)
 {
 	switch (cull) {
-	case NYAS_CULL_BACK:
-		return GL_BACK;
-	case NYAS_CULL_FRONT:
-		return GL_FRONT;
-	case NYAS_CULL_FRONT_AND_BACK:
-		return GL_FRONT_AND_BACK;
-	default:
-		return -1;
+	case NYAS_CULL_BACK: return GL_BACK;
+	case NYAS_CULL_FRONT: return GL_FRONT;
+	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
+	default: return -1;
 	}
 }
 
@@ -538,12 +530,9 @@ static GLenum
 nypx__gl_depth(enum nyas_depth_func df)
 {
 	switch (df) {
-	case NYAS_DEPTH_LEQUAL:
-		return GL_LEQUAL;
-	case NYAS_DEPTH_LESS:
-		return GL_LESS;
-	default:
-		return -1;
+	case NYAS_DEPTH_LEQUAL: return GL_LEQUAL;
+	case NYAS_DEPTH_LESS: return GL_LESS;
+	default: return -1;
 	}
 }
 

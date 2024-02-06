@@ -64,32 +64,24 @@ static const struct ShaderDescriptors g_shader_descriptors = {
 	.sky = &sky_shader_desc,
 };
 
-static const int albedo_map_flags =
-  NYAS_TEX_FLAGS(3, false, false, false, false, true, true);
-static const int normal_map_flags =
-  NYAS_TEX_FLAGS(3, false, true, false, false, true, true);
-static const int pbr_map_flags =
-  NYAS_TEX_FLAGS(1, false, true, false, false, true, true);
-
-struct TexFlags {
-	int albedo;
-	int normal;
-	int pbr_map;
+struct pbr_tex_desc {
+	struct nyas_texture_desc albedo;
+	struct nyas_texture_desc normal;
+	struct nyas_texture_desc pbr_map;
 };
 
-static const struct TexFlags g_tex_flags = {
-	.albedo = albedo_map_flags,
-	.normal = normal_map_flags,
-	.pbr_map = pbr_map_flags,
-};
+static struct pbr_tex_desc g_tex_desc;
 
 static inline nyas_tex
 InitMainFramebuffer(nyas_framebuffer fb)
 {
-	nyas_v2i vp = nyas_window_size();
-	int texflags = (TF_FLOAT | TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | 3);
-	nyas_tex fb_tex = nyas_tex_empty(vp.x, vp.y, texflags);
-	nyas_tex fb_depth = nyas_tex_empty(vp.x, vp.y, TF_DEPTH);
+	struct nyas_vec2i vp = nyas_window_size();
+	struct nyas_texture_desc descriptor =
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp.x, vp.y);
+	nyas_tex fb_tex = nyas_tex_empty(&descriptor);
+	struct nyas_texture_desc depthscriptor =
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp.x, vp.y);
+	nyas_tex fb_depth = nyas_tex_empty(&depthscriptor);
 
 	nyas_cmd *set_fb_tex = nyas_cmd_alloc();
 	set_fb_tex->data.set_fb.fb = fb;
