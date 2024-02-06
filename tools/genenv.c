@@ -295,21 +295,9 @@ main(int argc, char **argv)
 		return 1;
 	}
 
-	static const int environment_flags =
-	  NYAS_TEX_FLAGS(3, true, true, false, false, false, false);
-	static const int skybox_flags =
-	  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-	static const int lut_flags =
-	  NYAS_TEX_FLAGS(2, true, true, false, false, false, false);
-	static const int irr_flags =
-	  NYAS_TEX_FLAGS(3, true, true, true, false, false, false);
-	static const int pref_flags =
-	  NYAS_TEX_FLAGS(3, true, true, true, false, false, true);
-
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("Environment file generation tool", 600, 400, true);
 	nyas_px_init();
-	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
 
 	g_tex_flags.env = nyas_tex_default_desc(NYAS_TEX_2D);
 	g_tex_flags.env.min_filter = NYAS_TEX_FLTR_LINEAR;
