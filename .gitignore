@@ -10,6 +10,6 @@ demos/pbr/matballs
 demos/pbr/inspector
 demos/hello/hello
 demos/emsc/emsc.**
-tools/tomsh
+tools/tomesh
 tools/genenv
 compile_commands.json
