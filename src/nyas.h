@@ -13,6 +13,7 @@
 #include "core/io.h"
 #include "core/chrono.h"
 #include "core/mem.h"
+#include "core/sched.h"
 
 #include "render/pixels.h"
 

@@ -7,6 +7,8 @@ target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.c
+	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.h
+	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.c
 	${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c

@@ -70,7 +70,7 @@ struct pbr_tex_desc {
 	struct nyas_texture_desc pbr_map;
 };
 
-static struct pbr_tex_desc g_tex_desc;
+__attribute_maybe_unused__ static struct pbr_tex_desc g_tex_desc;
 
 static inline nyas_tex
 InitMainFramebuffer(nyas_framebuffer fb)
