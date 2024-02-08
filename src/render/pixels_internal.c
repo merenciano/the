@@ -3,6 +3,7 @@
 #include "core/io.h" // file_read --shader source
 #include "core/log.h"
 #include "core/mem.h" // free --shader source buffer
+#include "utils/array.h"
 
 #include <string.h> // shader path manipulation
 
@@ -83,17 +84,18 @@ gltwrap(nyas_texture_wrap w)
 }
 
 static gl_tdesc_t
-gltdesc(struct nyas_texture_config *c)
+gltdesc(struct nyas_texture_desc *d)
 {
 	gl_tdesc_t gldesc = {
-		.min_f = gltfilter(c->min),
-		.mag_f = gltfilter(c->mag),
-		.ws = gltwrap(c->ws),
-		.wt = gltwrap(c->wt),
-		.wr = gltwrap(c->wr),
+		.target = glttarget(d->type),
+		.min_f = gltfilter(d->min_filter),
+		.mag_f = gltfilter(d->mag_filter),
+		.ws = gltwrap(d->wrap_s),
+		.wt = gltwrap(d->wrap_t),
+		.wr = gltwrap(d->wrap_r),
 		.border = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
-	memcpy(gldesc.border, c->border_color, sizeof(gldesc.border));
+	memcpy(gldesc.border, d->border_color, sizeof(gldesc.border));
 	return gldesc;
 }
 
@@ -123,11 +125,9 @@ gltfmt(nyas_texture_format fmt)
 }
 
 void
-nypx_tex_create(struct nyas_texture_internal *t, struct nyas_texture_config *cfg)
+nypx_tex_create(struct nyas_texture_internal *t)
 {
-	gl_tdesc_t d = gltdesc(cfg);
-	d.target = glttarget(t->type);
-
+	gl_tdesc_t d = gltdesc(&t->data);
 	glGenTextures(1, &t->res.id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(d.target, t->res.id);
@@ -152,26 +152,27 @@ nypx_tex_create(struct nyas_texture_internal *t, struct nyas_texture_config *cfg
 }
 
 void
-nypx_tex_set(struct nyas_texture_internal *t, struct nyas_texture_image *img)
+nypx_tex_set(struct nyas_texture_internal *t, int level)
 {
-	GLenum target = glttarget(t->type);
+	GLenum type = glttarget(t->data.type);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(target, t->res.id);
+	glBindTexture(type, t->res.id);
 
-	struct gltfmt_result fmt = gltfmt(t->fmt);
+	struct gltfmt_result fmt = gltfmt(t->data.fmt);
 
-	if (t->type == NYAS_TEX_2D) {
-		glTexImage2D(
-		  GL_TEXTURE_2D, img->lod, fmt.ifmt, t->w >> img->lod, t->h >> img->lod, 0, fmt.fmt, fmt.type, img->pix[0]);
-	} else if (t->type == NYAS_TEX_CUBEMAP) {
-		for (int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, img->lod, fmt.ifmt, t->w >> img->lod, t->h >> img->lod, 0,
-			             fmt.fmt, fmt.type, img->pix[i]);
+	for (int i = 0; i < nyas_arr_count(t->img); ++i) {
+		if (t->img[i].lod != level) {
+			continue;
 		}
+
+		GLint target = (t->data.type == NYAS_TEX_2D) ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img[i].face;
+		int w = t->data.width >> t->img[i].lod;
+		int h = t->data.height >> t->img[i].lod;
+		glTexImage2D(target, t->img[i].lod, fmt.ifmt, w, h, 0, fmt.fmt, fmt.type, t->img[i].pix);
 	}
 
-	if (t->res.flags & NYAS_IRF_GENERATE_MIPMAPS) {
-		glGenerateMipmap(target);
+	if (t->data.flags & NYAS_TEX_FLAG_GENERATE_MIPMAPS) {
+		glGenerateMipmap(type);
 	}
 }
 

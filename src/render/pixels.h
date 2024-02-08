@@ -61,15 +61,9 @@ void nyas_px_render(void);
 void nyas_frame_end(void);
 void *nyas_alloc_frame(unsigned int size);
 
-#define NYAS_TEX_FLAGS(CHANNELS, FLOAT, LINEAR, CUBEMAP, DEPTH, TILE, MIPS) ( \
-	(((CHANNELS) - 1) & 0x03) \
-	| (TF_FLOAT * (FLOAT)) | (TF_CUBE * (CUBEMAP)) | (TF_DEPTH * (DEPTH)) \
-	| (TF_TILING * (TILE)) | (TF_MIPMAP * (MIPS)) | (TF_LINEAR_COLOR * (LINEAR)) \
-	| TF_MAG_FILTER_LERP | TF_MIN_FILTER_LERP | (TF_MAG_MIP_FILTER_LERP * (MIPS)))
-
 struct nyas_texture_desc nyas_tex_default_desc(nyas_texture_type type);
 struct nyas_texture_desc nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h);
-struct nyas_texture_desc nyas_tex_lod_desc(nyas_texture_type type, int levels, bool gen_mipmaps);
+struct nyas_texture_desc nyas_tex_lod_desc(nyas_texture_type type, bool gen_mipmaps);
 nyas_tex nyas_tex_empty(struct nyas_texture_desc *desc);
 nyas_tex nyas_tex_load(struct nyas_texture_desc *desc, const char *path);
 nyas_tex nyas_tex_loadf(struct nyas_texture_desc *desc, const char *path, bool flip);

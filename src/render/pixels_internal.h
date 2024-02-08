@@ -20,7 +20,6 @@ enum nyas_resource_flags {
 	NYAS_IRF_DIRTY = 1U << 3,
 	NYAS_IRF_CREATED = 1U << 4,
 	NYAS_IRF_RELEASE_APP_STORAGE = 1U << 5,
-	NYAS_IRF_GENERATE_MIPMAPS = 1U << 6,
 	NYAS_IRF_MAPPED = 1U << 7,
 };
 
@@ -49,28 +48,17 @@ struct nyas_mesh_internal {
 	int attrib;
 };
 
-struct nyas_texture_config {
-	int idx;
-	nyas_texture_filter min;
-	nyas_texture_filter mag;
-	nyas_texture_wrap ws;
-	nyas_texture_wrap wt;
-	nyas_texture_wrap wr;
-	float border_color[4];
-};
-
 struct nyas_texture_image {
 	int idx; // In tex_pool
 	int lod;
-	void *pix[6];
+	nyas_texture_face face;
+	void *pix;
 };
 
 struct nyas_texture_internal {
 	struct nyas_resource_internal res;
-	nyas_texture_type type;
-	int w;
-	int h;
-	nyas_texture_format fmt;
+	struct nyas_texture_desc data;
+	struct nyas_texture_image *img; // nyas_arr
 };
 
 struct nyas_shader_internal {
@@ -87,8 +75,8 @@ struct nyas_framebuffer_internal {
 };
 
 
-void nypx_tex_create(struct nyas_texture_internal *t, struct nyas_texture_config *cfg);
-void nypx_tex_set(struct nyas_texture_internal *t, struct nyas_texture_image *img);
+void nypx_tex_create(struct nyas_texture_internal *t);
+void nypx_tex_set(struct nyas_texture_internal *t, int level);
 
 void nypx_tex_release(uint32_t *id);
 

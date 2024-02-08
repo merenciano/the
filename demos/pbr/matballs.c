@@ -37,6 +37,8 @@ nyas_framebuffer g_fb;
 nyas_tex fb_tex;
 nyas_mesh g_mesh;
 
+static struct pbr_tex_desc g_tex_desc;
+
 struct pbr_tex_load_info_t {
 	struct pbr_tex_desc *desc;
 	struct pbr_tex_t tex;
@@ -49,10 +51,10 @@ struct pbr_tex_load_info_t {
 void load_pbr_map(void *pbr_maps)
 {
 	struct pbr_tex_load_info_t *maps = pbr_maps;
-	maps->tex.a = nyas_tex_load(&maps->desc->albedo, maps->apath);
-	maps->tex.n = nyas_tex_load(&maps->desc->normal, maps->npath);
-	maps->tex.r = nyas_tex_load(&maps->desc->pbr_map, maps->rpath);
-	maps->tex.m = nyas_tex_load(&maps->desc->pbr_map, maps->mpath);
+	maps->tex.a = nyas_tex_load(&maps->desc->albedo, maps->apath, 0);
+	maps->tex.n = nyas_tex_load(&maps->desc->normal, maps->npath, 3);
+	maps->tex.r = nyas_tex_load(&maps->desc->pbr_map, maps->rpath, 1);
+	maps->tex.m = nyas_tex_load(&maps->desc->pbr_map, maps->mpath, 1);
 }
 
 static void load_textures(void)
@@ -180,57 +182,6 @@ static void load_textures(void)
 	}
 
 	nyas_sched_wait();
-
-	/*
-	g_tex.gold.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/celtic-gold/celtic-gold_A.png");
-	g_tex.gold.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/celtic-gold/celtic-gold_N.png");
-	g_tex.gold.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/celtic-gold/celtic-gold_R.png");
-	g_tex.gold.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/celtic-gold/celtic-gold_M.png");
-
-	g_tex.peeled.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/peeling/peeling_A.png");
-	g_tex.peeled.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/peeling/peeling_N.png");
-	g_tex.peeled.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/peeling/peeling_R.png");
-	g_tex.peeled.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/peeling/peeling_M.png");
-
-	g_tex.rusted.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/rusted/rusted_A.png");
-	g_tex.rusted.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/rusted/rusted_N.png");
-	g_tex.rusted.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/rusted/rusted_R.png");
-	g_tex.rusted.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/rusted/rusted_M.png");
-
-	g_tex.tiles.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/tiles/tiles_A.png");
-	g_tex.tiles.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/tiles/tiles_N.png");
-	g_tex.tiles.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/tiles/tiles_R.png");
-	g_tex.tiles.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/tiles/tiles_M.png");
-
-	g_tex.plastic.a =
-	  nyas_tex_load(&g_tex_desc.albedo, "assets/tex/ship-panels/ship-panels_A.png");
-	g_tex.plastic.n =
-	  nyas_tex_load(&g_tex_desc.normal, "assets/tex/ship-panels/ship-panels_N.png");
-	g_tex.plastic.r =
-	  nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/ship-panels/ship-panels_R.png");
-	g_tex.plastic.m =
-	  nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/ship-panels/ship-panels_M.png");
-
-	g_tex.shore.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/shore/shore_A.png");
-	g_tex.shore.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/shore/shore_N.png");
-	g_tex.shore.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/shore/shore_R.png");
-	g_tex.shore.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/shore/shore_M.png");
-
-	g_tex.cliff.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/cliff/cliff_A.png");
-	g_tex.cliff.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/cliff/cliff_N.png");
-	g_tex.cliff.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/cliff/cliff_R.png");
-	g_tex.cliff.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/cliff/cliff_M.png");
-
-	g_tex.granite.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/granite/granite_A.png");
-	g_tex.granite.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/granite/granite_N.png");
-	g_tex.granite.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/granite/granite_R.png");
-	g_tex.granite.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/granite/granite_M.png");
-
-	g_tex.foam.a = nyas_tex_load(&g_tex_desc.albedo, "assets/tex/foam/foam_A.png");
-	g_tex.foam.n = nyas_tex_load(&g_tex_desc.normal, "assets/tex/foam/foam_N.png");
-	g_tex.foam.r = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/foam/foam_R.png");
-	g_tex.foam.m = nyas_tex_load(&g_tex_desc.pbr_map, "assets/tex/foam/foam_M.png");
-	 */
 }
 
 void
@@ -240,9 +191,7 @@ Init(void)
 
 	g_tex_desc.albedo = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0);
 	g_tex_desc.normal = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0);
-	g_tex_desc.normal.desired_channels = 3;
 	g_tex_desc.pbr_map = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0);
-	g_tex_desc.pbr_map.desired_channels = 1;
 
 	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);

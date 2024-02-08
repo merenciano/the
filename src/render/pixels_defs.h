@@ -49,13 +49,15 @@ enum nyas_framebuffer_slots {
 	NYAS_SLOT_COLOR5,
 };
 
-enum nyas_cube_faces {
-	NYAS_CUBE_POS_X,
-	NYAS_CUBE_NEG_X,
-	NYAS_CUBE_POS_Y,
-	NYAS_CUBE_NEG_Y,
-	NYAS_CUBE_POS_Z,
-	NYAS_CUBE_NEG_Z,
+typedef int nyas_texture_face;
+enum nyas_texture_face {
+	NYAS_FACE_POS_X = 0,
+	NYAS_FACE_NEG_X,
+	NYAS_FACE_POS_Y,
+	NYAS_FACE_NEG_Y,
+	NYAS_FACE_POS_Z,
+	NYAS_FACE_NEG_Z,
+	NYAS_FACE_2D,
 	NYAS_CUBE_FACE_COUNT
 };
 
@@ -124,8 +126,6 @@ struct nyas_texture_desc {
 	nyas_texture_type type;
 	int width;
 	int height;
-	int levels;
-	int desired_channels;
 	nyas_texture_format fmt;
 	nyas_texture_filter min_filter;
 	nyas_texture_filter mag_filter;

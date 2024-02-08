@@ -315,7 +315,6 @@ main(int argc, char **argv)
 	g_tex_flags.prefilter.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
 	g_tex_flags.prefilter.mag_filter = NYAS_TEX_FLTR_LINEAR;
 	g_tex_flags.prefilter.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS;
-	g_tex_flags.prefilter.levels = 9;
 	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RG16F, 512, 512);
 	nyas_tex sky = nyas_tex_empty(&g_tex_flags.sky);
 	nyas_tex irradiance = nyas_tex_empty(&g_tex_flags.sky);
