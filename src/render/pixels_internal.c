@@ -152,19 +152,13 @@ nypx_tex_create(struct nyas_texture_internal *t)
 }
 
 void
-nypx_tex_set(struct nyas_texture_internal *t, int level)
+nypx_tex_set(struct nyas_texture_internal *t)
 {
 	GLenum type = glttarget(t->data.type);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(type, t->res.id);
-
 	struct gltfmt_result fmt = gltfmt(t->data.fmt);
-
 	for (int i = 0; i < nyas_arr_count(t->img); ++i) {
-		if (t->img[i].lod != level) {
-			continue;
-		}
-
 		GLint target = (t->data.type == NYAS_TEX_2D) ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img[i].face;
 		int w = t->data.width >> t->img[i].lod;
 		int h = t->data.height >> t->img[i].lod;

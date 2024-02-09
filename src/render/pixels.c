@@ -124,14 +124,6 @@ nyas__create_mesh_handle(void)
 	return mesh;
 }
 
-static nyas_tex
-nyas__create_tex_handle(void)
-{
-	nyas_tex tex = (nyas_tex)nyas_arr_count(tex_pool);
-	nyas_arr_push(tex_pool);
-	return tex;
-}
-
 static nyas_framebuffer
 nyas__create_fb_handle(void)
 {
@@ -252,108 +244,90 @@ nyas_alloc_frame(unsigned int size)
 	return ret;
 }
 
-struct nyas_texture_desc
-nyas_tex_default_desc(nyas_texture_type type)
-{
-	return (struct nyas_texture_desc){
-		.flags = NYAS_TEX_FLAG_DEFAULT,
-		.type = type,
-		.width = 0,
-		.height = 0,
-		.fmt = NYAS_TEX_FMT_SRGB,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_DEFAULT,
-		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-}
-
-struct nyas_texture_desc
-nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h)
-{
-	return (struct nyas_texture_desc){
-		.flags = NYAS_TEX_FLAG_DEFAULT,
-		.type = type,
-		.width = w,
-		.height = h,
-		.fmt = fmt,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_REPEAT,
-		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-}
-
-struct nyas_texture_desc
-nyas_tex_lod_desc(nyas_texture_type type, bool gen_mipmaps)
-{
-	return (struct nyas_texture_desc){
-		.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS * gen_mipmaps,
-		.type = type,
-		.width = 0,
-		.height = 0,
-		.fmt = NYAS_TEX_FMT_RGB8,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_REPEAT,
-		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-}
-
 const char *
-nyas__face_img_path(const char *path, const char *suffixes, int face)
+nyas__face_img_path(const char *path, int face, int face_count)
 {
-	static char buffer[1024];
-	int count = snprintf(buffer, 1024, path, suffixes[face]);
-	(void)count;
-	NYAS_ASSERT(count < 1024 && "Xpand dat mf");
-	return buffer;
-}
-
-static int nyas__get_fmt_channels(nyas_texture_format fmt)
-{
-	switch (fmt) {
-		case NYAS_TEX_FMT_RGBA16F:
-		case NYAS_TEX_FMT_RGBA8:
-			return 4;
-		case NYAS_TEX_FMT_RGB16F:
-		case NYAS_TEX_FMT_RGB8:
-		case NYAS_TEX_FMT_SRGB:
-			return 3;
-		case NYAS_TEX_FMT_RG16F:
-		case NYAS_TEX_FMT_RG8:
-			return 2;
-		case NYAS_TEX_FMT_R16F:
-		case NYAS_TEX_FMT_R8:
-			return 1;
-		default:
-			return 0;
+	switch (face_count) {
+	case 6:
+	case 5:
+	case 4:
+	case 3:
+	case 2: {
+		const char *suffixes = "RLUDFB";
+		static char buffer[1024];
+		int count = snprintf(buffer, 1024, path, suffixes[face]);
+		if (count < 1024) {
+			NYAS_LOG_ERR("Cubemap face path format: %s is too long!", path);
+			return NULL;
+		}
+		return buffer;
+	}
+	case 1: return path;
+	default:
+		NYAS_LOG_WARN("Invalid cubemap face count. Path is %s.", path);
+		return path;
 	}
 }
 
-nyas_tex
-nyas_tex_load(struct nyas_texture_desc *desc, const char *path, int desired_channels)
+static int
+nyas__tex_channels(nyas_texture_format fmt)
+{
+	switch (fmt) {
+	case NYAS_TEX_FMT_RGBA16F:
+	case NYAS_TEX_FMT_RGBA8: return 4;
+	case NYAS_TEX_FMT_RGB16F:
+	case NYAS_TEX_FMT_RGB8:
+	case NYAS_TEX_FMT_SRGB: return 3;
+	case NYAS_TEX_FMT_RG16F:
+	case NYAS_TEX_FMT_RG8: return 2;
+	case NYAS_TEX_FMT_R16F:
+	case NYAS_TEX_FMT_R8: return 1;
+	default: return 0;
+	}
+}
+
+static int
+nyas__tex_faces(nyas_texture_type type)
+{
+	switch (type) {
+	case NYAS_TEX_2D:
+	case NYAS_TEX_ARRAY_2D: return 1;
+	case NYAS_TEX_CUBEMAP:
+	case NYAS_TEX_ARRAY_CUBEMAP: return 6;
+	default: return 0;
+	}
+}
+
+static bool
+nyas__tex_is_float(nyas_texture_format fmt)
+{
+	switch (fmt) {
+	case NYAS_TEX_FMT_RGBA16F:
+	case NYAS_TEX_FMT_RGB16F:
+	case NYAS_TEX_FMT_RGB32F:
+	case NYAS_TEX_FMT_RG16F:
+	case NYAS_TEX_FMT_R16F: return true;
+	default: return false;
+	}
+}
+
+/*nyas_tex
+nyas_tex_load(struct nyas_texture_desc *desc, const char *path)
 {
 	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_empty");
 
 	nyas_tex tex = nyas__create_tex_handle();
 	tex_t *t = &tex_pool[tex];
 	t->res.id = 0;
-	t->res.flags |= NYAS_IRF_DIRTY;
+	t->res.flags = NYAS_IRF_DIRTY;
 	t->data = *desc;
 	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 
-	int fmt_ch = nyas__get_fmt_channels(t->data.fmt);
+	int fmt_ch = nyas__tex_channels(t->data.fmt);
+	stbi_set_flip_vertically_on_load(t->data.flags & NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD);
 
-	stbi_set_flip_vertically_on_load(desc->flags & NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD);
 	int channels = 0;
-	if (desc->type == NYAS_TEX_2D) {
+	if (t->data.type == NYAS_TEX_2D) {
 		struct nyas_texture_image *img = nyas_arr_push(t->img);
 		img->lod = 0;
 		img->face = NYAS_FACE_2D;
@@ -373,45 +347,105 @@ nyas_tex_load(struct nyas_texture_desc *desc, const char *path, int desired_chan
 
 	return tex;
 }
+ */
 
-nyas_tex
-nyas_tex_loadf(struct nyas_texture_desc *desc, const char *path, bool flip)
+struct nyas_texture_desc
+nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h)
 {
-	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_empty");
+	return (struct nyas_texture_desc) {
+	  .flags = NYAS_TEX_FLAG_DEFAULT,
+	  .type = type,
+	  .width = w,
+	  .height = h,
+	  .fmt = fmt,
+	  .min_filter = NYAS_TEX_FLTR_LINEAR,
+	  .mag_filter = NYAS_TEX_FLTR_LINEAR,
+	  .wrap_s = NYAS_TEX_WRAP_REPEAT,
+	  .wrap_t = NYAS_TEX_WRAP_REPEAT,
+	  .wrap_r = NYAS_TEX_WRAP_REPEAT,
+	  .border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+}
 
-	nyas_tex tex = nyas__create_tex_handle();
-	tex_t *t = &tex_pool[tex];
-	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-
-	teximg_t *img = nyas_arr_push(tex_imgs);
-	img->idx = tex;
-	img->lod = 0;
-
-	t->data = *desc;
-
-	int fmt_ch = nyas__get_fmt_channels(t->data.fmt);
-
-	stbi_set_flip_vertically_on_load(flip);
-	int channels = 0;
-	if (desc->type == NYAS_TEX_2D) {
-		img->pix = stbi_loadf(path, &t->data.width, &t->data.height, &channels, fmt_ch);
-		NYAS_ASSERT(img->pix[0] && "The image couldn't be loaded");
+nyas_tex nyas_tex_alloc(int count)
+{
+	nyas_tex tex = (nyas_tex)nyas_arr_count(tex_pool);
+	nyas_arr_push(tex_pool, count);
+	for (int i = 0; i < count; ++i) {
+		tex_pool[tex + i].res = (struct nyas_resource_internal) { .id = 0, .flags = 0 };
+		tex_pool[tex + i].data = (struct nyas_texture_desc) {
+		  .flags = NYAS_TEX_FLAG_DEFAULT,
+		  .type = NYAS_TEX_2D,
+		  .width = 0,
+		  .height = 0,
+		  .fmt = NYAS_TEX_FMT_SRGB,
+		  .min_filter = NYAS_TEX_FLTR_LINEAR,
+		  .mag_filter = NYAS_TEX_FLTR_LINEAR,
+		  .wrap_s = NYAS_TEX_WRAP_REPEAT,
+		  .wrap_t = NYAS_TEX_WRAP_REPEAT,
+		  .wrap_r = NYAS_TEX_WRAP_REPEAT,
+		  .border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+		};
+		tex_pool[tex + i].img = NULL;
 	}
-
 	return tex;
 }
 
-nyas_tex
-nyas_tex_empty(struct nyas_texture_desc *desc)
+void
+nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path)
 {
-	NYAS_ASSERT(desc->width > 0 && desc->height > 0 && "Incorrect dimensions");
-	nyas_tex tex = nyas__create_tex_handle();
+	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_set");
 	tex_t *t = &tex_pool[tex];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data = *desc;
-	return tex;
+	t->img = nyas_arr_create(struct nyas_texture_image, 6);
+
+	int fmt_ch = nyas__tex_channels(t->data.fmt);
+	stbi_set_flip_vertically_on_load(t->data.flags & NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD);
+
+	int channels = 0;
+	int face_count = nyas__tex_faces(t->data.type);
+	struct nyas_texture_image *img = nyas_arr_push(t->img, face_count);
+	for (int i = 0; i < face_count; ++i) {
+		const char *p = nyas__face_img_path(path, i, face_count);
+		img[i].lod = 0;
+		img[i].face = i;
+		if (nyas__tex_is_float(t->data.fmt)) {
+			img[i].pix = stbi_loadf(p, &t->data.width, &t->data.height, &channels, fmt_ch);
+		} else {
+			img[i].pix = stbi_load(p, &t->data.width, &t->data.height, &channels, fmt_ch);
+		}
+
+		if (!img[i].pix) {
+			NYAS_LOG_ERR("The image '%s' couldn't be loaded", p);
+		}
+	}
+}
+
+void
+nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc)
+{
+	NYAS_ASSERT(desc->width > 0 && desc->height > 0 && "Incorrect dimensions");
+	tex_t *t = &tex_pool[tex];
+	t->res.flags |= NYAS_IRF_DIRTY;
+	t->data = *desc;
+	if (!t->img) {
+		int face_count = nyas__tex_faces(t->data.type);
+		t->img = nyas_arr_create(struct nyas_texture_image, face_count);
+		struct nyas_texture_image *img = nyas_arr_push(t->img, face_count);
+		for (int i = 0; i < face_count; ++i) {
+			img[i].lod = 0;
+			img[i].face = i;
+			img[i].pix = NULL;
+		}
+	}
+}
+
+struct nyas_texture_desc
+nyas_tex_desc(nyas_tex tex)
+{
+	return tex_pool[tex].data;
 }
 
 struct nyas_vec2i
@@ -432,7 +466,7 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 		return;
 	}
 
-	*sky = nyas__create_tex_handle();
+	*sky = nyas_tex_alloc(1);
 	tex_t *t = &tex_pool[*sky];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
@@ -446,83 +480,91 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
 
-	texcfg_t *cfg = nyas_arr_push(tex_cfgs);
-	*cfg = texconfig(*sky, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
-
-	teximg_t *img = nyas_arr_push(tex_imgs);
-	img->idx = *sky;
-	img->lod = 0;
+	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 	size_t size = 1024 * 1024 * 3 * 2; // size * nchannels * sizeof(channel)
 	for (int i = 0; i < 6; ++i) {
-		img->pix[i] = nyas_alloc(size);
-		fread(img->pix[i], size, 1, f);
-		NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
+		struct nyas_texture_image *img = nyas_arr_push(t->img);
+		img->lod = 0;
+		img->face = i;
+		img->pix = nyas_alloc(size);
+		fread(img->pix, size, 1, f);
+		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	}
 
-	*irr = nyas__create_tex_handle();
+	*irr = nyas_tex_alloc(1);
 	t = &tex_pool[*irr];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_CUBEMAP;
-	t->fmt = NYAS_TEX_FMT_RGB16F;
-	t->w = 1024;
-	t->h = 1024;
+	t->data.type = NYAS_TEX_CUBEMAP;
+	t->data.fmt = NYAS_TEX_FMT_RGB16F;
+	t->data.width = 1024;
+	t->data.height = 1024;
+	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
+	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
+	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
 
-	cfg = nyas_arr_push(tex_cfgs);
-	*cfg = texconfig(*irr, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
-
-	img = nyas_arr_push(tex_imgs);
-	img->idx = *irr;
-	img->lod = 0;
+	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 	for (int i = 0; i < 6; ++i) {
-		img->pix[i] = nyas_alloc(size);
-		fread(img->pix[i], size, 1, f);
-		NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
+		struct nyas_texture_image *img = nyas_arr_push(t->img);
+		img->lod = 0;
+		img->face = i;
+		img->pix = nyas_alloc(size);
+		fread(img->pix, size, 1, f);
+		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	}
 
-	*pref = nyas__create_tex_handle();
+	*pref = nyas_tex_alloc(1);
 	t = &tex_pool[*pref];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_CUBEMAP;
-	t->fmt = NYAS_TEX_FMT_RGB16F;
-	t->w = 256;
-	t->h = 256;
-
-	cfg = nyas_arr_push(tex_cfgs);
-	*cfg = texconfig(*pref, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
-	cfg->min = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
+	t->data.type = NYAS_TEX_CUBEMAP;
+	t->data.fmt = NYAS_TEX_FMT_RGB16F;
+	t->data.width = 256;
+	t->data.height = 256;
+	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
+	t->data.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
+	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
 
 	size = 256 * 256 * 3 * 2;
+	t->img = nyas_arr_create(struct nyas_texture_image, 64);
 	for (int lod = 0; lod < 9; ++lod) {
-		img = nyas_arr_push(tex_imgs);
-		img->idx = *pref;
-		img->lod = lod;
-		for (int i = 0; i < 6; ++i) {
-			img->pix[i] = nyas_alloc(size);
-			fread(img->pix[i], size, 1, f);
-			NYAS_ASSERT(img->pix[i] && "The image couldn't be loaded");
+		for (int face = 0; face < 6; ++face) {
+			struct nyas_texture_image *img = nyas_arr_push(t->img);
+			img->lod = lod;
+			img->face = face;
+			img->pix = nyas_alloc(size);
+			fread(img->pix, size, 1, f);
+			NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 		}
 		size /= 4;
 	}
 
-	*lut = nyas__create_tex_handle();
+	*lut = nyas_tex_alloc(1);
 	t = &tex_pool[*lut];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->type = NYAS_TEX_2D;
-	t->fmt = NYAS_TEX_FMT_RG16F;
-	t->w = 512;
-	t->h = 512;
+	t->data.type = NYAS_TEX_2D;
+	t->data.fmt = NYAS_TEX_FMT_RG16F;
+	t->data.width = 512;
+	t->data.height = 512;
+	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
+	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
+	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+
 	size = 512 * 512 * 2 * 2;
-	cfg = nyas_arr_push(tex_cfgs);
-	*cfg = texconfig(*lut, NYAS_TEX_FLTR_LINEAR, NYAS_TEX_WRAP_CLAMP);
-	img = nyas_arr_push(tex_imgs);
-	img->idx = *lut;
+	t->img = nyas_arr_create(struct nyas_texture_image, 1);
+	struct nyas_texture_image *img = nyas_arr_push(t->img);
+
 	img->lod = 0;
-	img->pix[0] = nyas_alloc(size);
-	fread(img->pix[0], size, 1, f);
-	NYAS_ASSERT(img->pix[0] && "The image couldn't be loaded");
+	img->pix = nyas_alloc(size);
+	fread(img->pix, size, 1, f);
+	NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	fclose(f);
 }
 
@@ -705,7 +747,7 @@ nyas__mesh_set_quad(mesh_t *mesh)
 }
 
 static nyas_idx
-check_vertex(float *v, float *end, float *newvtx)
+check_vertex(const float *v, const float *end, const float *newvtx)
 {
 	nyas_idx i = 0;
 	for (; v < end; ++i, v += 14) {
@@ -1052,31 +1094,12 @@ nyas__sync_gpu_tex(nyas_tex tex)
 	CHECK_HANDLE(tex, tex);
 	tex_t *t = &tex_pool[tex];
 	if (!(t->res.flags & NYAS_IRF_CREATED)) {
-		for (int i = 0; i < nyas_arr_count(tex_cfgs); ++i) {
-			if (tex_cfgs[i].idx == tex) {
-				nypx_tex_create(t, tex_cfgs + i);
-				t->res.flags |= NYAS_IRF_CREATED;
-				t->res.flags |= NYAS_IRF_DIRTY;
-				//nyas_arr_rm(tex_cfgs, i);
-				break;
-			}
-		}
+		nypx_tex_create(t);
+		t->res.flags |= (NYAS_IRF_CREATED | NYAS_IRF_DIRTY);
 	}
 
 	if (t->res.flags & NYAS_IRF_DIRTY) {
-		int count = 0;
-		for (int i = 0; i < nyas_arr_count(tex_imgs); ++i) {
-			if (tex_imgs[i].idx == tex) {
-				nypx_tex_set(t, tex_imgs + i);
-				//nyas_arr_rm(tex_imgs, i);
-				//--i;
-				++count;
-			}
-		}
-		if (!count) {
-			struct nyas_texture_image img = {.idx = tex, .lod = 0, .pix = {NULL, NULL, NULL, NULL, NULL, NULL}};
-			nypx_tex_set(t, &img);
-		}
+		nypx_tex_set(t);
 		t->res.flags &= ~NYAS_IRF_DIRTY;
 	}
 	return t;

@@ -76,7 +76,7 @@ struct nyas_framebuffer_internal {
 
 
 void nypx_tex_create(struct nyas_texture_internal *t);
-void nypx_tex_set(struct nyas_texture_internal *t, int level);
+void nypx_tex_set(struct nyas_texture_internal *t);
 
 void nypx_tex_release(uint32_t *id);
 

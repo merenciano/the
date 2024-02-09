@@ -15,6 +15,32 @@
 #define NYAS_ARRAY_ASSERT assert
 #endif
 
+#define GET_MACRO(_1, _2, NAME, ...) NAME
+
+#define nyas__internal_arr_pushv(arr, count) \
+	nyas__internal_arr_push((void **)&(arr), (count), sizeof(*(arr)))
+#define nyas__internal_arr_push_(arr) nyas__internal_arr_pushv((arr), 1)
+#define nyas__internal_arr_popv(arr, count) nyas__internal_arr_pop(arr, count)
+#define nyas__internal_arr_pop_(arr) nyas__internal_arr_pop(arr, 1)
+
+// Creation/Deletion
+#define nyas_arr_create(T, capacity) nyas__internal_arr_create(sizeof(T), (capacity))
+#define nyas_arr_release(arr) NYAS_ARRAY_FREE((struct nyas__internal_arr_header *)arr - 1)
+#define nyas_arr_reserve(arr, new_capacity) \
+	nyas__internal_arr_reserve((void **)&(arr), (new_capacity), sizeof(*(arr)))
+
+// Modifiers
+#define nyas_arr_push(...) \
+	GET_MACRO(__VA_ARGS__, nyas__internal_arr_pushv, nyas__internal_arr_push_, UNUSED)(__VA_ARGS__)
+#define nyas_arr_pop(...) \
+	GET_MACRO(__VA_ARGS__, nyas__internal_arr_popv, nyas__internal_arr_pop_, UNUSED)(__VA_ARGS__)
+#define nyas_arr_rm(arr, pos) nyas__internal_arr_rm((arr), &(arr[pos]), sizeof(*(arr)))
+
+// Getters
+#define nyas_arr_count(arr) (*((int *)(arr)-1))
+#define nyas_arr_capacity(arr) (*((int *)(arr)-2))
+#define nyas_arr_last(arr) ((arr) + (nyas_arr_count(arr) - 1))
+
 struct nyas__internal_arr_header {
 	int cap;
 	int count;
@@ -31,17 +57,26 @@ nyas__internal_arr_create(int elem_size, int capacity)
 	return h->buf;
 }
 
-static inline void *
-nyas__internal_arr_push(void **arr, int count, int elem_size)
+// Doubles arr capacity until it is greater than 'min_cap'.
+static inline void
+nyas__internal_arr_reserve(void **arr, int min_cap, int elem_size)
 {
 	struct nyas__internal_arr_header *h = (struct nyas__internal_arr_header *)*arr - 1;
-	if ((h->count += count) > h->cap) {
-		while ((h->cap *= 2) < h->count) {}
+	if (min_cap > h->cap) {
+		while ((h->cap *= 2) < min_cap) {}
 		*arr = NYAS_ARRAY_REALLOC(h, elem_size * h->cap);
 		NYAS_ARRAY_ASSERT(*arr);
 		h = *arr;
 		*arr = h + 1;
 	}
+}
+
+static inline void *
+nyas__internal_arr_push(void **arr, int count, int elem_size)
+{
+	nyas__internal_arr_reserve(arr, count + nyas_arr_count(*arr), elem_size);
+	struct nyas__internal_arr_header *h = (struct nyas__internal_arr_header *)*arr - 1;
+	h->count += count;
 	return &h->buf[(h->count - count) * elem_size];
 }
 
@@ -59,28 +94,6 @@ nyas__internal_arr_rm(void *arr, void *elem, int elem_size)
 	memcpy(elem, &h->buf[(--h->count) * elem_size], elem_size);
 }
 
-#define GET_MACRO(_1, _2, NAME, ...) NAME
-
-#define nyas__internal_arr_pushv(arr, count) \
-	nyas__internal_arr_push((void **)&(arr), (count), sizeof(*(arr)))
-#define nyas__internal_arr_push_(arr) nyas__internal_arr_pushv((arr), 1)
-#define nyas__internal_arr_popv(arr, count) nyas__internal_arr_pop(arr, count)
-#define nyas__internal_arr_pop_(arr) nyas__internal_arr_pop(arr, 1)
-
-// Creation/Deletion
-#define nyas_arr_create(T, capacity) nyas__internal_arr_create(sizeof(T), (capacity))
-#define nyas_arr_release(arr) NYAS_ARRAY_FREE((struct nyas__internal_arr_header *)arr - 1)
-
-// Modifiers
-#define nyas_arr_push(...) \
-	GET_MACRO(__VA_ARGS__, nyas__internal_arr_pushv, nyas__internal_arr_push_, UNUSED)(__VA_ARGS__)
-#define nyas_arr_pop(...) \
-	GET_MACRO(__VA_ARGS__, nyas__internal_arr_popv, nyas__internal_arr_pop_, UNUSED)(__VA_ARGS__)
-#define nyas_arr_rm(arr, pos) nyas__internal_arr_rm((arr), &(arr[pos]), sizeof(*(arr)))
-
-// Getters
-#define nyas_arr_count(arr) (*((int *)(arr)-1))
-#define nyas_arr_capacity(arr) (*((int *)(arr)-2))
 
 #ifdef NYAS_ARRAY_TEST
 #include <stdio.h>

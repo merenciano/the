@@ -77,10 +77,12 @@ InitMainFramebuffer(nyas_framebuffer fb)
 	struct nyas_vec2i vp = nyas_window_size();
 	struct nyas_texture_desc descriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp.x, vp.y);
-	nyas_tex fb_tex = nyas_tex_empty(&descriptor);
+	nyas_tex fb_tex = nyas_tex_alloc(2);
+	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_desc depthscriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp.x, vp.y);
-	nyas_tex fb_depth = nyas_tex_empty(&depthscriptor);
+	nyas_tex fb_depth = fb_tex + 1;
+	nyas_tex_set(fb_depth, &depthscriptor);
 
 	nyas_cmd *set_fb_tex = nyas_cmd_alloc();
 	set_fb_tex->data.set_fb.fb = fb;

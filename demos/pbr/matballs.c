@@ -41,146 +41,104 @@ static struct pbr_tex_desc g_tex_desc;
 
 struct pbr_tex_load_info_t {
 	struct pbr_tex_desc *desc;
-	struct pbr_tex_t tex;
+	struct pbr_tex_t *tex;
 	const char *apath;
 	const char *npath;
 	const char *rpath;
 	const char *mpath;
 };
 
-void load_pbr_map(void *pbr_maps)
+static void load_pbr_map(void *pbr_maps)
 {
 	struct pbr_tex_load_info_t *maps = pbr_maps;
-	maps->tex.a = nyas_tex_load(&maps->desc->albedo, maps->apath, 0);
-	maps->tex.n = nyas_tex_load(&maps->desc->normal, maps->npath, 3);
-	maps->tex.r = nyas_tex_load(&maps->desc->pbr_map, maps->rpath, 1);
-	maps->tex.m = nyas_tex_load(&maps->desc->pbr_map, maps->mpath, 1);
+	nyas_tex_load(maps->tex->a, &maps->desc->albedo, maps->apath);
+	nyas_tex_load(maps->tex->n, &maps->desc->normal, maps->npath);
+	nyas_tex_load(maps->tex->r, &maps->desc->pbr_map, maps->rpath);
+	nyas_tex_load(maps->tex->m, &maps->desc->pbr_map, maps->mpath);
 }
 
 static void load_textures(void)
 {
-	struct pbr_tex_load_info_t gold_maps = {
-		.desc = &g_tex_desc,
-		.tex = g_tex.gold,
-		.apath = "assets/tex/celtic-gold/celtic-gold_A.png",
-		.npath = "assets/tex/celtic-gold/celtic-gold_N.png",
-		.rpath = "assets/tex/celtic-gold/celtic-gold_R.png",
-		.mpath = "assets/tex/celtic-gold/celtic-gold_M.png",
-	};
-
-	struct pbr_tex_load_info_t peeled_maps = {
+	struct pbr_tex_load_info_t img_files[] = {
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.peeled,
+	  .tex = &g_tex.gold,
+	  .apath = "assets/tex/celtic-gold/celtic-gold_A.png",
+	  .npath = "assets/tex/celtic-gold/celtic-gold_N.png",
+	  .rpath = "assets/tex/celtic-gold/celtic-gold_R.png",
+	  .mpath = "assets/tex/celtic-gold/celtic-gold_M.png",
+	},
+	{
+	  .desc = &g_tex_desc,
+	  .tex = &g_tex.peeled,
 	  .apath = "assets/tex/peeling/peeling_A.png",
 	  .npath = "assets/tex/peeling/peeling_N.png",
 	  .rpath = "assets/tex/peeling/peeling_R.png",
 	  .mpath = "assets/tex/peeling/peeling_M.png",
-	};
-
-	struct pbr_tex_load_info_t rusted_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.rusted,
+	  .tex = &g_tex.rusted,
 	  .apath = "assets/tex/rusted/rusted_A.png",
 	  .npath = "assets/tex/rusted/rusted_N.png",
 	  .rpath = "assets/tex/rusted/rusted_R.png",
 	  .mpath = "assets/tex/rusted/rusted_M.png",
-	};
-
-	struct pbr_tex_load_info_t tiles_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.tiles,
+	  .tex = &g_tex.tiles,
 	  .apath = "assets/tex/tiles/tiles_A.png",
 	  .npath = "assets/tex/tiles/tiles_N.png",
 	  .rpath = "assets/tex/tiles/tiles_R.png",
 	  .mpath = "assets/tex/tiles/tiles_M.png",
-	};
-
-	struct pbr_tex_load_info_t plastic_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.plastic,
+	  .tex = &g_tex.plastic,
 	  .apath = "assets/tex/ship-panels/ship-panels_A.png",
 	  .npath = "assets/tex/ship-panels/ship-panels_N.png",
 	  .rpath = "assets/tex/ship-panels/ship-panels_R.png",
 	  .mpath = "assets/tex/ship-panels/ship-panels_M.png",
-	};
-
-	struct pbr_tex_load_info_t shore_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.shore,
+	  .tex = &g_tex.shore,
 	  .apath = "assets/tex/shore/shore_A.png",
 	  .npath = "assets/tex/shore/shore_N.png",
 	  .rpath = "assets/tex/shore/shore_R.png",
 	  .mpath = "assets/tex/shore/shore_M.png",
-	};
-
-	struct pbr_tex_load_info_t cliff_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.cliff,
+	  .tex = &g_tex.cliff,
 	  .apath = "assets/tex/cliff/cliff_A.png",
 	  .npath = "assets/tex/cliff/cliff_N.png",
 	  .rpath = "assets/tex/cliff/cliff_R.png",
 	  .mpath = "assets/tex/cliff/cliff_M.png",
-	};
-
-	struct pbr_tex_load_info_t granite_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.granite,
+	  .tex = &g_tex.granite,
 	  .apath = "assets/tex/granite/granite_A.png",
 	  .npath = "assets/tex/granite/granite_N.png",
 	  .rpath = "assets/tex/granite/granite_R.png",
 	  .mpath = "assets/tex/granite/granite_M.png",
-	};
-
-	struct pbr_tex_load_info_t foam_maps = {
+	},
+	{
 	  .desc = &g_tex_desc,
-	  .tex = g_tex.foam,
+	  .tex = &g_tex.foam,
 	  .apath = "assets/tex/foam/foam_A.png",
 	  .npath = "assets/tex/foam/foam_N.png",
 	  .rpath = "assets/tex/foam/foam_R.png",
 	  .mpath = "assets/tex/foam/foam_M.png",
-	};
+	}};
 
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &gold_maps};
+	nyas_tex begin = nyas_tex_alloc(9 * 4);
+	for (int i = 0; i < 9; ++i, begin += 4) {
+		*img_files[i].tex = (struct pbr_tex_t){ .a = begin, .n = begin + 1, .r = begin + 2, .m = begin + 3 };
+		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
 		nyas_sched_do(job);
 	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &peeled_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &rusted_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &tiles_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &plastic_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &shore_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &granite_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &foam_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &gold_maps};
-		nyas_sched_do(job);
-	}
-	{
-		struct nyas_job job = { .job = load_pbr_map, .args = &cliff_maps};
-		nyas_sched_do(job);
-	}
-
 	nyas_sched_wait();
 }
 

@@ -33,11 +33,11 @@ nyas__worker(void *data)
 			}
 		}
 
-		nyas_arr_pop(queue);
-		struct nyas_job *job = &queue[nyas_arr_count(queue)];
 		--waiting;
+		struct nyas_job job = *nyas_arr_last(queue);
+		nyas_arr_pop(queue);
 		pthread_mutex_unlock(&mtx);
-		(*(job->job))(job->args);
+		(*(job.job))(job.args);
 	}
 
 exit_worker:
@@ -68,6 +68,10 @@ nyas_sched_init(int thread_count, int queue_capacity)
 void
 nyas_sched_do(struct nyas_job job)
 {
+	if (!nyas_arr_count(threads)) {
+		(*(job.job))(job.args);
+		return;
+	}
 	pthread_mutex_lock(&mtx);
 	struct nyas_job *next = nyas_arr_push(queue);
 	*next = job;
@@ -78,11 +82,14 @@ nyas_sched_do(struct nyas_job job)
 void
 nyas_sched_wait(void)
 {
-	pthread_mutex_lock(&mtx);
-	while (waiting != nyas_arr_count(threads)) {
+	if (!nyas_arr_count(threads)) {
+		return;
+	}
+
+	while (nyas_arr_count(queue) || waiting != nyas_arr_count(threads)) {
+		pthread_cond_broadcast(&cond);
 		nanosleep((const struct timespec[]){ { 0, 50000000L } }, NULL);
 	}
-	pthread_mutex_unlock(&mtx);
 }
 
 int
