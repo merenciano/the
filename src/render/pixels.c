@@ -648,13 +648,8 @@ nyas__mesh_set_cube(mesh_t *mesh)
 		13, 12, 14, 12, 15, 14, 16, 17, 18, 18, 19, 16, 23, 22, 20, 22, 21, 20,
 	};
 
-	if (mesh->vtx) {
-		nyas_free(mesh->vtx);
-	}
-
-	if (mesh->idx) {
-		nyas_free(mesh->idx);
-	}
+	nyas_free(mesh->vtx);
+	nyas_free(mesh->idx);
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
 	mesh->vtx = nyas_alloc(sizeof(VERTICES));
@@ -673,13 +668,8 @@ nyas__mesh_set_sphere(mesh_t *mesh, int x_segments, int y_segments)
 	const float x_step = 1.0f / (float)(y_segments - 1);
 	const float y_step = 1.0f / (float)(x_segments - 1);
 
-	if (mesh->vtx) {
-		nyas_free(mesh->vtx);
-	}
-
-	if (mesh->idx) {
-		nyas_free(mesh->idx);
-	}
+	nyas_free(mesh->vtx);
+	nyas_free(mesh->idx);
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
 	mesh->vtx_size = y_segments * x_segments * 8 * sizeof(float);
@@ -729,13 +719,8 @@ nyas__mesh_set_quad(mesh_t *mesh)
 
 	static const nyas_idx INDICES[] = { 0, 1, 2, 0, 2, 3 };
 
-	if (mesh->vtx) {
-		nyas_free(mesh->vtx);
-	}
-
-	if (mesh->idx) {
-		nyas_free(mesh->idx);
-	}
+	nyas_free(mesh->vtx);
+	nyas_free(mesh->idx);
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_UV);
 	mesh->vtx = nyas_alloc(sizeof(VERTICES));
@@ -780,13 +765,8 @@ nyas__mesh_set_obj(mesh_t *mesh, const char *path)
 
 	size_t vertex_count = attrib.num_face_num_verts * 3;
 
-	if (mesh->vtx) {
-		nyas_free(mesh->vtx);
-	}
-
-	if (mesh->idx) {
-		nyas_free(mesh->idx);
-	}
+	nyas_free(mesh->vtx);
+	nyas_free(mesh->idx);
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_TANGENT) |
 	  (1 << VA_BITANGENT) | (1 << VA_UV);
@@ -912,13 +892,8 @@ nyas__mesh_set_msh(mesh_t *mesh, const char *path)
 		return;
 	}
 
-	if (mesh->vtx) {
-		nyas_free(mesh->vtx);
-	}
-
-	if (mesh->idx) {
-		nyas_free(mesh->idx);
-	}
+	nyas_free(mesh->vtx);
+	nyas_free(mesh->idx);
 
 	mesh->attrib = (1 << VA_POSITION) | (1 << VA_NORMAL) | (1 << VA_TANGENT) |
 	  (1 << VA_BITANGENT) | (1 << VA_UV);

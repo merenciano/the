@@ -169,17 +169,29 @@ extern void nyas_setfb_fn(nyas_cmdata *data);
 
 typedef int nyas_draw_flags;
 enum nyas_draw_flags {
-	NYAS_DRAW_CLEAR_COLOR = 0,
+	NYAS_DRAW_NONE = 0,
+	NYAS_DRAW_CLEAR_COLOR,
 	NYAS_DRAW_CLEAR_DEPTH,
 	NYAS_DRAW_CLEAR_STENCIL,
 	NYAS_DRAW_TEST_DEPTH,
 	NYAS_DRAW_TEST_STENCIL,
+	NYAS_DRAW_WRITE_COLOR,
 	NYAS_DRAW_WRITE_DEPTH,
 	NYAS_DRAW_WRITE_STENCIL,
 	NYAS_DRAW_BLEND,
 	NYAS_DRAW_CULL,
 	NYAS_DRAW_SCISSOR,
 	NYAS_DRAW_FLAGS_COUNT
+};
+
+typedef int nyas_vtx_attribs;
+enum nyas_vertex_attrib {
+	NYAS_VA_POS = 0,
+	NYAS_VA_NORMAL,
+	NYAS_VA_TAN,
+	NYAS_VA_BITAN,
+	NYAS_VA_UV,
+	NYAS_VA_COUNT
 };
 
 struct nyas_draw_target {
@@ -189,13 +201,14 @@ struct nyas_draw_target {
 
 struct nyas_draw_pipeline {
 	nyas_shader shader;
-	int vtx_attrib;
+	nyas_vtx_attribs va;
 };
 
 struct nyas_draw_ops {
-	struct nyas_rect viewport[4];
-	struct nyas_rect scissor[4];
-	nyas_draw_flags flags;
+	struct nyas_rect viewport;
+	struct nyas_rect scissor;
+	nyas_draw_flags enable;
+	nyas_draw_flags disable;
 	uint8_t blend_src;
 	uint8_t blend_dst;
 	uint8_t cull_face;
@@ -208,17 +221,28 @@ struct nyas_draw_cmd {
 	nyas_mat material;
 };
 
-struct nyas_draw_list {
+struct nyas_drawlist {
 	struct nyas_draw_target target;
 	struct nyas_draw_pipeline pipeline;
 	struct nyas_draw_ops ops;
 	struct nyas_draw_cmd *cmds;
 };
 
-struct nyas_draw_frame {
+struct nyas_frame_ctx {
 	struct nyas_draw_list *draw_lists; // nyas_arr
 	// post process
 	uint8_t *mem_arena;
 };
+
+struct nyas_draw_cmd *nyas_drawlist_push(struct nyas_drawlist *dl);
+void nyas_drawlist_enable_op(struct nyas_drawlist *dl, nyas_draw_flags flag);
+void nyas_drawlist_viewport(struct nyas_drawlist *dl, struct nyas_rect viewport);
+void nyas_drawlist_scissor(struct nyas_drawlist *dl, struct nyas_rect scissor);
+void nyas_drawlist_ops(struct nyas_drawlist *dl, struct nyas_draw_ops *ops);
+void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
+void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes);
+void nyas_frame_render(struct nyas_frame_ctx *frame);
+void nyas_frame_swap(struct nyas_frame_ctx *lh, struct nyas_frame_ctx *rh);
+
 
 #endif // NYAS_PIXELS_H
