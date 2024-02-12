@@ -59,6 +59,10 @@ static void load_pbr_map(void *pbr_maps)
 
 static void load_textures(void)
 {
+	g_tex_desc.albedo = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0);
+	g_tex_desc.normal = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0);
+	g_tex_desc.pbr_map = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0);
+
 	struct pbr_tex_load_info_t img_files[] = {
 	{
 	  .desc = &g_tex_desc,
@@ -142,24 +146,58 @@ static void load_textures(void)
 	nyas_sched_wait();
 }
 
+struct mesh_args {
+	const char *path;
+	nyas_mesh *out_mesh;
+};
+
+static void load_mesh(void *args)
+{
+	struct mesh_args *ma = args;
+	*ma->out_mesh = nyas_mesh_load_file(ma->path);
+}
+
+struct env_args {
+	const char *path;
+	nyas_tex *out_sky;
+	nyas_tex *out_irr;
+	nyas_tex *out_pref;
+	nyas_tex *out_lut;
+};
+
+static void load_env(void *args)
+{
+	struct env_args *ea = args;
+	nyas_load_env(ea->path, ea->out_lut, ea->out_sky, ea->out_irr, ea->out_pref);
+}
+
+static void load_assets(void)
+{
+	struct mesh_args mshargs = { .path = "assets/obj/matball.msh", .out_mesh = &g_mesh };
+	struct env_args envargs = {.path = "assets/env/canyon.env", .out_sky = &g_tex.sky, .out_irr = &g_tex.irradiance, .out_pref = &g_tex.prefilter, .out_lut = &g_tex.lut};
+	{
+		struct nyas_job job = { .job = load_mesh, .args = &mshargs};
+		nyas_sched_do(job);
+	}
+	{
+		struct nyas_job job = { .job = load_env, .args = &envargs};
+		nyas_sched_do(job);
+	}
+	load_textures();
+
+	nyas_sched_wait();
+}
+
 void
 Init(void)
 {
 	g_fb = nyas_fb_create();
 
-	g_tex_desc.albedo = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0);
-	g_tex_desc.normal = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0);
-	g_tex_desc.pbr_map = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0);
-
 	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
 	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
 
-	g_mesh = nyas_mesh_load_file("assets/obj/matball.msh");
-	nyas_load_env(
-	  "assets/env/canyon.env", &g_tex.lut, &g_tex.sky, &g_tex.irradiance, &g_tex.prefilter);
-
-	load_textures();
+	load_assets();
 
 	struct nyas_pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
@@ -483,7 +521,7 @@ main(int argc, char **argv)
 	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
 	nyas_sched_init(9, 32);
 	nyas_px_init();
-	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
+	nyas_camera_init(&camera, 70.0f, 300.0f, (float)nyas_window_size().x, (float)nyas_window_size().y);
 	nuklear_init();
 	Init();
 

@@ -22,8 +22,7 @@ nyas_camera_init(nyas_cam *cam,
 	float pos[] = { 0.0f, 2.0f, 2.0f };
 	float target[] = { 0.0f, 0.0f, -1.0f };
 	mat4_look_at(cam->view, pos, target, UP);
-	mat4_perspective_fov(cam->proj, to_radians(fov), width, height, 0.01f,
-	                     far);
+	mat4_perspective_fov(cam->proj, to_radians(fov), width, height, 0.01f, far);
 }
 
 float *

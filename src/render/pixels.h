@@ -29,15 +29,15 @@ typedef uint32_t nyas_idx;
  * nyaspix resources
  */
 
-typedef int nyas_resource_handle;
-typedef nyas_resource_handle nyas_mesh;
-typedef nyas_resource_handle nyas_tex;
-typedef nyas_resource_handle nyas_framebuffer;
-typedef nyas_resource_handle nyas_shader;
+union nyas_mat_value {
+	float data;
+	nyas_tex sampler;
+};
 
 typedef struct nyas_mat {
-	void *ptr;
+	void *ptr; // TODO deprecar
 	nyas_shader shader;
+	union nyas_material_value *data;
 } nyas_mat;
 
 typedef struct nyas_shader_desc {
@@ -166,5 +166,59 @@ extern void nyas_draw_fn(nyas_cmdata *data);
 extern void nyas_rops_fn(nyas_cmdata *data);
 extern void nyas_setshader_fn(nyas_cmdata *data);
 extern void nyas_setfb_fn(nyas_cmdata *data);
+
+typedef int nyas_draw_flags;
+enum nyas_draw_flags {
+	NYAS_DRAW_CLEAR_COLOR = 0,
+	NYAS_DRAW_CLEAR_DEPTH,
+	NYAS_DRAW_CLEAR_STENCIL,
+	NYAS_DRAW_TEST_DEPTH,
+	NYAS_DRAW_TEST_STENCIL,
+	NYAS_DRAW_WRITE_DEPTH,
+	NYAS_DRAW_WRITE_STENCIL,
+	NYAS_DRAW_BLEND,
+	NYAS_DRAW_CULL,
+	NYAS_DRAW_SCISSOR,
+	NYAS_DRAW_FLAGS_COUNT
+};
+
+struct nyas_draw_target {
+	nyas_framebuffer fb;
+	float bgcolor[4];
+};
+
+struct nyas_draw_pipeline {
+	nyas_shader shader;
+	int vtx_attrib;
+};
+
+struct nyas_draw_ops {
+	struct nyas_rect viewport[4];
+	struct nyas_rect scissor[4];
+	nyas_draw_flags flags;
+	uint8_t blend_src;
+	uint8_t blend_dst;
+	uint8_t cull_face;
+	uint8_t depth_fun;
+	uint8_t stencil_fun;
+};
+
+struct nyas_draw_cmd {
+	nyas_mesh mesh;
+	nyas_mat material;
+};
+
+struct nyas_draw_list {
+	struct nyas_draw_target target;
+	struct nyas_draw_pipeline pipeline;
+	struct nyas_draw_ops ops;
+	struct nyas_draw_cmd *cmds;
+};
+
+struct nyas_draw_frame {
+	struct nyas_draw_list *draw_lists; // nyas_arr
+	// post process
+	uint8_t *mem_arena;
+};
 
 #endif // NYAS_PIXELS_H

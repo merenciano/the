@@ -49,10 +49,9 @@ struct nyas_mesh_internal {
 };
 
 struct nyas_texture_image {
-	int idx; // In tex_pool
-	int lod;
-	nyas_texture_face face;
 	void *pix;
+	nyas_texture_face face;
+	int lod;
 };
 
 struct nyas_texture_internal {
@@ -72,6 +71,7 @@ struct nyas_shader_internal {
 
 struct nyas_framebuffer_internal {
 	struct nyas_resource_internal res;
+
 };
 
 
