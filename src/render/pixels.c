@@ -1195,7 +1195,7 @@ nyas_rops_fn(nyas_cmdata *data)
 		}
 	}
 
-	/* Ignore unless both have a value assigned. */
+	// Ignore unless both have a value assigned.
 	if (data->rend_opts.blend_src && data->rend_opts.blend_dst) {
 		nypx_blend_set(data->rend_opts.blend_src, data->rend_opts.blend_dst);
 	}
@@ -1234,3 +1234,22 @@ nyas_setfb_fn(nyas_cmdata *data)
 	}
 	nypx_viewport(0, 0, d->vp_x, d->vp_y);
 }
+
+void nyas_drawlist_push_cmd(struct nyas_drawlist *dl, const struct nyas_draw_cmd *cmd)
+{
+	struct nyas_draw_cmd *c = nyas_arr_push(dl);
+	*c = *cmd;
+}
+
+void nyas_drawlist_enable_op(struct nyas_drawlist *dl, nyas_draw_flags op)
+{
+	dl->ops.enable |= (1 << op);
+}
+
+void nyas_drawlist_viewport(struct nyas_drawlist *dl, struct nyas_rect viewport);
+void nyas_drawlist_scissor(struct nyas_drawlist *dl, struct nyas_rect scissor);
+void nyas_drawlist_ops(struct nyas_drawlist *dl, struct nyas_draw_ops *ops);
+void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
+void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes);
+void nyas_frame_render(struct nyas_frame_ctx *frame);
+void nyas_frame_swap(struct nyas_frame_ctx *lh, struct nyas_frame_ctx *rh);
