@@ -71,9 +71,28 @@ struct nyas_shader_internal {
 
 struct nyas_framebuffer_internal {
 	struct nyas_resource_internal res;
-
+	struct nyas_texture_target target[8];
 };
 
+/*static struct nyas_framebuffer_internal
+nyas_framebuffer_internal(void)
+{
+	return (struct nyas_framebuffer_internal){
+		.res = { .id = 0, .flags = NYAS_IRF_DIRTY },
+		.color = {
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
+		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0}
+		},
+		.depth = NYAS_NONE,
+		.stencil = NYAS_NONE
+	};
+}*/
 
 void nypx_tex_create(struct nyas_texture_internal *t);
 void nypx_tex_set(struct nyas_texture_internal *t);
@@ -84,15 +103,16 @@ void nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
 void nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s);
 
-void nypx_mesh_set(uint32_t id,
-                   uint32_t vid,
-                   uint32_t iid,
-                   uint32_t shader_id,
-                   int attrib,
-                   float *vtx,
-                   size_t vsize,
-                   nypx_index *idx,
-                   size_t elements);
+void nypx_mesh_set(
+  uint32_t id,
+  uint32_t vid,
+  uint32_t iid,
+  uint32_t shader_id,
+  int attrib,
+  float *vtx,
+  size_t vsize,
+  nypx_index *idx,
+  size_t elements);
 
 void nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
@@ -112,25 +132,23 @@ void nypx_shader_use(uint32_t id);
 
 void nypx_shader_release(uint32_t id);
 
-void nypx_fb_create(uint32_t *id);
+void nypx_fb_create(struct nyas_framebuffer_internal *fb);
 
-// Sets fb attach from cubemap face
-// id: framebuffer internal id
-// texid: cubemap internal id
-// slot: framebuffer attachment
-// level: mipmap level
-// face: cubemap face (see enum nypx_cube_faces)
-void nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face);
+void nypx_fb_set(struct nyas_framebuffer_internal *fb, int index);
 
-void nypx_fb_use(uint32_t id);
+void nypx_fb_use(struct nyas_framebuffer_internal *fb);
 
-void nypx_fb_release(uint32_t *id);
+void nypx_fb_release(struct nyas_framebuffer_internal *fb);
 
 void nypx_clear(int color, int depth, int stencil);
 
 void nypx_draw(int elem_count, int index_type);
 
 void nypx_clear_color(float r, float g, float b, float a);
+
+void nypx_scissor_enable(void);
+
+void nypx_scissor_disable(void);
 
 void nypx_blend_enable(void);
 
@@ -154,7 +172,18 @@ void nypx_depth_disable_mask(void);
 
 void nypx_depth_set(int depth_func);
 
-void nypx_viewport(int x, int y, int width, int height);
+void nypx_stencil_enable_test(void);
+
+void nypx_stencil_disable_test(void);
+
+void nypx_stencil_enable_mask(void);
+
+void nypx_stencil_disable_mask(void);
+
+void nypx_stencil_set(int stencil_func);
+
+void nypx_viewport(struct nyas_rect rect);
+void nypx_scissor(struct nyas_rect rect);
 
 extern struct nyas_mesh_internal *mesh_pool;
 extern struct nyas_texture_internal *tex_pool;

@@ -174,7 +174,6 @@ enum nyas_draw_flags {
 	NYAS_DRAW_CLEAR_STENCIL,
 	NYAS_DRAW_TEST_DEPTH,
 	NYAS_DRAW_TEST_STENCIL,
-	NYAS_DRAW_WRITE_COLOR,
 	NYAS_DRAW_WRITE_DEPTH,
 	NYAS_DRAW_WRITE_STENCIL,
 	NYAS_DRAW_BLEND,
@@ -220,28 +219,31 @@ struct nyas_draw_cmd {
 	nyas_mat material;
 };
 
-struct nyas_drawlist {
+struct nyas_render_state {
 	struct nyas_draw_target target;
 	struct nyas_draw_pipeline pipeline;
 	struct nyas_draw_ops ops;
+};
+
+struct nyas_drawlist {
+	struct nyas_render_state state;
 	struct nyas_draw_cmd *cmds;
 };
 
 struct nyas_frame_ctx {
-	struct nyas_draw_list *draw_lists; // nyas_arr
+	struct nyas_drawlist *draw_lists; // nyas_arr
 	// post process
 	uint8_t *mem_arena;
 };
 
-void nyas_draw_op_enable(struct nyas_drawlist *dl, nyas_draw_flags flag);
-void nyas_draw_op_disable(struct nyas_drawlist *dl, nyas_draw_flags flag);
+void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op);
+void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void nyas_drawlist_push_cmd(struct nyas_drawlist *dl, const struct nyas_draw_cmd *cmd);
-void nyas_drawlist_viewport(struct nyas_drawlist *dl, struct nyas_rect viewport);
-void nyas_drawlist_scissor(struct nyas_drawlist *dl, struct nyas_rect scissor);
-void nyas_drawlist_ops(struct nyas_drawlist *dl, struct nyas_draw_ops *ops);
 void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
 void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes);
 void nyas_frame_render(struct nyas_frame_ctx *frame);
-void nyas_frame_swap(struct nyas_frame_ctx *lh, struct nyas_frame_ctx *rh);
+
+extern struct nyas_frame_ctx *curr_frame;
+extern struct nyas_frame_ctx *next_frame;
 
 #endif // NYAS_PIXELS_H

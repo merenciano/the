@@ -379,41 +379,54 @@ nypx_shader_release(uint32_t id)
 }
 
 void
-nypx_fb_create(uint32_t *id)
+nypx_fb_create(struct nyas_framebuffer_internal *fb)
 {
-	glGenFramebuffers(1, id);
+	glGenFramebuffers(1, &fb->res.id);
 }
 
 int
-nypx__fb_attach_gl(int slot)
+nypx__fb_attach_gl(nyas_framebuffer_attach a)
 {
-	switch (slot) {
-	case NYAS_SLOT_DEPTH: return GL_DEPTH_ATTACHMENT;
-	case NYAS_SLOT_STENCIL: return GL_STENCIL_ATTACHMENT;
-	case NYAS_SLOT_DEPTH_STENCIL: return GL_DEPTH_STENCIL_ATTACHMENT;
-	default: return (GL_COLOR_ATTACHMENT0 - NYAS_SLOT_COLOR0) + slot;
+	switch (a) {
+	case NYAS_ATTACH_DEPTH: return GL_DEPTH_ATTACHMENT;
+	case NYAS_ATTACH_STENCIL: return GL_STENCIL_ATTACHMENT;
+	case NYAS_ATTACH_DEPTH_STENCIL: return GL_DEPTH_STENCIL_ATTACHMENT;
+	default: return GL_COLOR_ATTACHMENT0 + a;
 	}
 }
 
 void
-nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face)
+nypx_fb_set(struct nyas_framebuffer_internal *fb, int index)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, id);
-	GLenum target = face >= 0 ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face : GL_TEXTURE_2D;
-	slot = nypx__fb_attach_gl(slot);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, texid, level);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
+	GLenum face = fb->target[index].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
+	              GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[index].face;
+	GLint slot = nypx__fb_attach_gl(fb->target[index].attach);
+	struct nyas_texture_internal *t = &tex_pool[fb->target[index].tex];
+	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[index].lod_level);
+	/*
+	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
+	for (int i = 0; fb->target[i].tex != NYAS_NONE; ++i) {
+		GLenum face = fb->target[i].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
+		              GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[i].face;
+
+		struct nyas_texture_internal *t = &tex_pool[fb->target[i].tex];
+		GLint slot = nypx__fb_attach_gl(t->data.fmt, &color_count);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[i].lod_level);
+	}
+	 */
 }
 
 void
-nypx_fb_use(uint32_t id)
+nypx_fb_use(struct nyas_framebuffer_internal *fb)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, id);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
 }
 
 void
-nypx_fb_release(uint32_t *id)
+nypx_fb_release(struct nyas_framebuffer_internal *fb)
 {
-	glDeleteFramebuffers(1, id);
+	glDeleteFramebuffers(1, &fb->res.id);
 }
 
 void
@@ -538,7 +551,13 @@ nypx_depth_set(int depth_func)
 }
 
 void
-nypx_viewport(int x, int y, int width, int height)
+nypx_viewport(struct nyas_rect rect)
 {
-	glViewport(x, y, width, height);
+	glViewport(rect.x, rect.y, rect.w, rect.h);
+}
+
+void
+nypx_scissor(struct nyas_rect rect)
+{
+	glScissor(rect.x, rect.y, rect.w, rect.h);
 }

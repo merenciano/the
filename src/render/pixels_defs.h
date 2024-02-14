@@ -41,6 +41,20 @@ enum nyas_texture_face {
 	NYAS_CUBE_FACE_COUNT
 };
 
+typedef int nyas_framebuffer_attach;
+enum nyas_framebuffer_attach {
+	NYAS_ATTACH_DEPTH_STENCIL = -3,
+	NYAS_ATTACH_STENCIL = -2,
+	NYAS_ATTACH_DEPTH = -1,
+	NYAS_ATTACH_COLOR = 0,
+	NYAS_ATTACH_COLOR1,
+	NYAS_ATTACH_COLOR2,
+	NYAS_ATTACH_COLOR3,
+	NYAS_ATTACH_COLOR4,
+	NYAS_ATTACH_COLOR5,
+	NYAS_ATTACH_COLOR6
+};
+
 typedef int nyas_texture_flags;
 enum nyas_texture_flags {
 	NYAS_TEX_FLAG_DEFAULT = 0,
@@ -118,11 +132,8 @@ struct nyas_texture_desc {
 struct nyas_texture_target {
 	nyas_tex tex;
 	nyas_texture_face face;
+	nyas_framebuffer_attach attach;
 	int lod_level;
-};
-
-struct nyas_framebuffer_desc {
-	struct nyas_texture_target *targets; // nyas_arr
 };
 
 #endif // NYAS_PIXELS_DEFS_H

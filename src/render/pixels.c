@@ -1122,6 +1122,30 @@ nyas__set_shader_data(shdr_t *s, void *srcdata, int common)
 }
 
 void
+nyas__sync_shader(shdr_t *s)
+{
+	static const char *uniforms[] = {
+	  "u_data", "u_tex", "u_cube", "u_common_data", "u_common_tex", "u_common_cube"
+	};
+
+	if (!(s->res.flags & NYAS_IRF_CREATED)) {
+		nypx_shader_create(&s->res.id);
+		s->res.flags |= NYAS_IRF_CREATED;
+	}
+
+	if (s->res.flags & NYAS_IRF_DIRTY) {
+		NYAS_ASSERT(s->name && *s->name && "Shader name needed.");
+		nypx_shader_compile(s->res.id, s->name);
+		nypx_shader_loc(s->res.id, &s->loc[0].data, &uniforms[0], 6);
+		s->res.flags &= ~NYAS_IRF_DIRTY;
+	}
+}
+
+void nyas__use_shader(nyas_mat *mat)
+{
+}
+
+void
 nyas_setshader_fn(nyas_cmdata *data)
 {
 	static const char *uniforms[] = {
@@ -1235,21 +1259,160 @@ nyas_setfb_fn(nyas_cmdata *data)
 	nypx_viewport(0, 0, d->vp_x, d->vp_y);
 }
 
+void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op)
+{
+	ops->enable |= (1 << op);
+}
+
+void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op)
+{
+	ops->enable &= ~(1 << op);
+}
+
 void nyas_drawlist_push_cmd(struct nyas_drawlist *dl, const struct nyas_draw_cmd *cmd)
 {
 	struct nyas_draw_cmd *c = nyas_arr_push(dl);
 	*c = *cmd;
 }
 
-void nyas_drawlist_enable_op(struct nyas_drawlist *dl, nyas_draw_flags op)
+void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl)
 {
-	dl->ops.enable |= (1 << op);
+	struct nyas_drawlist *new = nyas_arr_push(frame->draw_lists);
+	*new = *dl;
 }
 
-void nyas_drawlist_viewport(struct nyas_drawlist *dl, struct nyas_rect viewport);
-void nyas_drawlist_scissor(struct nyas_drawlist *dl, struct nyas_rect scissor);
-void nyas_drawlist_ops(struct nyas_drawlist *dl, struct nyas_draw_ops *ops);
-void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
-void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes);
-void nyas_frame_render(struct nyas_frame_ctx *frame);
-void nyas_frame_swap(struct nyas_frame_ctx *lh, struct nyas_frame_ctx *rh);
+void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes)
+{
+	return nyas_arr_push(frame->mem_arena, bytes);
+}
+
+static void nyas__fb_sync(nyas_framebuffer framebuffer)
+{
+	nypx__check_handle(framebuffer, framebuffer_pool);
+	struct nyas_framebuffer_internal *fb = &framebuffer_pool[framebuffer];
+	if (!(fb->res.flags & NYAS_IRF_CREATED)) {
+		nypx_fb_create(fb);
+		fb->res.flags |= NYAS_IRF_CREATED;
+	}
+
+	if (fb->res.flags & NYAS_IRF_DIRTY) {
+		for (int i = 0; fb->target[i].tex != NYAS_NONE; ++i) {
+			nyas__sync_gpu_tex(fb->target[i].tex);
+			nypx_fb_set(fb, i);
+		}
+		fb->res.flags &= ~NYAS_IRF_DIRTY;
+	}
+}
+
+static void nyas__set_render_initial_state(struct nyas_render_state *rs)
+{
+	// sync fb y tex
+}
+
+static void nyas__set_render_state(struct nyas_render_state *rs)
+{
+	if (rs->target.fb == NYAS_NONE) {
+
+	}
+}
+
+void nyas_frame_render(struct nyas_frame_ctx *frame)
+{
+	// sorting frame drawlists
+	// mutex lock
+	// frame swaps
+	for (int i = 0; i < nyas_arr_count(frame->draw_lists); ++i) {
+		struct nyas_render_state *rs = &frame->draw_lists[i].state;
+		// target
+		nyas_framebuffer fb = rs->target.fb;
+		nyas__fb_sync(fb);
+		nypx_fb_use(&framebuffer_pool[fb]);
+
+		// pipeline
+		nyas_shader shdr = rs->pipeline.shader;
+		nyas_mat mat = nyas_mat_copy_shader(shdr);
+		nypx__check_handle(mat.shader, shader_pool);
+		shdr_t *s = &shader_pool[mat.shader];
+		nyas__sync_shader(s);
+		nypx_shader_use(s->res.id);
+		nyas__set_shader_data(s, mat.ptr, true);
+		// TODO: Mesh attrib
+
+		// ops
+		int enable = rs->ops.enable;
+		int disable = rs->ops.disable;
+
+		nypx_clear_color(rs->target.bgcolor[0], rs->target.bgcolor[1], rs->target.bgcolor[2], rs->target.bgcolor[3]);
+		nypx_clear(enable & (1 << NYAS_DRAW_CLEAR_COLOR),
+		           enable & (1 << NYAS_DRAW_CLEAR_DEPTH),
+		           enable & (1 << NYAS_DRAW_CLEAR_STENCIL));
+
+		nypx_viewport(rs->ops.viewport);
+		nypx_scissor(rs->ops.scissor);
+
+		if (disable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+			nypx_depth_disable_test();
+		} else if (enable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+			nypx_depth_enable_test();
+		}
+
+		if (disable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+			nypx_depth_disable_mask();
+		} else if (enable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+			nypx_depth_enable_mask();
+		}
+
+		if (disable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+			nypx_stencil_disable_test();
+		} else if (enable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+			nypx_stencil_enable_test();
+		}
+
+		if (disable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+			nypx_stencil_disable_mask();
+		} else if (enable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+			nypx_stencil_enable_mask();
+		}
+
+		if (disable & (1 << NYAS_DRAW_BLEND)) {
+			nypx_blend_disable();
+		} else if (enable & (1 << NYAS_DRAW_BLEND)) {
+			nypx_blend_enable();
+		}
+
+		if (disable & (1 << NYAS_DRAW_CULL)) {
+			nypx_cull_disable();
+		} else if (enable & (1 << NYAS_DRAW_CULL)) {
+			nypx_cull_enable();
+		}
+
+		if (disable & (1 << NYAS_DRAW_SCISSOR)) {
+			nypx_scissor_disable();
+		} else if (enable & (1 << NYAS_DRAW_SCISSOR)) {
+			nypx_scissor_enable();
+		}
+
+		nypx_depth_set(rs->ops.depth_fun);
+		nypx_stencil_set(rs->ops.stencil_fun);
+		nypx_blend_set(rs->ops.blend_src, rs->ops.blend_dst);
+		nypx_cull_set(rs->ops.cull_face);
+
+		// commands
+		for (int cmd = 0; cmd < nyas_arr_count(frame->draw_lists[i].cmds); ++cmd) {
+			nyas_mesh mesh = frame->draw_lists[i].cmds[cmd].mesh;
+			nyas_mat mat = frame->draw_lists[i].cmds[cmd].material;
+			mesh_t *imsh = &mesh_pool[mesh];
+			nypx__check_handle(mesh, mesh_pool);
+			NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
+
+			if (imsh->res.flags & NYAS_IRF_DIRTY) {
+				nyas__sync_gpu_mesh(mesh, mat.shader);
+			}
+
+			shdr_t *s = &shader_pool[mat.shader];
+			nyas__set_shader_data(s, mat.ptr, false);
+			nypx_mesh_use(imsh, s);
+			nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
+		}
+	}
+}
