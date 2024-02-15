@@ -1141,10 +1141,8 @@ nyas__sync_shader(shdr_t *s)
 	}
 }
 
-void nyas__use_shader(nyas_mat *mat)
-{
-}
-
+// DEPRECATED
+#if 0
 void
 nyas_setshader_fn(nyas_cmdata *data)
 {
@@ -1258,6 +1256,7 @@ nyas_setfb_fn(nyas_cmdata *data)
 	}
 	nypx_viewport(0, 0, d->vp_x, d->vp_y);
 }
+#endif
 
 void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op)
 {
@@ -1301,18 +1300,6 @@ static void nyas__fb_sync(nyas_framebuffer framebuffer)
 			nypx_fb_set(fb, i);
 		}
 		fb->res.flags &= ~NYAS_IRF_DIRTY;
-	}
-}
-
-static void nyas__set_render_initial_state(struct nyas_render_state *rs)
-{
-	// sync fb y tex
-}
-
-static void nyas__set_render_state(struct nyas_render_state *rs)
-{
-	if (rs->target.fb == NYAS_NONE) {
-
 	}
 }
 

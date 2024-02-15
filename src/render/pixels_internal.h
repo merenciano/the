@@ -1,6 +1,7 @@
 #ifndef NYASPIX_H
 #define NYASPIX_H
 
+#include "core/nyas_core.h"
 #include "pixels_defs.h"
 
 #include <stddef.h>

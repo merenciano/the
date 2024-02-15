@@ -48,7 +48,7 @@ typedef struct gl_tdesc_t {
 static GLenum
 glttarget(nyas_texture_type type)
 {
-	switch(type) {
+	switch (type) {
 	case NYAS_TEX_2D: return GL_TEXTURE_2D;
 	case NYAS_TEX_CUBEMAP: return GL_TEXTURE_CUBE_MAP;
 	case NYAS_TEX_ARRAY_2D: return GL_TEXTURE_2D_ARRAY;
@@ -119,8 +119,11 @@ gltfmt(nyas_texture_format fmt)
 	case NYAS_TEX_FMT_RGB16F: return (struct gltfmt_result){ GL_RGB16F, GL_RGB, GL_HALF_FLOAT };
 	case NYAS_TEX_FMT_RGBA16F: return (struct gltfmt_result){ GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT };
 	case NYAS_TEX_FMT_RGB32F: return (struct gltfmt_result){ GL_RGB32F, GL_RGB, GL_FLOAT };
-	case NYAS_TEX_FMT_DEPTH: return (struct gltfmt_result){ GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT };
-	default: NYAS_LOG_ERR("Unrecognized texture format: (%d).", fmt); return (struct gltfmt_result){0,0,0};
+	case NYAS_TEX_FMT_DEPTH:
+		return (struct gltfmt_result){ GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT };
+	default:
+		NYAS_LOG_ERR("Unrecognized texture format: (%d).", fmt);
+		return (struct gltfmt_result){ 0, 0, 0 };
 	}
 }
 
@@ -159,7 +162,9 @@ nypx_tex_set(struct nyas_texture_internal *t)
 	glBindTexture(type, t->res.id);
 	struct gltfmt_result fmt = gltfmt(t->data.fmt);
 	for (int i = 0; i < nyas_arr_count(t->img); ++i) {
-		GLint target = (t->data.type == NYAS_TEX_2D) ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img[i].face;
+		GLint target = (t->data.type == NYAS_TEX_2D) ?
+		  GL_TEXTURE_2D :
+		  GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img[i].face;
 		int w = t->data.width >> t->img[i].lod;
 		int h = t->data.height >> t->img[i].lod;
 		glTexImage2D(target, t->img[i].lod, fmt.ifmt, w, h, 0, fmt.fmt, fmt.type, t->img[i].pix);
@@ -399,20 +404,21 @@ void
 nypx_fb_set(struct nyas_framebuffer_internal *fb, int index)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
-	GLenum face = fb->target[index].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
-	              GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[index].face;
+	GLenum face = fb->target[index].face == NYAS_FACE_2D ?
+	  GL_TEXTURE_2D :
+	  GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[index].face;
 	GLint slot = nypx__fb_attach_gl(fb->target[index].attach);
 	struct nyas_texture_internal *t = &tex_pool[fb->target[index].tex];
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[index].lod_level);
 	/*
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
 	for (int i = 0; fb->target[i].tex != NYAS_NONE; ++i) {
-		GLenum face = fb->target[i].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
-		              GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[i].face;
+	    GLenum face = fb->target[i].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
+	                  GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[i].face;
 
-		struct nyas_texture_internal *t = &tex_pool[fb->target[i].tex];
-		GLint slot = nypx__fb_attach_gl(t->data.fmt, &color_count);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[i].lod_level);
+	    struct nyas_texture_internal *t = &tex_pool[fb->target[i].tex];
+	    GLint slot = nypx__fb_attach_gl(t->data.fmt, &color_count);
+	    glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[i].lod_level);
 	}
 	 */
 }
@@ -467,18 +473,22 @@ static GLenum
 nypx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
+	case NYAS_BLEND_CURRENT: return 0xFFFF;
 	case NYAS_BLEND_ONE: return GL_ONE;
 	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
 	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
 	case NYAS_BLEND_ZERO: return GL_ZERO;
-	default: return -1;
 	}
 }
 
 void
 nypx_blend_set(int blend_func_src, int blend_func_dst)
 {
-	glBlendFunc(nypx__gl_blend(blend_func_src), nypx__gl_blend(blend_func_dst));
+	// TODO: hacer todas las combis en un solo enum
+	GLenum gl_src = nypx__gl_blend(blend_func_src);
+	if (gl_src != 0xFFFF) {
+		glBlendFunc(gl_src, nypx__gl_blend(blend_func_dst));
+	}
 }
 
 void
@@ -500,14 +510,17 @@ nypx__gl_cull(enum nyas_cull_face cull)
 	case NYAS_CULL_BACK: return GL_BACK;
 	case NYAS_CULL_FRONT: return GL_FRONT;
 	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
-	default: return -1;
+	case NYAS_CULL_CURRENT: return 0;
 	}
 }
 
 void
 nypx_cull_set(int cull_face)
 {
-	glCullFace(nypx__gl_cull(cull_face));
+	GLenum gl_value = nypx__gl_cull(cull_face);
+	if (gl_value) {
+		glCullFace(nypx__gl_cull(cull_face));
+	}
 }
 
 void
@@ -540,24 +553,31 @@ nypx__gl_depth(enum nyas_depth_func df)
 	switch (df) {
 	case NYAS_DEPTH_LEQUAL: return GL_LEQUAL;
 	case NYAS_DEPTH_LESS: return GL_LESS;
-	default: return -1;
+	case NYAS_DEPTH_CURRENT: return 0;
 	}
 }
 
 void
 nypx_depth_set(int depth_func)
 {
-	glDepthFunc(nypx__gl_depth(depth_func));
+	GLenum gl_value = nypx__gl_depth(depth_func);
+	if (gl_value) {
+		glDepthFunc(gl_value);
+	}
 }
 
 void
 nypx_viewport(struct nyas_rect rect)
 {
-	glViewport(rect.x, rect.y, rect.w, rect.h);
+	if (rect.w) {
+		glViewport(rect.x, rect.y, rect.w, rect.h);
+	}
 }
 
 void
 nypx_scissor(struct nyas_rect rect)
 {
-	glScissor(rect.x, rect.y, rect.w, rect.h);
+	if (rect.w) {
+		glScissor(rect.x, rect.y, rect.w, rect.h);
+	}
 }

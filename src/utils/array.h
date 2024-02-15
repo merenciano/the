@@ -25,7 +25,7 @@
 
 // Creation/Deletion
 #define nyas_arr_create(T, capacity) nyas__internal_arr_create(sizeof(T), (capacity))
-#define nyas_arr_release(arr) NYAS_ARRAY_FREE((struct nyas__internal_arr_header *)arr - 1)
+#define nyas_arr_release(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->alloc((struct nyas__internal_arr_header *)(arr) - 1), 0, NULL)
 #define nyas_arr_reserve(arr, new_capacity) \
 	nyas__internal_arr_reserve((void **)&(arr), (new_capacity), sizeof(*(arr)))
 
@@ -34,14 +34,30 @@
 	GET_MACRO(__VA_ARGS__, nyas__internal_arr_pushv, nyas__internal_arr_push_, UNUSED)(__VA_ARGS__)
 #define nyas_arr_pop(...) \
 	GET_MACRO(__VA_ARGS__, nyas__internal_arr_popv, nyas__internal_arr_pop_, UNUSED)(__VA_ARGS__)
-#define nyas_arr_rm(arr, pos) nyas__internal_arr_rm((arr), &(arr[pos]), sizeof(*(arr)))
+#define nyas_arr_rm(arr, pos) nyas__internal_arr_rm((arr), &((arr)[pos]), sizeof(*(arr)))
 
 // Getters
-#define nyas_arr_count(arr) (*((int *)(arr)-1))
-#define nyas_arr_capacity(arr) (*((int *)(arr)-2))
+#define nyas_arr_count(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->count)
+#define nyas_arr_capacity(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->cap)
 #define nyas_arr_last(arr) ((arr) + (nyas_arr_count(arr) - 1))
 
+static void* nyas__internal_arr_default_alloc(void *ptr, size_t bytes, void *ctx)
+{
+	if (!bytes) {
+		NYAS_ARRAY_FREE(ptr);
+		return NULL;
+	}
+
+	if (!ptr) {
+		return NYAS_ARRAY_MALLOC(bytes);
+	}
+
+	return NYAS_ARRAY_REALLOC(ptr, bytes);
+}
+
 struct nyas__internal_arr_header {
+	void*(*alloc)(void *ptr, size_t bytes, void *ctx);
+	void *ctx;
 	int cap;
 	int count;
 	char buf[];
@@ -51,7 +67,7 @@ static inline void *
 nyas__internal_arr_create(int elem_size, int capacity)
 {
 	struct nyas__internal_arr_header *h =
-	  NYAS_ARRAY_MALLOC(sizeof(struct nyas__internal_arr_header) + capacity * elem_size);
+	  h->alloc(NULL, sizeof(struct nyas__internal_arr_header) + capacity * elem_size, h->ctx);
 	h->cap = capacity;
 	h->count = 0;
 	return h->buf;
@@ -64,7 +80,7 @@ nyas__internal_arr_reserve(void **arr, int min_cap, int elem_size)
 	struct nyas__internal_arr_header *h = (struct nyas__internal_arr_header *)*arr - 1;
 	if (min_cap > h->cap) {
 		while ((h->cap *= 2) < min_cap) {}
-		*arr = NYAS_ARRAY_REALLOC(h, elem_size * h->cap);
+		*arr = h->alloc(h, elem_size * h->cap, h->ctx);
 		NYAS_ARRAY_ASSERT(*arr);
 		h = *arr;
 		*arr = h + 1;

@@ -1,6 +1,8 @@
 #ifndef NYAS_NYAS_CORE_H
 #define NYAS_NYAS_CORE_H
 
+#include <stdint.h>
+
 enum nyas_defs {
 	NYAS_ERR = 0,
 	NYAS_OK = 1,

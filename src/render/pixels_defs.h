@@ -7,14 +7,16 @@ typedef nyas_resource_handle nyas_tex;
 typedef nyas_resource_handle nyas_framebuffer;
 typedef nyas_resource_handle nyas_shader;
 
+typedef int nyas_blend_func;
 enum nyas_blend_func {
-	NYAS_BLEND_INVALID = 0,
+	NYAS_BLEND_CURRENT = 0,
 	NYAS_BLEND_ONE,
 	NYAS_BLEND_SRC_ALPHA,
 	NYAS_BLEND_ONE_MINUS_SRC_ALPHA,
 	NYAS_BLEND_ZERO
 };
 
+typedef int nyas_cull_face;
 enum nyas_cull_face {
 	NYAS_CULL_CURRENT = 0,
 	NYAS_CULL_FRONT,
@@ -22,6 +24,7 @@ enum nyas_cull_face {
 	NYAS_CULL_FRONT_AND_BACK
 };
 
+typedef int nyas_depth_func;
 enum nyas_depth_func {
 	// TODO: Add as needed.
 	NYAS_DEPTH_CURRENT = 0,

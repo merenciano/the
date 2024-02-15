@@ -227,7 +227,7 @@ struct nyas_render_state {
 
 struct nyas_drawlist {
 	struct nyas_render_state state;
-	struct nyas_draw_cmd *cmds;
+	struct nyas_draw_cmd *cmds; // nyas_arr
 };
 
 struct nyas_frame_ctx {
