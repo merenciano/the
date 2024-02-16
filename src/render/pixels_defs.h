@@ -7,6 +7,16 @@ typedef nyas_resource_handle nyas_tex;
 typedef nyas_resource_handle nyas_framebuffer;
 typedef nyas_resource_handle nyas_shader;
 
+typedef int nyas_vertex_attrib;
+enum nyas_vertex_attrib {
+	NYAS_VA_POS = 0,
+	NYAS_VA_NORMAL,
+	NYAS_VA_TAN,
+	NYAS_VA_BITAN,
+	NYAS_VA_UV,
+	NYAS_VA_COUNT
+};
+
 typedef int nyas_blend_func;
 enum nyas_blend_func {
 	NYAS_BLEND_CURRENT = 0,

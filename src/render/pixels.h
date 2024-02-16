@@ -18,8 +18,6 @@ typedef uint16_t nyas_idx;
 typedef uint32_t nyas_idx;
 #endif
 
-#define NYAS_RENDER_QUEUE_CAPACITY 1024
-#define NYAS_FRAME_POOL_SIZE (16 * 1024 * 1024)
 #define NYAS_TEX_RESERVE 64
 #define NYAS_MESH_RESERVE 64
 #define NYAS_FB_RESERVE 32
@@ -56,7 +54,6 @@ void nyas_frame_end(void);
 void *nyas_alloc_frame(unsigned int size);
 
 struct nyas_texture_desc nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h);
-struct nyas_texture_desc nyas_tex_desc(nyas_tex tex);
 nyas_tex nyas_tex_alloc(int count);
 void nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc);
 void nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path);
@@ -85,82 +82,10 @@ nyas_mat nyas_mat_copy(nyas_mat mat);
 nyas_mat nyas_mat_copy_shader(nyas_shader shader);
 
 nyas_tex *nyas_mat_tex(nyas_mat mat); // Ptr to first texture.
-nyas_tex *nyas_mat_cubemap(nyas_mat mat); // Ptr to first cubemap.
 
 extern nyas_mesh SPHERE_MESH;
 extern nyas_mesh CUBE_MESH;
 extern nyas_mesh QUAD_MESH;
-
-/*
- * nyaspix commands
- */
-
-typedef struct nyas_clear_cmdata {
-	float color[4];
-	bool color_buffer;
-	bool depth_buffer;
-	bool stencil_buffer;
-} nyas_clear_cmdata;
-
-typedef struct nyas_draw_cmdata {
-	nyas_mesh mesh;
-	nyas_mat material;
-} nyas_draw_cmdata;
-
-typedef enum nyas_rops_opt {
-	NYAS_ROPS_NONE = 0,
-	NYAS_BLEND = 1 << 0,
-	NYAS_CULL_FACE = 1 << 1,
-	NYAS_DEPTH_TEST = 1 << 2,
-	NYAS_DEPTH_WRITE = 1 << 3,
-	NYAS_REND_OPTS_COUNT
-} nyas_rops_opt;
-
-typedef struct nyas_rops_cmdata {
-	int enable_flags;
-	int disable_flags;
-	enum nyas_blend_func blend_src;
-	enum nyas_blend_func blend_dst;
-	enum nyas_cull_face cull_face;
-	enum nyas_depth_func depth_func;
-} nyas_rops_cmdata;
-
-typedef struct nyas_fb_slot {
-	nyas_tex tex;
-	int mip_level;
-	int type;
-	int face;
-} nyas_fb_slot;
-
-typedef struct nyas_set_fb_cmdata {
-	nyas_framebuffer fb;
-	int vp_x;
-	int vp_y;
-	nyas_fb_slot attach;
-} nyas_set_fb_cmdata;
-
-typedef union nyas_cmdata {
-	nyas_clear_cmdata clear;
-	nyas_draw_cmdata draw;
-	nyas_rops_cmdata rend_opts;
-	nyas_mat mat;
-	nyas_set_fb_cmdata set_fb;
-} nyas_cmdata;
-
-typedef struct nyas_cmd {
-	struct nyas_cmd *next;
-	void (*execute)(nyas_cmdata *data);
-	nyas_cmdata data;
-} nyas_cmd;
-
-void nyas_cmd_add(nyas_cmd *rc);
-nyas_cmd *nyas_cmd_alloc(void);
-
-extern void nyas_clear_fn(nyas_cmdata *data);
-extern void nyas_draw_fn(nyas_cmdata *data);
-extern void nyas_rops_fn(nyas_cmdata *data);
-extern void nyas_setshader_fn(nyas_cmdata *data);
-extern void nyas_setfb_fn(nyas_cmdata *data);
 
 typedef int nyas_draw_flags;
 enum nyas_draw_flags {
@@ -175,16 +100,6 @@ enum nyas_draw_flags {
 	NYAS_DRAW_CULL,
 	NYAS_DRAW_SCISSOR,
 	NYAS_DRAW_FLAGS_COUNT
-};
-
-typedef int nyas_vtx_attribs;
-enum nyas_vertex_attrib {
-	NYAS_VA_POS = 0,
-	NYAS_VA_NORMAL,
-	NYAS_VA_TAN,
-	NYAS_VA_BITAN,
-	NYAS_VA_UV,
-	NYAS_VA_COUNT
 };
 
 struct nyas_draw_target {
@@ -232,12 +147,9 @@ struct nyas_frame_ctx {
 
 void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op);
-void nyas_drawlist_push_cmd(struct nyas_drawlist *dl, const struct nyas_draw_cmd *cmd);
-void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
 void *nyas_frame_alloc(ptrdiff_t size); // Circular buffer (fixed size, not freeing)
 void nyas_frame_render(struct nyas_frame_ctx *frame);
 
-//extern struct nyas_frame_ctx *curr_frame;
 extern struct nyas_frame_ctx *next_frame;
 
 static inline void nyas_draw_state_default(struct nyas_render_state *rs)

@@ -9,29 +9,8 @@
 
 #include <glad/glad.h>
 
-struct texcnfg {
-	GLenum target;
-	GLint ifmt;
-	GLenum fmt;
-	GLenum type;
-	GLint wrap;
-	GLint min;
-	GLint mag;
-};
-
-/*
-  Attribute's number of elements for each vertex.
-  The array's position must match with the
-  enum (nyas_VertexAttributes) value of the attribute.
-*/
-static const GLint attrib_sizes[VTXATTR_COUNT] = { 3, 3, 3, 3, 2 };
-
-/*
-  Attribute's layout name in the shader.
-  The array's position must match with the attribute's
-  value at enum nyas_VertexAttributes.
-*/
-static const char *attrib_names[VTXATTR_COUNT] = {
+static const GLint attrib_sizes[NYAS_VA_COUNT] = { 3, 3, 3, 3, 2 };
+static const char *attrib_names[NYAS_VA_COUNT] = {
 	"a_position", "a_normal", "a_tangent", "a_bitangent", "a_uv"
 };
 
@@ -204,7 +183,7 @@ static GLsizei
 nypx__get_attrib_stride(int32_t attr_flags)
 {
 	GLsizei stride = 0;
-	for (int i = 0; i < VTXATTR_COUNT; ++i) {
+	for (int i = 0; i < NYAS_VA_COUNT; ++i) {
 		if (attr_flags & (1 << i)) {
 			stride += attrib_sizes[i];
 		}
@@ -230,7 +209,7 @@ nypx_mesh_set(
 
 	GLint offset = 0;
 	GLsizei stride = nypx__get_attrib_stride(attrib);
-	for (int i = 0; i < VTXATTR_COUNT; ++i) {
+	for (int i = 0; i < NYAS_VA_COUNT; ++i) {
 		if (!(attrib & (1 << i))) {
 			continue;
 		}
@@ -410,27 +389,12 @@ nypx_fb_set(struct nyas_framebuffer_internal *fb, int index)
 	GLint slot = nypx__fb_attach_gl(fb->target[index].attach);
 	struct nyas_texture_internal *t = &tex_pool[fb->target[index].tex];
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[index].lod_level);
-	/*
-	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
-	for (int i = 0; fb->target[i].tex != NYAS_NONE; ++i) {
-	    GLenum face = fb->target[i].face == NYAS_FACE_2D ? GL_TEXTURE_2D :
-	                  GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[i].face;
-
-	    struct nyas_texture_internal *t = &tex_pool[fb->target[i].tex];
-	    GLint slot = nypx__fb_attach_gl(t->data.fmt, &color_count);
-	    glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[i].lod_level);
-	}
-	 */
 }
 
 void
-nypx_fb_use(struct nyas_framebuffer_internal *fb)
+nypx_fb_use(uint32_t id)
 {
-	if (!fb) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	} else {
-		glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
-	}
+	glBindFramebuffer(GL_FRAMEBUFFER, id);
 }
 
 void
@@ -475,28 +439,6 @@ nypx_blend_disable(void)
 	glDisable(GL_BLEND);
 }
 
-static GLenum
-nypx__gl_blend(int blend_func)
-{
-	switch (blend_func) {
-	case NYAS_BLEND_CURRENT: return 0xFFFF;
-	case NYAS_BLEND_ONE: return GL_ONE;
-	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
-	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
-	case NYAS_BLEND_ZERO: return GL_ZERO;
-	}
-}
-
-void
-nypx_blend_set(int blend_func_src, int blend_func_dst)
-{
-	// TODO: hacer todas las combis en un solo enum
-	GLenum gl_src = nypx__gl_blend(blend_func_src);
-	if (gl_src != 0xFFFF) {
-		glBlendFunc(gl_src, nypx__gl_blend(blend_func_dst));
-	}
-}
-
 void
 nypx_cull_enable(void)
 {
@@ -507,26 +449,6 @@ void
 nypx_cull_disable(void)
 {
 	glDisable(GL_CULL_FACE);
-}
-
-static GLenum
-nypx__gl_cull(enum nyas_cull_face cull)
-{
-	switch (cull) {
-	case NYAS_CULL_BACK: return GL_BACK;
-	case NYAS_CULL_FRONT: return GL_FRONT;
-	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
-	case NYAS_CULL_CURRENT: return 0;
-	}
-}
-
-void
-nypx_cull_set(int cull_face)
-{
-	GLenum gl_value = nypx__gl_cull(cull_face);
-	if (gl_value) {
-		glCullFace(nypx__gl_cull(cull_face));
-	}
 }
 
 void
@@ -551,6 +473,48 @@ void
 nypx_depth_disable_mask(void)
 {
 	glDepthMask(GL_FALSE);
+}
+
+static GLenum
+nypx__gl_blend(int blend_func)
+{
+	switch (blend_func) {
+	case NYAS_BLEND_CURRENT: return 0xFFFF;
+	case NYAS_BLEND_ONE: return GL_ONE;
+	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
+	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
+	case NYAS_BLEND_ZERO: return GL_ZERO;
+	default: NYAS_ASSERT(false);
+	}
+}
+
+void
+nypx_blend_set(int blend_func_src, int blend_func_dst)
+{
+	GLenum gl_src = nypx__gl_blend(blend_func_src);
+	if (gl_src != 0xFFFF) {
+		glBlendFunc(gl_src, nypx__gl_blend(blend_func_dst));
+	}
+}
+
+static GLenum
+nypx__gl_cull(enum nyas_cull_face cull)
+{
+	switch (cull) {
+	case NYAS_CULL_BACK: return GL_BACK;
+	case NYAS_CULL_FRONT: return GL_FRONT;
+	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
+	case NYAS_CULL_CURRENT: return 0;
+	}
+}
+
+void
+nypx_cull_set(int cull_face)
+{
+	GLenum gl_value = nypx__gl_cull(cull_face);
+	if (gl_value) {
+		glCullFace(nypx__gl_cull(cull_face));
+	}
 }
 
 static GLenum
@@ -592,22 +556,6 @@ void nypx_stencil_disable_mask(void)
 	glStencilMask(GL_FALSE);
 }
 
-void nypx_stencil_set(int stencil_func)
-{
-	GLenum gl_value = nypx__gl_depth(stencil_func);
-	if (gl_value) {
-		//glStencilFunc(gl_value); // TODO
-	}
-}
-
-void
-nypx_viewport(struct nyas_rect rect)
-{
-	if (rect.w) {
-		glViewport(rect.x, rect.y, rect.w, rect.h);
-	}
-}
-
 void nypx_scissor_enable(void)
 {
 	glEnable(GL_SCISSOR_TEST);
@@ -616,6 +564,14 @@ void nypx_scissor_enable(void)
 void nypx_scissor_disable(void)
 {
 	glDisable(GL_SCISSOR_TEST);
+}
+
+void
+nypx_viewport(struct nyas_rect rect)
+{
+	if (rect.w) {
+		glViewport(rect.x, rect.y, rect.w, rect.h);
+	}
 }
 
 void

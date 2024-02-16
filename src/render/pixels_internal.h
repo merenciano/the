@@ -25,15 +25,6 @@ enum nyas_resource_flags {
 	NYAS_IRF_MAPPED = 1U << 7,
 };
 
-enum nypx_vertex_attributes {
-	VA_POSITION = 0,
-	VA_NORMAL,
-	VA_TANGENT,
-	VA_BITANGENT,
-	VA_UV,
-	VTXATTR_COUNT
-};
-
 struct nyas_resource_internal {
 	uint32_t id;
 	int flags;
@@ -75,26 +66,6 @@ struct nyas_framebuffer_internal {
 	struct nyas_resource_internal res;
 	struct nyas_texture_target target[8];
 };
-
-/*static struct nyas_framebuffer_internal
-nyas_framebuffer_internal(void)
-{
-	return (struct nyas_framebuffer_internal){
-		.res = { .id = 0, .flags = NYAS_IRF_DIRTY },
-		.color = {
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0},
-		  { .tex = NYAS_NONE, .face = NYAS_FACE_2D, .lod_level = 0}
-		},
-		.depth = NYAS_NONE,
-		.stencil = NYAS_NONE
-	};
-}*/
 
 void nypx_tex_create(struct nyas_texture_internal *t);
 void nypx_tex_set(struct nyas_texture_internal *t);
@@ -138,7 +109,7 @@ void nypx_fb_create(struct nyas_framebuffer_internal *fb);
 
 void nypx_fb_set(struct nyas_framebuffer_internal *fb, int index);
 
-void nypx_fb_use(struct nyas_framebuffer_internal *fb);
+void nypx_fb_use(uint32_t id);
 
 void nypx_fb_release(struct nyas_framebuffer_internal *fb);
 
@@ -181,8 +152,6 @@ void nypx_stencil_disable_test(void);
 void nypx_stencil_enable_mask(void);
 
 void nypx_stencil_disable_mask(void);
-
-void nypx_stencil_set(int stencil_func);
 
 void nypx_viewport(struct nyas_rect rect);
 void nypx_scissor(struct nyas_rect rect);
