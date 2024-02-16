@@ -19,7 +19,7 @@ static const nyas_shader_desc eqr_to_cubemap_shader_desc = {
 	.data_count = 4 * 4,
 	.tex_count = 0,
 	.cubemap_count = 0,
-	.common_data_count = 0,
+	.shared_data_count = 0,
 	.common_tex_count = 1,
 	.common_cubemap_count = 0
 };
@@ -29,7 +29,7 @@ static const nyas_shader_desc prefilter_shader_desc = {
 	.data_count = 5 * 4,
 	.tex_count = 0,
 	.cubemap_count = 0,
-	.common_data_count = 0,
+	.shared_data_count = 0,
 	.common_tex_count = 0,
 	.common_cubemap_count = 1
 };
@@ -39,7 +39,7 @@ static const nyas_shader_desc lut_shader_desc = {
 	.data_count = 0,
 	.tex_count = 0,
 	.cubemap_count = 0,
-	.common_data_count = 0,
+	.shared_data_count = 0,
 	.common_tex_count = 0,
 	.common_cubemap_count = 0
 };

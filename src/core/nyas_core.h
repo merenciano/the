@@ -17,106 +17,49 @@ enum nyas_defs {
 	NYAS_NONE = -53,
 };
 
-union nyas2 {
-	uint64_t bits;
-
-	struct nyas_point2i {
-		int32_t x, y;
-	} pi;
-
-	struct nyas_rect2i {
-		int32_t w, h;
-	} rect;
-
-	int32_t vi[2];
-
-	struct nyas_point2u {
-		uint32_t x, y;
-	} pu;
-
-	struct nyas_rect2u {
-		uint32_t w, h;
-	} rectu;
-
-	uint32_t vu[2];
-
-	struct nyas_point2 {
-		float x, y;
-	} p;
-
-	struct nyas_rect2f {
-		float w, h;
-	} rectf;
-
-	struct nyas_color2f {
-		float rgb, a;
-	} color;
-
-	float v[2];
+struct nyas_point {
+	int x, y;
 };
 
-union nyas3 {
-	struct nyas_point3i {
-		int32_t x, y, z;
-	} pi;
-
-	int32_t vi[3];
-
-	struct nyas_point3u {
-		uint32_t x, y, z;
-	} pu;
-
-	uint32_t vu[3];
-
-	struct nyas_point3 {
-		float x, y, z;
-	} p;
-
-	struct nyas_color3f {
-		float r, g, b;
-	} color;
-
-	float v[3];
+struct nyas_rect {
+	int x, y, w, h;
 };
 
-union nyas4 {
-	struct nyas_point4i {
-		int32_t x, y, z, w;
-	} pi;
+struct nyas_vec2 {
+	float x, y;
+};
 
-	struct nyas_rect {
-		int32_t x, y, w, h;
-	} rect;
+struct nyas_vec3 {
+	float x, y, z;
+};
 
-	int32_t vi[4];
-
-	struct nyas_point4u {
-		uint32_t x, y, z, w;
-	} pu;
-
-	struct nyas_rectu {
-		uint32_t x, y, w, h;
-	} rectu;
-
-	uint32_t vu[4];
-
-	struct nyas_point4 {
+union nyas4f {
+	struct nyas_vec4 {
 		float x, y, z, w;
 	} p;
 
-	struct nyas_rectf {
-		float x, y, w, h;
-	} rectf;
-
-	struct nyas_color4f {
+	struct nyas_color {
 		float r, g, b, a;
-	} color;
+	} c;
 
 	float v[4];
 };
 
-struct nyas_vec2i {
-	int x, y;
+typedef float nyas_mat4[16];
+
+union nyas_mat4 {
+	struct nyas_vec4 r[4];
+	struct nyas_4x4 {
+		struct nyas_vec4 x;
+		struct nyas_vec4 y;
+		struct nyas_vec4 z;
+		struct nyas_vec4 w;
+	} row;
+	float v[16];
+	float p[4][4];
+	struct nyas_mat4x4 {
+		float m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33;
+	} m;
 };
 
 #endif // NYAS_NYAS_CORE_H

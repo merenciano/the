@@ -45,6 +45,8 @@
 
 static void* nyas__internal_arr_default_alloc(void *ptr, ptrdiff_t bytes, void *ctx)
 {
+	(void)ctx;
+
 	if (!bytes) {
 		NYAS_ARRAY_FREE(ptr);
 		return NULL;

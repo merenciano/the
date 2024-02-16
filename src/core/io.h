@@ -31,7 +31,7 @@ void nyas_io_poll(void);
 
 int nyas_window_closed(void);
 void nyas_window_swap(void);
-struct nyas_vec2i nyas_window_size(void);
+struct nyas_point nyas_window_size(void);
 int nyas_window_width(void); // TODO: DEPRECATED: nyas_window_size instead
 int nyas_window_height(void); // TODO: DEPRECATED: nyas_window_size instead
 
@@ -41,8 +41,9 @@ float nyas_input_scroll(void);
 bool nyas_input_pressed(enum nyas_input button);
 bool nyas_input_down(enum nyas_input button);
 bool nyas_input_up(enum nyas_input button);
-float nyas_input_mouse_x(void); // TODO: Merge with y
-float nyas_input_mouse_y(void);
+struct nyas_vec2 nyas_io_mouse_pos(void);
+float nyas_input_mouse_x(void); // TODO: Deprecated.
+float nyas_input_mouse_y(void); // TODO: Deprecated.
 void nyas_input_cursor_disable(void); // TODO: Merge with enable
 void nyas_input_cursor_enable(void); // TODO: flags for cursor mode and capture
 void nyas_input_capture(bool mouse, bool kb);

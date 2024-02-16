@@ -192,25 +192,16 @@ nypx__get_attrib_stride(int32_t attr_flags)
 }
 
 void
-nypx_mesh_set(
-  uint32_t id,
-  uint32_t vid,
-  uint32_t iid,
-  uint32_t shader_id,
-  int attrib,
-  float *vtx,
-  size_t vsize,
-  nypx_index *idx,
-  size_t elements)
+nypx_mesh_set(struct nyas_mesh_internal *mesh, uint32_t shader_id)
 {
-	glBindVertexArray(id);
-	glBindBuffer(GL_ARRAY_BUFFER, vid);
-	glBufferData(GL_ARRAY_BUFFER, vsize, vtx, GL_STATIC_DRAW);
+	glBindVertexArray(mesh->res.id);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->res_vb.id);
+	glBufferData(GL_ARRAY_BUFFER, mesh->vtx_size, mesh->vtx, GL_STATIC_DRAW);
 
 	GLint offset = 0;
-	GLsizei stride = nypx__get_attrib_stride(attrib);
+	GLsizei stride = nypx__get_attrib_stride(mesh->attrib);
 	for (int i = 0; i < NYAS_VA_COUNT; ++i) {
-		if (!(attrib & (1 << i))) {
+		if (!(mesh->attrib & (1 << i))) {
 			continue;
 		}
 
@@ -224,9 +215,9 @@ nypx_mesh_set(
 		offset += size;
 	}
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iid);
-	glBufferData(
-	  GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index), (const void *)idx, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->res_ib.id);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->elem_count * sizeof(nypx_index),
+	             (const void *)mesh->idx, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -380,15 +371,14 @@ nypx__fb_attach_gl(nyas_framebuffer_attach a)
 }
 
 void
-nypx_fb_set(struct nyas_framebuffer_internal *fb, int index)
+nypx_fb_set(uint32_t fb_id, uint32_t tex_id, struct nyas_texture_target *tt)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
-	GLenum face = fb->target[index].face == NYAS_FACE_2D ?
+	glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
+	GLenum face = tt->face == NYAS_FACE_2D ?
 	  GL_TEXTURE_2D :
-	  GL_TEXTURE_CUBE_MAP_POSITIVE_X + fb->target[index].face;
-	GLint slot = nypx__fb_attach_gl(fb->target[index].attach);
-	struct nyas_texture_internal *t = &tex_pool[fb->target[index].tex];
-	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, t->res.id, fb->target[index].lod_level);
+	  GL_TEXTURE_CUBE_MAP_POSITIVE_X + tt->face;
+	GLint slot = nypx__fb_attach_gl(tt->attach);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, face, tex_id, tt->lod_level);
 }
 
 void
@@ -536,32 +526,38 @@ nypx_depth_set(int depth_func)
 	}
 }
 
-void nypx_stencil_enable_test(void)
+void
+nypx_stencil_enable_test(void)
 {
 	glEnable(GL_STENCIL);
 }
 
-void nypx_stencil_disable_test(void)
+void
+nypx_stencil_disable_test(void)
 {
 	glDisable(GL_STENCIL);
 }
 
-void nypx_stencil_enable_mask(void)
+void
+nypx_stencil_enable_mask(void)
 {
 	glStencilMask(GL_TRUE);
 }
 
-void nypx_stencil_disable_mask(void)
+void
+nypx_stencil_disable_mask(void)
 {
 	glStencilMask(GL_FALSE);
 }
 
-void nypx_scissor_enable(void)
+void
+nypx_scissor_enable(void)
 {
 	glEnable(GL_SCISSOR_TEST);
 }
 
-void nypx_scissor_disable(void)
+void
+nypx_scissor_disable(void)
 {
 	glDisable(GL_SCISSOR_TEST);
 }

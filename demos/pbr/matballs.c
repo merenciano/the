@@ -137,7 +137,7 @@ static void load_textures(void)
 	  .mpath = "assets/tex/foam/foam_M.png",
 	}};
 
-	nyas_tex begin = nyas_tex_alloc(9 * 4);
+	nyas_tex begin = nyas_tex_create(9 * 4);
 	for (int i = 0; i < 9; ++i, begin += 4) {
 		*img_files[i].tex = (struct pbr_tex_t){ .a = begin, .n = begin + 1, .r = begin + 2, .m = begin + 3 };
 		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
@@ -214,12 +214,14 @@ Init(void)
 
 	float position[3] = { -2.0f, 0.0f, 0.0f };
 
+	entities = nyas_arr_create(struct nyas_entity, 16);
 	// CelticGold
 	{
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.gold.a;
@@ -233,11 +235,12 @@ Init(void)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.shore.a;
@@ -252,10 +255,11 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.7f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.peeled.a;
@@ -271,10 +275,11 @@ Init(void)
 		pbr.normal_map_intensity = 0.2f;
 		position[0] = -2.0f;
 		position[2] = -2.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.rusted.a;
@@ -289,10 +294,11 @@ Init(void)
 		pbr.tiling_y = 4.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.tiles.a;
@@ -307,10 +313,11 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.plastic.a;
@@ -326,10 +333,11 @@ Init(void)
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = -2.0f;
 		position[2] = -4.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.cliff.a;
@@ -344,10 +352,11 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.granite.a;
@@ -362,10 +371,11 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		struct nyas_entity *e = nyas_arr_push(entities);
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
+		e->mat = nyas_mat_create(g_shaders.pbr);
 		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.foam.a;
@@ -387,10 +397,10 @@ Init(void)
 
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
 
-	struct nyas_vec2i vp = nyas_window_size();
+	struct nyas_point vp = nyas_window_size();
 	struct nyas_texture_desc descriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp.x, vp.y);
-	fb_tex = nyas_tex_alloc(2);
+	fb_tex = nyas_tex_create(2);
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
 		.tex = fb_tex,
@@ -424,35 +434,29 @@ static void *renderalloc(void *ptr, ptrdiff_t size, void *_2)
 	return mem;
 }
 
-void
-Update(nyas_chrono *chrono)
+void BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 {
-	float dt = nyas_time_sec(nyas_elapsed(*chrono));
-	*chrono = nyas_time();
-
-	next_frame = nyas_frame_alloc(sizeof *next_frame);
-
 	nyas_io_poll();
 	nyas_input_read();
-	struct nyas_vec2i vp = nyas_window_size();
-	nyas_camera_control(&camera, dt);
+	struct nyas_point vp = nyas_window_size();
+	nyas_camera_control(&camera, (struct nyas_control_config){ 10.0f, 0.001f, 1.0f, delta_time });
 
 	/* PBR common shader data. */
 	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
-	nyas_camera_pos(common_pbr->camera_position, &camera);
-	struct nyas_vec2i fb_size = nyas_tex_size(fb_tex);
+	common_pbr->camera_position = nyas_camera_eye(&camera);
+	struct nyas_point fb_size = nyas_tex_size(fb_tex);
 
-	next_frame->draw_lists = nyas_arr_create_a(struct nyas_drawlist, 8, renderalloc, NULL);
-	struct nyas_drawlist *dl = nyas_arr_push(next_frame->draw_lists);
+	new_frame->draw_lists = nyas_arr_create_a(struct nyas_drawlist, 8, renderalloc, NULL);
+	struct nyas_drawlist *dl = nyas_arr_push(new_frame->draw_lists);
 	nyas_draw_state_default(&dl->state);
 
-	dl->state.target.bgcolor = (struct nyas_color4f){0.2f, 0.2f, 0.2f, 1.0f};
+	dl->state.target.bgcolor = (struct nyas_color){0.2f, 0.2f, 0.2f, 1.0f};
 	dl->state.target.fb = g_fb;
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
 
 	dl->state.pipeline.shader = g_shaders.pbr;
-	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.pbr);
+	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.pbr);
 
 	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_COLOR);
 	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_DEPTH);
@@ -465,19 +469,19 @@ Update(nyas_chrono *chrono)
 	dl->state.ops.cull_face = NYAS_CULL_BACK;
 
 	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 16, renderalloc, NULL);
-	for (int i = 0; i < nyas_entity_count(); ++i) {
+	for (int i = 0; i < nyas_arr_count(entities); ++i) {
 		struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
-		mat4_assign(nyas_entities()[i].mat.ptr, nyas_entities()[i].transform);
-		cmd->material = nyas_mat_copy(nyas_entities()[i].mat);
-		cmd->mesh = nyas_entities()[i].mesh;
+		mat4_assign(entities[i].mat.ptr, entities[i].transform);
+		cmd->material = nyas_mat_copy(entities[i].mat);
+		cmd->mesh = entities[i].mesh;
 	}
 
-	dl = nyas_arr_push(next_frame->draw_lists);
+	dl = nyas_arr_push(new_frame->draw_lists);
 	nyas_draw_state_default(&dl->state);
 
-	nyas_camera_static_vp(nyas_shader_data(g_shaders.skybox), &camera);
+	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
 	dl->state.pipeline.shader = g_shaders.skybox;
-	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.skybox);
+	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.skybox);
 
 	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_CULL);
 	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
@@ -487,13 +491,13 @@ Update(nyas_chrono *chrono)
 	cmd->material.shader = g_shaders.skybox;
 	cmd->mesh = CUBE_MESH;
 
-	dl = nyas_arr_push(next_frame->draw_lists);
+	dl = nyas_arr_push(new_frame->draw_lists);
 	nyas_draw_state_default(&dl->state);
 
-	dl->state.target.bgcolor = (struct nyas_color4f){1.0f, 0.0f, 0.0f, 1.0f};
+	dl->state.target.bgcolor = (struct nyas_color){1.0f, 0.0f, 0.0f, 1.0f};
 	dl->state.target.fb = NYAS_DEFAULT;
 	dl->state.pipeline.shader = g_shaders.fullscreen_img;
-	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.fullscreen_img);
+	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.fullscreen_img);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp.x, vp.y };
 	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
 
@@ -501,15 +505,6 @@ Update(nyas_chrono *chrono)
 	cmd = nyas_arr_push(dl->cmds);
 	cmd->material.shader = g_shaders.fullscreen_img;
 	cmd->mesh = QUAD_MESH;
-}
-
-void
-Render(void)
-{
-	nyas_frame_render(next_frame);
-	nuklear_draw();
-	nyas_window_swap();
-	nyas_frame_end();
 }
 
 int
@@ -521,17 +516,22 @@ main(int argc, char **argv)
 	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
 	nyas_sched_init(9, 32);
 	nyas_px_init();
-	nyas_camera_init(&camera, 70.0f, 300.0f, (float)nyas_window_size().x, (float)nyas_window_size().y);
+	nyas_camera_init_default(&camera);
 	nuklear_init();
 	Init();
-
 	nyas_chrono frame_chrono = nyas_time();
-	Update(&frame_chrono);
-	nyas_frame_end();
-	Render();
 	while (!nyas_window_closed()) {
-		Update(&frame_chrono);
-		Render();
+		float delta_time = nyas_time_sec(nyas_elapsed(frame_chrono));
+		frame_chrono = nyas_time();
+
+		struct nyas_frame_ctx frame;
+		BuildFrame(&frame, delta_time);
+
+		// Render
+		nyas_frame_render(&frame);
+		nuklear_draw();
+		nyas_window_swap();
+		// End render
 	}
 
 	return 0;

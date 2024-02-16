@@ -117,13 +117,13 @@ nyas_window_swap(void)
 	glfwSwapBuffers(internal_window);
 }
 
-struct nyas_vec2i
+struct nyas_point
 nyas_window_size(void)
 {
 	NYAS_ASSERT(internal_window && "The IO system is uninitalized");
 	int x, y;
 	glfwGetWindowSize(internal_window, &x, &y);
-	return (struct nyas_vec2i){x, y};
+	return (struct nyas_point){x, y};
 }
 
 int
@@ -198,6 +198,11 @@ nyas_input_up(enum nyas_input button)
 	}
 
 	return prev.pressed & (1 << button);
+}
+
+struct nyas_vec2 nyas_io_mouse_pos(void)
+{
+	return (struct nyas_vec2){curr.mouse_x, curr.mouse_y};
 }
 
 float

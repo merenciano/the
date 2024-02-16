@@ -149,4 +149,20 @@ struct nyas_texture_target {
 	int lod_level;
 };
 
+typedef struct nyas_shader_desc {
+	const char *name;
+	int data_count;
+	int tex_count;
+	int cubemap_count;
+	int shared_data_count;
+	int common_tex_count;
+	int common_cubemap_count;
+} nyas_shader_desc;
+
+typedef struct nyas_mat {
+	void *ptr; // TODO deprecar
+	nyas_shader shader;
+} nyas_mat;
+
+
 #endif // NYAS_PIXELS_DEFS_H

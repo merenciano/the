@@ -4,9 +4,9 @@
 #include "core/nyas_core.h"
 #include "pixels_defs.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 // TODO: Glue nyas and nypx common types better
 #ifdef NYAS_ELEM_SIZE_16
@@ -15,9 +15,7 @@ typedef uint16_t nypx_index;
 typedef uint32_t nypx_index;
 #endif
 
-#define NYPX_HALF_INDEX 0
-#define NYPX_WORD_INDEX 1
-
+typedef int nyas_resource_flags;
 enum nyas_resource_flags {
 	NYAS_IRF_DIRTY = 1U << 3,
 	NYAS_IRF_CREATED = 1U << 4,
@@ -27,7 +25,7 @@ enum nyas_resource_flags {
 
 struct nyas_resource_internal {
 	uint32_t id;
-	int flags;
+	nyas_resource_flags flags;
 };
 
 struct nyas_mesh_internal {
@@ -38,7 +36,7 @@ struct nyas_mesh_internal {
 	nypx_index *idx;
 	int64_t elem_count;
 	uint32_t vtx_size;
-	int attrib;
+	nyas_vertex_attrib attrib;
 };
 
 struct nyas_texture_image {
@@ -76,22 +74,17 @@ void nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
 void nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s);
 
-void nypx_mesh_set(
-  uint32_t id,
-  uint32_t vid,
-  uint32_t iid,
-  uint32_t shader_id,
-  int attrib,
-  float *vtx,
-  size_t vsize,
-  nypx_index *idx,
-  size_t elements);
+void nypx_mesh_set(struct nyas_mesh_internal *mesh, uint32_t shader_id);
 
 void nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid);
 
 void nypx_shader_create(uint32_t *id);
 
 void nypx_shader_compile(uint32_t id, const char *name);
+
+void nypx_shader_use(uint32_t id);
+
+void nypx_shader_release(uint32_t id);
 
 void nypx_shader_loc(uint32_t id, int *o_loc, const char **i_unif, int count);
 
@@ -101,13 +94,9 @@ void nypx_shader_set_tex(int loc, int *tex, int count, int texunit_offset);
 
 void nypx_shader_set_cube(int loc, int *tex, int count, int texunit_offset);
 
-void nypx_shader_use(uint32_t id);
-
-void nypx_shader_release(uint32_t id);
-
 void nypx_fb_create(struct nyas_framebuffer_internal *fb);
 
-void nypx_fb_set(struct nyas_framebuffer_internal *fb, int index);
+void nypx_fb_set(uint32_t fb_id, uint32_t tex_id, struct nyas_texture_target *tt);
 
 void nypx_fb_use(uint32_t id);
 

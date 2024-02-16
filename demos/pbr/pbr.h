@@ -17,7 +17,7 @@ typedef struct nyas_pbr_desc_unit {
 
 typedef struct nyas_pbr_desc_scene {
 	float view_projection[16];
-	float camera_position[3];
+	struct nyas_vec3 camera_position;
 	float padding;
 	float sunlight[4];
 } nyas_pbr_desc_scene;
@@ -27,7 +27,7 @@ static const nyas_shader_desc pbr_shader_desc = {
 	.data_count = 7 * 4, // 7 vec4
 	.tex_count = 4,
 	.cubemap_count = 0,
-	.common_data_count = 6 * 4, // 6 vec4
+	.shared_data_count = 6 * 4, // 6 vec4
 	.common_tex_count = 1,
 	.common_cubemap_count = 2
 };
@@ -37,7 +37,7 @@ static const nyas_shader_desc sky_shader_desc = {
 	.data_count = 0,
 	.tex_count = 0,
 	.cubemap_count = 0,
-	.common_data_count = 4 * 4, // mat4
+	.shared_data_count = 4 * 4, // mat4
 	.common_tex_count = 0,
 	.common_cubemap_count = 1
 };
@@ -47,7 +47,7 @@ static const nyas_shader_desc fs_img_shader_desc = {
 	.data_count = 0,
 	.tex_count = 0,
 	.cubemap_count = 0,
-	.common_data_count = 0,
+	.shared_data_count = 0,
 	.common_tex_count = 1,
 	.common_cubemap_count = 0
 };

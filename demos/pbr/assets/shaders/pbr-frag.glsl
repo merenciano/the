@@ -8,9 +8,9 @@
 #define METALLIC             u_data[6].y
 #define NORMAL_MAP_INTENSITY u_data[6].z
 
-#define LIGHT_DIRECTION      u_common_data[5].xyz
-#define LIGHT_INTENSITY      u_common_data[5].w
-#define CAMERA_POSITION      u_common_data[4].xyz
+#define LIGHT_DIRECTION      u_shared_data[5].xyz
+#define LIGHT_INTENSITY      u_shared_data[5].w
+#define CAMERA_POSITION      u_shared_data[4].xyz
 
 #define ALBEDO_MAP           u_tex[0]
 #define METALLIC_MAP         u_tex[1]
@@ -35,7 +35,7 @@ in Vertex
 out vec4 FragColor;
 
 uniform vec4        u_data[7];
-uniform vec4        u_common_data[6];
+uniform vec4        u_shared_data[6];
 
 uniform sampler2D   u_tex[4];
 uniform sampler2D   u_common_tex[1];

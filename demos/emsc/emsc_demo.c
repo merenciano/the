@@ -27,7 +27,7 @@ Init(void *context)
 		                            .data_count = sizeof(HelloMatData) / 4,
 		                            .tex_count = 0,
 		                            .cubemap_count = 0,
-		                            .common_data_count = 0,
+		                            .shared_data_count = 0,
 		                            .common_tex_count = 0,
 		                            .common_cubemap_count = 0 };
 	ctx->hellomat = nyas_shader_create(&hello_desc);
@@ -36,7 +36,7 @@ Init(void *context)
 		                             .data_count = 0,
 		                             .tex_count = 0,
 		                             .cubemap_count = 0,
-		                             .common_data_count = 16,
+		                             .shared_data_count = 16,
 		                             .common_tex_count = 0,
 		                             .common_cubemap_count = 1 };
 	ctx->skybox = nyas_shader_create(&skybox_desc);
@@ -51,7 +51,7 @@ Init(void *context)
 	float pos[3] = { 0.0f, 0.0f, -4.0f };
 	mat4_translation(ctx->e->transform, mat4_identity(ctx->e->transform), pos);
 	ctx->e->mesh = SPHERE_MESH;
-	ctx->e->mat = nyas_mat_pers(ctx->hellomat);
+	ctx->e->mat = nyas_mat_create(ctx->hellomat);
 	*(HelloMatData *)ctx->e->mat.ptr = ctx->hello_mat;
 }
 
