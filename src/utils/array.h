@@ -1,6 +1,7 @@
 #ifndef NYAS_ARRAY_H
 #define NYAS_ARRAY_H
 
+#include <stddef.h>
 #include <string.h>
 
 #if !defined(NYAS_ARRAY_MALLOC) || !defined(NYAS_ARRAY_REALLOC) || !defined(NYAS_ARRAY_FREE)
@@ -25,7 +26,8 @@
 
 // Creation/Deletion
 #define nyas_arr_create(T, capacity) nyas__internal_arr_create(sizeof(T), (capacity))
-#define nyas_arr_release(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->alloc((struct nyas__internal_arr_header *)(arr) - 1), 0, NULL)
+#define nyas_arr_create_a(T, capacity, alloc, ctx) nyas__internal_arr_create_a(sizeof(T), (capacity), alloc, (ctx))
+#define nyas_arr_release(arr) (nyas__internal_arr_header(arr)->alloc(nyas__internal_arr_header(arr), 0, NULL))
 #define nyas_arr_reserve(arr, new_capacity) \
 	nyas__internal_arr_reserve((void **)&(arr), (new_capacity), sizeof(*(arr)))
 
@@ -37,11 +39,11 @@
 #define nyas_arr_rm(arr, pos) nyas__internal_arr_rm((arr), &((arr)[pos]), sizeof(*(arr)))
 
 // Getters
-#define nyas_arr_count(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->count)
-#define nyas_arr_capacity(arr) (((struct nyas__internal_arr_header *)(arr) - 1)->cap)
+#define nyas_arr_count(arr) (nyas__internal_arr_header(arr)->count)
+#define nyas_arr_capacity(arr) (nyas__internal_arr_header(arr)->cap)
 #define nyas_arr_last(arr) ((arr) + (nyas_arr_count(arr) - 1))
 
-static void* nyas__internal_arr_default_alloc(void *ptr, size_t bytes, void *ctx)
+static void* nyas__internal_arr_default_alloc(void *ptr, ptrdiff_t bytes, void *ctx)
 {
 	if (!bytes) {
 		NYAS_ARRAY_FREE(ptr);
@@ -56,18 +58,38 @@ static void* nyas__internal_arr_default_alloc(void *ptr, size_t bytes, void *ctx
 }
 
 struct nyas__internal_arr_header {
-	void*(*alloc)(void *ptr, size_t bytes, void *ctx);
+	void*(*alloc)(void *ptr, ptrdiff_t bytes, void *ctx);
 	void *ctx;
 	int cap;
 	int count;
 	char buf[];
 };
 
+static inline struct nyas__internal_arr_header *nyas__internal_arr_header(void *arr)
+{
+	return (struct nyas__internal_arr_header *)(arr) - 1;
+}
+
 static inline void *
 nyas__internal_arr_create(int elem_size, int capacity)
 {
 	struct nyas__internal_arr_header *h =
-	  h->alloc(NULL, sizeof(struct nyas__internal_arr_header) + capacity * elem_size, h->ctx);
+	  nyas__internal_arr_default_alloc(NULL, sizeof(struct nyas__internal_arr_header) + capacity * elem_size, NULL);
+	h->alloc = nyas__internal_arr_default_alloc;
+	h->ctx = NULL;
+	h->cap = capacity;
+	h->count = 0;
+	return h->buf;
+}
+
+
+static inline void *
+nyas__internal_arr_create_a(int elem_size, int capacity, void*(*alloc_fn)(void*, ptrdiff_t, void*), void *ctx)
+{
+	struct nyas__internal_arr_header *h =
+	  alloc_fn(NULL, sizeof(struct nyas__internal_arr_header) + capacity * elem_size, ctx);
+	h->alloc = alloc_fn;
+	h->ctx = ctx;
 	h->cap = capacity;
 	h->count = 0;
 	return h->buf;

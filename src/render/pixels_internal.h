@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // TODO: Glue nyas and nypx common types better
 #ifdef NYAS_ELEM_SIZE_16
@@ -141,7 +142,7 @@ void nypx_fb_use(struct nyas_framebuffer_internal *fb);
 
 void nypx_fb_release(struct nyas_framebuffer_internal *fb);
 
-void nypx_clear(int color, int depth, int stencil);
+void nypx_clear(bool color, bool depth, bool stencil);
 
 void nypx_draw(int elem_count, int index_type);
 

@@ -12,7 +12,7 @@ enum nyas_defs {
 	NYAS_ERR_FILE = -20,
 	NYAS_ERR_THREAD = -30,
 	NYAS_DEFAULT = -50,
-	NYAS_IGNORE = -51,
+	NYAS_NOOP = -51,
 	NYAS_INVALID = -52,
 	NYAS_NONE = -53,
 };

@@ -42,6 +42,7 @@ nyas_free(void *ptr)
 	free(ptr);
 }
 
+
 void
 nyas_mem_init(size_t size)
 {

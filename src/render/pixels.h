@@ -29,15 +29,9 @@ typedef uint32_t nyas_idx;
  * nyaspix resources
  */
 
-union nyas_mat_value {
-	float data;
-	nyas_tex sampler;
-};
-
 typedef struct nyas_mat {
 	void *ptr; // TODO deprecar
 	nyas_shader shader;
-	union nyas_material_value *data;
 } nyas_mat;
 
 typedef struct nyas_shader_desc {
@@ -70,6 +64,7 @@ struct nyas_vec2i nyas_tex_size(nyas_tex tex);
 void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
 
 nyas_framebuffer nyas_fb_create(void);
+void nyas_fb_set_target(nyas_framebuffer fb, int index, struct nyas_texture_target target);
 
 nyas_mesh nyas_mesh_load_file(const char *path);
 nyas_mesh nyas_mesh_load_geometry(enum nyas_geometry geo);
@@ -194,11 +189,12 @@ enum nyas_vertex_attrib {
 
 struct nyas_draw_target {
 	nyas_framebuffer fb;
-	float bgcolor[4];
+	struct nyas_color4f bgcolor;
 };
 
 struct nyas_draw_pipeline {
 	nyas_shader shader;
+	nyas_mat common_data;
 	nyas_vtx_attribs va;
 };
 
@@ -232,18 +228,33 @@ struct nyas_drawlist {
 
 struct nyas_frame_ctx {
 	struct nyas_drawlist *draw_lists; // nyas_arr
-	// post process
-	uint8_t *mem_arena;
 };
 
 void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void nyas_drawlist_push_cmd(struct nyas_drawlist *dl, const struct nyas_draw_cmd *cmd);
 void nyas_drawlist_submit(struct nyas_frame_ctx *frame, struct nyas_drawlist *dl);
-void *nyas_frame_alloc(struct nyas_frame_ctx *frame, size_t bytes);
+void *nyas_frame_alloc(ptrdiff_t size); // Circular buffer (fixed size, not freeing)
 void nyas_frame_render(struct nyas_frame_ctx *frame);
 
-extern struct nyas_frame_ctx *curr_frame;
+//extern struct nyas_frame_ctx *curr_frame;
 extern struct nyas_frame_ctx *next_frame;
+
+static inline void nyas_draw_state_default(struct nyas_render_state *rs)
+{
+	rs->target.fb = NYAS_NOOP;
+	rs->target.bgcolor = (struct nyas_color4f){0.0f, 0.0f, 0.0f, 1.0f};
+	rs->pipeline.shader = NYAS_NOOP;
+	rs->pipeline.common_data.ptr = NULL;
+	rs->ops.viewport = (struct nyas_rect){0, 0, 0, 0};
+	rs->ops.scissor = (struct nyas_rect){0, 0, 0, 0};
+	rs->ops.enable = 0;
+	rs->ops.disable = 0;
+	rs->ops.depth_fun = NYAS_DEPTH_CURRENT;
+	rs->ops.stencil_fun = NYAS_DEPTH_CURRENT;
+	rs->ops.blend_src = NYAS_BLEND_CURRENT;
+	rs->ops.blend_dst = NYAS_BLEND_CURRENT;
+	rs->ops.cull_face = NYAS_CULL_CURRENT;
+}
 
 #endif // NYAS_PIXELS_H

@@ -19,3 +19,5 @@
 
 #include "scene/camera.h"
 #include "scene/entity.h"
+
+#include "utils/array.h"

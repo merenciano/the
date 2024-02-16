@@ -24,4 +24,21 @@ float nyas_mem_mega_used(void);
 size_t nyas_mem_bytes_used(void);
 size_t nyas_mem_capacity(void);
 
+struct nyas_mem {
+	ptrdiff_t cap;
+	ptrdiff_t tail;
+	char buff[];
+};
+
+static inline void *nyas_circalloc(struct nyas_mem *mem, ptrdiff_t bytes)
+{
+	if (mem->tail + bytes > mem->cap) {
+		mem->tail = bytes;
+		return mem->buff;
+	}
+	void *ret = mem->buff + mem->tail;
+	mem->tail += bytes;
+	return ret;
+}
+
 #endif // NYAS_CORE_MEM_H

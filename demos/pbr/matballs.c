@@ -386,8 +386,42 @@ Init(void)
 	pbr_scene_tex[2] = g_tex.prefilter;
 
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
-	fb_tex = InitMainFramebuffer(g_fb);
+
+	struct nyas_vec2i vp = nyas_window_size();
+	struct nyas_texture_desc descriptor =
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp.x, vp.y);
+	fb_tex = nyas_tex_alloc(2);
+	nyas_tex_set(fb_tex, &descriptor);
+	struct nyas_texture_target color = {
+		.tex = fb_tex,
+		.attach = NYAS_ATTACH_COLOR,
+		.face = NYAS_FACE_2D,
+		.lod_level = 0
+	};
+
+	struct nyas_texture_desc depthscriptor =
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp.x, vp.y);
+	nyas_tex_set(fb_tex + 1, &depthscriptor);
+	struct nyas_texture_target depth = {
+	  .tex = fb_tex + 1,
+	  .attach = NYAS_ATTACH_DEPTH,
+	  .face = NYAS_FACE_2D,
+	  .lod_level = 0
+	};
+
+	nyas_fb_set_target(g_fb, 0, color);
+	nyas_fb_set_target(g_fb, 1, depth);
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
+}
+
+static void *renderalloc(void *ptr, ptrdiff_t size, void *_2)
+{
+	(void)_2;
+	void *mem = nyas_frame_alloc(size);
+	if (ptr) {
+		memcpy(mem, ptr, size / 2);
+	}
+	return mem;
 }
 
 void
@@ -395,6 +429,8 @@ Update(nyas_chrono *chrono)
 {
 	float dt = nyas_time_sec(nyas_elapsed(*chrono));
 	*chrono = nyas_time();
+
+	next_frame = nyas_frame_alloc(sizeof *next_frame);
 
 	nyas_io_poll();
 	nyas_input_read();
@@ -405,108 +441,72 @@ Update(nyas_chrono *chrono)
 	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	nyas_camera_pos(common_pbr->camera_position, &camera);
-
 	struct nyas_vec2i fb_size = nyas_tex_size(fb_tex);
-	nyas_cmd *fbuff = nyas_cmd_alloc();
-	fbuff->data.set_fb.fb = g_fb;
-	fbuff->data.set_fb.vp_x = fb_size.x;
-	fbuff->data.set_fb.vp_y = fb_size.y;
-	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
-	fbuff->execute = nyas_setfb_fn;
 
-	nyas_cmd *rops = nyas_cmd_alloc();
-	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST | NYAS_DEPTH_WRITE;
-	rops->data.rend_opts.blend_src = NYAS_BLEND_ONE;
-	rops->data.rend_opts.blend_dst = NYAS_BLEND_ZERO;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_LESS;
-	rops->data.rend_opts.cull_face = NYAS_CULL_BACK;
-	rops->execute = nyas_rops_fn;
-	fbuff->next = rops;
+	next_frame->draw_lists = nyas_arr_create_a(struct nyas_drawlist, 8, renderalloc, NULL);
+	struct nyas_drawlist *dl = nyas_arr_push(next_frame->draw_lists);
+	nyas_draw_state_default(&dl->state);
 
-	nyas_cmd *clear = nyas_cmd_alloc();
-	clear->data.clear.color_buffer = true;
-	clear->data.clear.depth_buffer = true;
-	clear->data.clear.stencil_buffer = false;
-	clear->data.clear.color[0] = 0.2f;
-	clear->data.clear.color[1] = 0.2f;
-	clear->data.clear.color[2] = 0.2f;
-	clear->data.clear.color[3] = 1.0f;
-	clear->execute = nyas_clear_fn;
-	rops->next = clear;
+	dl->state.target.bgcolor = (struct nyas_color4f){0.2f, 0.2f, 0.2f, 1.0f};
+	dl->state.target.fb = g_fb;
+	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
 
-	nyas_cmd *use_pbr = nyas_cmd_alloc();
-	use_pbr->data.mat = nyas_mat_copy_shader(g_shaders.pbr);
-	use_pbr->execute = nyas_setshader_fn;
-	clear->next = use_pbr;
-	use_pbr->next = NULL;
+	dl->state.pipeline.shader = g_shaders.pbr;
+	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.pbr);
 
-	nyas_cmd_add(fbuff);
+	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_COLOR);
+	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_DEPTH);
+	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_BLEND);
+	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
+	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_WRITE_DEPTH);
+	dl->state.ops.blend_src = NYAS_BLEND_ONE;
+	dl->state.ops.blend_dst = NYAS_BLEND_ZERO;
+	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
+	dl->state.ops.cull_face = NYAS_CULL_BACK;
 
-	nyas_entity_draw(nyas_entities(), nyas_entity_count());
+	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 16, renderalloc, NULL);
+	for (int i = 0; i < nyas_entity_count(); ++i) {
+		struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
+		mat4_assign(nyas_entities()[i].mat.ptr, nyas_entities()[i].transform);
+		cmd->material = nyas_mat_copy(nyas_entities()[i].mat);
+		cmd->mesh = nyas_entities()[i].mesh;
+	}
 
-	rops = nyas_cmd_alloc();
-	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_LEQUAL;
-	rops->execute = nyas_rops_fn;
+	dl = nyas_arr_push(next_frame->draw_lists);
+	nyas_draw_state_default(&dl->state);
 
 	nyas_camera_static_vp(nyas_shader_data(g_shaders.skybox), &camera);
-	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = nyas_mat_copy_shader(g_shaders.skybox);
-	use_sky_shader->execute = nyas_setshader_fn;
-	rops->next = use_sky_shader;
+	dl->state.pipeline.shader = g_shaders.skybox;
+	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.skybox);
 
-	nyas_cmd *draw_sky = nyas_cmd_alloc();
-	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material.shader = g_shaders.skybox;
-	draw_sky->execute = nyas_draw_fn;
-	use_sky_shader->next = draw_sky;
+	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_CULL);
+	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
 
-	fbuff = nyas_cmd_alloc();
-	fbuff->data.set_fb.fb = NYAS_DEFAULT;
-	fbuff->data.set_fb.vp_x = vp.x;
-	fbuff->data.set_fb.vp_y = vp.y;
-	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
-	fbuff->execute = nyas_setfb_fn;
-	draw_sky->next = fbuff;
+	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
+	struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
+	cmd->material.shader = g_shaders.skybox;
+	cmd->mesh = CUBE_MESH;
 
-	nyas_cmd *rops2 = nyas_cmd_alloc();
-	memset(&rops2->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops2->data.rend_opts.disable_flags = NYAS_DEPTH_TEST;
-	rops2->execute = nyas_rops_fn;
-	fbuff->next = rops2;
+	dl = nyas_arr_push(next_frame->draw_lists);
+	nyas_draw_state_default(&dl->state);
 
-	clear = nyas_cmd_alloc();
-	clear->data.clear.color_buffer = true;
-	clear->data.clear.depth_buffer = false;
-	clear->data.clear.stencil_buffer = false;
-	clear->data.clear.color[0] = 1.0f;
-	clear->data.clear.color[1] = 0.0f;
-	clear->data.clear.color[2] = 0.0f;
-	clear->data.clear.color[3] = 1.0f;
-	clear->execute = nyas_clear_fn;
-	rops2->next = clear;
+	dl->state.target.bgcolor = (struct nyas_color4f){1.0f, 0.0f, 0.0f, 1.0f};
+	dl->state.target.fb = NYAS_DEFAULT;
+	dl->state.pipeline.shader = g_shaders.fullscreen_img;
+	dl->state.pipeline.common_data = nyas_mat_copy_shader(g_shaders.fullscreen_img);
+	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp.x, vp.y };
+	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
 
-	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
-	usefullscreen->execute = nyas_setshader_fn;
-	clear->next = usefullscreen;
-
-	nyas_cmd *draw = nyas_cmd_alloc();
-	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.material.shader = g_shaders.fullscreen_img;
-	draw->execute = nyas_draw_fn;
-	usefullscreen->next = draw;
-	draw->next = NULL;
-
-	nyas_cmd_add(rops);
+	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
+	cmd = nyas_arr_push(dl->cmds);
+	cmd->material.shader = g_shaders.fullscreen_img;
+	cmd->mesh = QUAD_MESH;
 }
 
 void
 Render(void)
 {
-	nyas_px_render();
+	nyas_frame_render(next_frame);
 	nuklear_draw();
 	nyas_window_swap();
 	nyas_frame_end();

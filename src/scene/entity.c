@@ -26,6 +26,7 @@ nyas_entity_count(void)
 void
 nyas_entity_draw(nyas_entity *ntt, int32_t count)
 {
+#if 0
 	if (!ntt) {
 		return;
 	}
@@ -51,4 +52,5 @@ nyas_entity_draw(nyas_entity *ntt, int32_t count)
 	}
 
 	nyas_cmd_add(command_list);
+#endif
 }

@@ -426,7 +426,11 @@ nypx_fb_set(struct nyas_framebuffer_internal *fb, int index)
 void
 nypx_fb_use(struct nyas_framebuffer_internal *fb)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
+	if (!fb) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	} else {
+		glBindFramebuffer(GL_FRAMEBUFFER, fb->res.id);
+	}
 }
 
 void
@@ -436,13 +440,15 @@ nypx_fb_release(struct nyas_framebuffer_internal *fb)
 }
 
 void
-nypx_clear(int color, int depth, int stencil)
+nypx_clear(bool color, bool depth, bool stencil)
 {
 	GLbitfield mask = 0;
 	mask |= (GL_COLOR_BUFFER_BIT * color);
 	mask |= (GL_DEPTH_BUFFER_BIT * depth);
 	mask |= (GL_STENCIL_BUFFER_BIT * stencil);
-	glClear(mask);
+	if (mask) {
+		glClear(mask);
+	}
 }
 
 void
@@ -566,12 +572,50 @@ nypx_depth_set(int depth_func)
 	}
 }
 
+void nypx_stencil_enable_test(void)
+{
+	glEnable(GL_STENCIL);
+}
+
+void nypx_stencil_disable_test(void)
+{
+	glDisable(GL_STENCIL);
+}
+
+void nypx_stencil_enable_mask(void)
+{
+	glStencilMask(GL_TRUE);
+}
+
+void nypx_stencil_disable_mask(void)
+{
+	glStencilMask(GL_FALSE);
+}
+
+void nypx_stencil_set(int stencil_func)
+{
+	GLenum gl_value = nypx__gl_depth(stencil_func);
+	if (gl_value) {
+		//glStencilFunc(gl_value); // TODO
+	}
+}
+
 void
 nypx_viewport(struct nyas_rect rect)
 {
 	if (rect.w) {
 		glViewport(rect.x, rect.y, rect.w, rect.h);
 	}
+}
+
+void nypx_scissor_enable(void)
+{
+	glEnable(GL_SCISSOR_TEST);
+}
+
+void nypx_scissor_disable(void)
+{
+	glDisable(GL_SCISSOR_TEST);
 }
 
 void
