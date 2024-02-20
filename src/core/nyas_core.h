@@ -2,6 +2,9 @@
 #define NYAS_NYAS_CORE_H
 
 #include <stdint.h>
+#include <assert.h>
+
+#define NYAS_ASSERT(X) (assert(X))
 
 enum nyas_defs {
 	NYAS_ERR = 0,

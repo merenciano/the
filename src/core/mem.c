@@ -1,6 +1,7 @@
 #include "mem.h"
 
 #include "log.h"
+#include "nyas_core.h"
 #include <stdlib.h>
 
 #define MEM_ALIGN 8
@@ -41,7 +42,6 @@ nyas_free(void *ptr)
 {
 	free(ptr);
 }
-
 
 void
 nyas_mem_init(size_t size)

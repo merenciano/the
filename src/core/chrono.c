@@ -1,5 +1,4 @@
 #include "chrono.h"
-
 #include <time.h>
 
 nyas_chrono

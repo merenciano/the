@@ -84,7 +84,6 @@ nyas__internal_arr_create(int elem_size, int capacity)
 	return h->buf;
 }
 
-
 static inline void *
 nyas__internal_arr_create_a(int elem_size, int capacity, void*(*alloc_fn)(void*, ptrdiff_t, void*), void *ctx)
 {
@@ -133,7 +132,6 @@ nyas__internal_arr_rm(void *arr, void *elem, int elem_size)
 	struct nyas__internal_arr_header *h = (struct nyas__internal_arr_header *)arr - 1;
 	memcpy(elem, &h->buf[(--h->count) * elem_size], elem_size);
 }
-
 
 #ifdef NYAS_ARRAY_TEST
 #include <stdio.h>

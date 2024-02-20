@@ -55,37 +55,9 @@ shdr_t *shader_pool;
 fb_t *framebuffer_pool;
 
 static void
-nyas__file_reader(
-  void *ctx,
-  const char *path,
-  int is_mtl,
-  const char *obj_path,
-  char **buf,
-  size_t *size)
+nyas__file_reader(void *, const char *path, int, const char *, char **buf, size_t *size)
 {
-	(void)ctx;
-	(void)is_mtl;
-	(void)obj_path;
-
-	FILE *f = fopen(path, "rb");
-	if (!f) {
-		*buf = NULL;
-		*size = 0;
-		return;
-	}
-
-	fseek(f, 0L, SEEK_END);
-	*size = ftell(f);
-	rewind(f);
-
-	*buf = nyas_alloc(*size + 1);
-	NYAS_ASSERT(*buf && "Allocation failed.");
-
-	if (fread(*buf, *size, 1, f) != 1) {
-		NYAS_ASSERT(false && "Read failed.");
-	}
-
-	fclose(f);
+	nyas_file_read(path, buf, size);
 }
 
 static nyas_mesh
