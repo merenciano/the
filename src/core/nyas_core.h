@@ -1,10 +1,33 @@
 #ifndef NYAS_NYAS_CORE_H
 #define NYAS_NYAS_CORE_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #define NYAS_ASSERT(X) (assert(X))
+
+#define NYAS_GENERATE_ARR(T)                                                                     \
+	struct nyarr_##T {                                                                           \
+		ptrdiff_t count;                                                                         \
+		T data[];                                                                                \
+	};                                                                                           \
+                                                                                                 \
+	void nyarr_##T##_push(struct nyarr_##T **arr, T value)                                       \
+	{                                                                                            \
+		ptrdiff_t count = *arr ? (*arr)->count : 0;                                              \
+		if (!(count & (count + 1))) {                                                            \
+			void *new =                                                                          \
+			  realloc(*arr, sizeof(struct nyarr_##T) + (count + 1) * 2 * sizeof(*(*arr)->data)); \
+			if (!new) {                                                                          \
+				return;                                                                          \
+			}                                                                                    \
+			*arr = new;                                                                          \
+		}                                                                                        \
+		(*arr)->data[count] = value;                                                             \
+		(*arr)->count = count + 1;                                                               \
+	}
 
 enum nyas_defs {
 	NYAS_ERR = 0,
