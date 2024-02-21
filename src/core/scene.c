@@ -17,8 +17,9 @@ void
 nyas_camera_init(struct nyas_cam *cam, struct nyas_vec3 pos, struct nyas_vec3 target)
 {
 	mat4_look_at(cam->view, &pos, &target, VEC3_UP);
-	struct nyas_point winsize = nyas_window_size();
-	mat4_perspective_fov(cam->proj, to_radians(cam->fov), winsize.x, winsize.y, 0.01f, cam->far);
+	mat4_perspective_fov(
+	  cam->proj, to_radians(cam->fov), nyas_io->window_size.x, nyas_io->window_size.y, 0.01f,
+	  cam->far);
 }
 
 void
@@ -62,13 +63,13 @@ nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
 	float speed = cfg.speed * cfg.deltatime;
 
 	// Rotation
-	if (nyas_input_down(NYAS_MOUSE_RIGHT)) {
-		mouse_down_pos = nyas_io_mouse_pos();
+	if (nyas_io->mouse_button[NYAS_MOUSE_RIGHT] == NYAS_KEYSTATE_DOWN) {
+		mouse_down_pos = nyas_io->mouse_pos;
 	}
 
 	float tmp_vec[3];
-	if (nyas_input_pressed(NYAS_MOUSE_RIGHT)) {
-		struct nyas_vec2 curr_pos = nyas_io_mouse_pos();
+	if (nyas_io->mouse_button[NYAS_MOUSE_RIGHT] == NYAS_KEYSTATE_PRESSED) {
+		struct nyas_vec2 curr_pos = nyas_io->mouse_pos;
 		struct nyas_vec2 offset = {
 			(curr_pos.x - mouse_down_pos.x) * cfg.sensitivity,
 			(mouse_down_pos.y - curr_pos.y) * cfg.sensitivity
@@ -82,37 +83,38 @@ nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
 	}
 
 	// Position
-	if (nyas_input_pressed(NYAS_KEY_UP)) {
+	if (nyas_io->keys[NYAS_KEY_W] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, &fwd, speed));
 	}
 
-	if (nyas_input_pressed(NYAS_KEY_DOWN)) {
+	if (nyas_io->keys[NYAS_KEY_S] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, &fwd, -speed));
 	}
 
-	if (nyas_input_pressed(NYAS_KEY_LEFT)) {
+	if (nyas_io->keys[NYAS_KEY_A] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, &fwd), speed));
 	}
 
-	if (nyas_input_pressed(NYAS_KEY_RIGHT)) {
+	if (nyas_io->keys[NYAS_KEY_D] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, &fwd), -speed));
 	}
 
-	if (nyas_input_pressed(NYAS_KEY_1)) {
+	if (nyas_io->keys[NYAS_KEY_SPACE] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, VEC3_UP, speed));
 	}
 
-	if (nyas_input_pressed(NYAS_KEY_4)) {
+	if (nyas_io->keys[NYAS_KEY_LEFT_SHIFT] == NYAS_KEYSTATE_PRESSED) {
 		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, VEC3_UP, -speed));
 	}
 
 	mat4_look_at(cam->view, &eye, vec3_add(tmp_vec, &eye, &fwd), VEC3_UP);
 
 	// Zoom
-	if (nyas_input_scroll() != 0.0f) {
-		cam->fov -= nyas_input_scroll() * cfg.scroll_sensitivity;
+	if (nyas_io->mouse_scroll.y != 0.0f) {
+		cam->fov -= nyas_io->mouse_scroll.y * cfg.scroll_sensitivity;
 		cam->fov = clampf(cam->fov, 1.0f, 120.0f);
-		mat4_perspective(cam->proj, to_radians(cam->fov),
-		                 (float)nyas_window_width() / (float)nyas_window_height(), 0.1f, cam->far);
+		mat4_perspective(
+		  cam->proj, to_radians(cam->fov),
+		  (float)nyas_io->window_size.x / (float)nyas_io->window_size.y, 0.1f, cam->far);
 	}
 }

@@ -30,7 +30,7 @@ struct nk_context *ctx;
 void
 nuklear_init(void)
 {
-	ctx = nk_glfw3_init(&glfw, internal_window, NK_GLFW3_INSTALL_CALLBACKS);
+	ctx = nk_glfw3_init(&glfw, nyas_io->internal_window, NK_GLFW3_INSTALL_CALLBACKS);
 	struct nk_font_atlas *atlas;
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);

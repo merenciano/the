@@ -397,9 +397,9 @@ Init(void)
 
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
 
-	struct nyas_point vp = nyas_window_size();
+	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
-	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp.x, vp.y);
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
 	fb_tex = nyas_tex_create(2);
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
@@ -410,7 +410,7 @@ Init(void)
 	};
 
 	struct nyas_texture_desc depthscriptor =
-	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp.x, vp.y);
+	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
 	nyas_tex_set(fb_tex + 1, &depthscriptor);
 	struct nyas_texture_target depth = {
 	  .tex = fb_tex + 1,
@@ -437,8 +437,7 @@ static void *renderalloc(void *ptr, ptrdiff_t size, void *_2)
 void BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 {
 	nyas_io_poll();
-	nyas_input_read();
-	struct nyas_point vp = nyas_window_size();
+	struct nyas_point *vp = &nyas_io->window_size;
 	nyas_camera_control(&camera, (struct nyas_control_config){ 10.0f, 0.001f, 1.0f, delta_time });
 
 	/* PBR common shader data. */
@@ -498,7 +497,7 @@ void BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	dl->state.target.fb = NYAS_DEFAULT;
 	dl->state.pipeline.shader = g_shaders.fullscreen_img;
 	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.fullscreen_img);
-	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp.x, vp.y };
+	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
 	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
 
 	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
@@ -513,14 +512,15 @@ main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
+	nyas_io_init("NYAS PBR Material Demo", (struct nyas_point){1920, 1080});
+	nyas_io_poll();
 	nyas_sched_init(9, 32);
 	nyas_px_init();
 	nyas_camera_init_default(&camera);
 	nuklear_init();
 	Init();
 	nyas_chrono frame_chrono = nyas_time();
-	while (!nyas_window_closed()) {
+	while (!nyas_io->window_closed) {
 		float delta_time = nyas_time_sec(nyas_elapsed(frame_chrono));
 		frame_chrono = nyas_time();
 
