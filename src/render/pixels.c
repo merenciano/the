@@ -1,7 +1,6 @@
 #include "pixels.h"
 
 #include "core/io.h"
-#include "core/log.h"
 #include "core/mem.h"
 #include "render/pixels_internal.h"
 #include "utils/array.h"

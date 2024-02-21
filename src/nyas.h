@@ -10,8 +10,6 @@
  */
 
 #include "core/io.h"
-#include "core/log.h"
-#include "core/chrono.h"
 #include "core/mem.h"
 #include "core/scene.h"
 #include "core/sched.h"

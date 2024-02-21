@@ -1,5 +1,4 @@
-#include "core/log.h"
-#include "core/nyas_core.h"
+#include "core/io.h"
 #include "sched.h"
 #include "utils/array.h"
 #include <pthread.h>

@@ -1,5 +1,4 @@
 #include "io.h"
-#include "log.h"
 #include "mem.h"
 
 #ifndef __EMSCRIPTEN__
@@ -7,6 +6,7 @@
 #endif
 #include <GLFW/glfw3.h>
 #include <string.h>
+#include <time.h>
 
 #define NYAS_MOUSE_BUTTON_UPDATE(MBTN) \
 	io.mouse_button[(MBTN)] =          \
@@ -261,4 +261,12 @@ nyas_window_swap(void)
 {
 	NYAS_ASSERT(io.internal_window && "The IO system is uninitalized");
 	glfwSwapBuffers(io.internal_window);
+}
+
+nyas_chrono
+nyas_time(void)
+{
+	struct timespec time;
+	clock_gettime(2, &time);
+	return time.tv_nsec + time.tv_sec * 1000000000;
 }

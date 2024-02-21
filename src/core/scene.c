@@ -16,7 +16,7 @@ nyas_camera_fwd(struct nyas_cam *cam)
 void
 nyas_camera_init(struct nyas_cam *cam, struct nyas_vec3 pos, struct nyas_vec3 target)
 {
-	mat4_look_at(cam->view, &pos, &target, VEC3_UP);
+	mat4_look_at(cam->view, (float*)&pos, (float*)&target, VEC3_UP);
 	mat4_perspective_fov(
 	  cam->proj, to_radians(cam->fov), nyas_io->window_size.x, nyas_io->window_size.y, 0.01f,
 	  cam->far);
@@ -58,7 +58,7 @@ nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
 {
 	struct nyas_vec3 eye = nyas_camera_eye(cam);
 	struct nyas_vec3 fwd = nyas_camera_fwd(cam);
-	vec3_negative(&fwd, vec3_normalize(&fwd, &fwd));
+	vec3_negative((float*)&fwd, vec3_normalize((float*)&fwd, (float*)&fwd));
 	static struct nyas_vec2 mouse_down_pos = { 0.0f, 0.0f };
 	float speed = cfg.speed * cfg.deltatime;
 
@@ -75,39 +75,39 @@ nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
 			(mouse_down_pos.y - curr_pos.y) * cfg.sensitivity
 		};
 
-		vec3_add(&fwd, &fwd,
-		         vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, &fwd), -offset.x));
-		vec3_add(&fwd, &fwd, vec3_multiply_f(tmp_vec, VEC3_UP, offset.y));
+		vec3_add((float*)&fwd, (float*)&fwd,
+		         vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, (float*)&fwd), -offset.x));
+		vec3_add((float*)&fwd, (float*)&fwd, vec3_multiply_f(tmp_vec, VEC3_UP, offset.y));
 
 		mouse_down_pos = curr_pos;
 	}
 
 	// Position
 	if (nyas_io->keys[NYAS_KEY_W] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, &fwd, speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, (float*)&fwd, speed));
 	}
 
 	if (nyas_io->keys[NYAS_KEY_S] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, &fwd, -speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, (float*)&fwd, -speed));
 	}
 
 	if (nyas_io->keys[NYAS_KEY_A] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, &fwd), speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, (float*)&fwd), speed));
 	}
 
 	if (nyas_io->keys[NYAS_KEY_D] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, &fwd), -speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, (float*)&fwd), -speed));
 	}
 
 	if (nyas_io->keys[NYAS_KEY_SPACE] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, VEC3_UP, speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, VEC3_UP, speed));
 	}
 
 	if (nyas_io->keys[NYAS_KEY_LEFT_SHIFT] == NYAS_KEYSTATE_PRESSED) {
-		vec3_add(&eye, &eye, vec3_multiply_f(tmp_vec, VEC3_UP, -speed));
+		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, VEC3_UP, -speed));
 	}
 
-	mat4_look_at(cam->view, &eye, vec3_add(tmp_vec, &eye, &fwd), VEC3_UP);
+	mat4_look_at(cam->view, (float*)&eye, vec3_add(tmp_vec, (float*)&eye, (float*)&fwd), VEC3_UP);
 
 	// Zoom
 	if (nyas_io->mouse_scroll.y != 0.0f) {

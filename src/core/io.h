@@ -4,6 +4,40 @@
 #include "nyas_core.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
+
+#define NYAS_PRINT printf
+#define NYAS__LOG_LOC NYAS_PRINT("%s(%u)", __FILE__, __LINE__)
+
+#define NYAS_LOG(...)        \
+	NYAS_PRINT("Nyas [Log] ");   \
+	NYAS__LOG_LOC;           \
+	NYAS_PRINT(":\n\t");     \
+	NYAS_PRINT(__VA_ARGS__); \
+	NYAS_PRINT("\n")
+
+#define NYAS_LOG_WARN(...)     \
+	NYAS_PRINT("Nyas [Warning] "); \
+	NYAS__LOG_LOC;             \
+	NYAS_PRINT(":\n\t");       \
+	NYAS_PRINT(__VA_ARGS__);   \
+	NYAS_PRINT("\n")
+
+#define NYAS_LOG_ERR(...)    \
+	NYAS_PRINT("Nyas [Error] "); \
+	NYAS__LOG_LOC;           \
+	NYAS_PRINT(":\n\t");     \
+	NYAS_PRINT(__VA_ARGS__); \
+	NYAS_PRINT("\n")
+
+#define nyas_elapsed(CHRONO) (nyas_time() - (CHRONO))
+#define nyas_time_sec(CHRONO) ((CHRONO) / 1000000000.0f)
+#define nyas_time_milli(CHRONO) ((CHRONO) / 1000000)
+#define nyas_time_micro(CHRONO) ((CHRONO) / 1000)
+#define nyas_time_nano(CHRONO) (CHRONO)
+
+typedef int64_t nyas_chrono;
+nyas_chrono nyas_time(void);
 
 typedef int8_t nyas_keystate;
 enum nyas_keystate {

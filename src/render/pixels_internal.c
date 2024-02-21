@@ -1,12 +1,10 @@
 #include "pixels_internal.h"
 
-#include "core/io.h" // file_read --shader source
-#include "core/log.h"
+#include "core/io.h"
 #include "core/mem.h" // free --shader source buffer
 #include "utils/array.h"
 
 #include <string.h> // shader path manipulation
-
 #include <glad/glad.h>
 
 static const GLint attrib_sizes[NYAS_VA_COUNT] = { 3, 3, 3, 3, 2 };

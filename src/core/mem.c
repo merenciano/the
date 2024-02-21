@@ -1,7 +1,6 @@
 #include "mem.h"
 
-#include "log.h"
-#include "nyas_core.h"
+#include "io.h"
 #include <stdlib.h>
 
 #define MEM_ALIGN 8

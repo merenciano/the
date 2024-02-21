@@ -2,7 +2,7 @@
 #define NYASPIX_H
 
 #include "core/nyas_core.h"
-#include "pixels_defs.h"
+#include "pixels.h"
 
 #include <stdbool.h>
 #include <stddef.h>

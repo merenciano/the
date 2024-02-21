@@ -1,7 +1,6 @@
 #include "pixels_internal.h"
 
 #include "core/io.h"
-#include "core/log.h"
 #include "core/mem.h"
 
 #include <string.h>
