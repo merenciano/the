@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define MEM_ALIGN 8
-#define MEM_ALIGN_MOD(ADDRESS) (ADDRESS & (MEM_ALIGN - 1))
+#define MEM_ALIGN_MOD(ADDRESS) ((ADDRESS) & (MEM_ALIGN - 1))
 
 static unsigned char *mem;
 static size_t offset;

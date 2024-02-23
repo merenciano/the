@@ -145,8 +145,18 @@ void nypx_stencil_disable_mask(void);
 void nypx_viewport(struct nyas_rect rect);
 void nypx_scissor(struct nyas_rect rect);
 
-extern struct nyas_mesh_internal *mesh_pool;
-extern struct nyas_texture_internal *tex_pool;
+typedef struct nyas_mesh_internal mesh;
+NYAS_DECL_ARR(mesh);
+NYAS_DECL_POOL(mesh);
+
+typedef struct nyas_texture_internal tex;
+NYAS_DECL_ARR(tex);
+NYAS_DECL_POOL(tex);
+
+//extern struct nyas_mesh_internal *mesh_pool;
+//extern struct nyas_texture_internal *tex_pool;
+extern struct nypool_mesh mesh_pool;
+extern struct nypool_tex tex_pool;
 extern struct nyas_shader_internal *shader_pool;
 extern struct nyas_framebuffer_internal *framebuffer_pool;
 

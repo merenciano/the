@@ -70,11 +70,11 @@ nuklear_draw(void)
 			                        nk_strlen(NK_FILE_LINE), i)) {
 				nyas_pbr_desc_unit *unit = e->mat.ptr;
 				nyas_pbr_desc_scene *scene = (shader_pool + e->mat.shader)->common;
-				struct nyas_texture_internal *tex = &tex_pool[*nyas_mat_tex(e->mat)];
+				struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
 
 				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED, NK_FILE_LINE,
 				                        nk_strlen(NK_FILE_LINE), i)) {
-					struct nyas_texture_internal *tex = &tex_pool[*nyas_mat_tex(e->mat)];
+					struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex->res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
@@ -134,10 +134,10 @@ nuklear_draw(void)
 		}
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
-			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %d (%lu Bytes)", nyas_arr_count(tex_pool),
-			          nyas_arr_capacity(tex_pool), sizeof(struct nyas_texture_internal));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %d (%lu Bytes)", nyas_arr_count(mesh_pool),
-			          nyas_arr_capacity(mesh_pool), sizeof(struct nyas_mesh_internal));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %ld (%lu Bytes)", tex_pool.count,
+			          tex_pool.buf->count, sizeof(struct nyas_texture_internal));
+			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %ld (%lu Bytes)", mesh_pool.count,
+			          mesh_pool.buf->count, sizeof(struct nyas_mesh_internal));
 			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %d (%lu Bytes)",
 			          nyas_arr_count(framebuffer_pool), nyas_arr_capacity(framebuffer_pool),
 			          sizeof(struct nyas_framebuffer_internal));

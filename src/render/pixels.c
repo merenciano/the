@@ -29,6 +29,12 @@
 
 #define NYAS_TEXUNIT_OFFSET_FOR_COMMON_SHADER_DATA (8)
 
+NYAS_IMPL_ARR(mesh);
+NYAS_IMPL_POOL(mesh);
+
+NYAS_IMPL_ARR(tex);
+NYAS_IMPL_POOL(tex);
+
 static inline void
 nypx__check_handle(int h, void *arr)
 {
@@ -48,23 +54,26 @@ nyas_mesh SPHERE_MESH;
 nyas_mesh CUBE_MESH;
 nyas_mesh QUAD_MESH;
 
-mesh_t *mesh_pool;
-tex_t *tex_pool;
+//mesh_t *mesh_pool;
+//tex_t *tex_pool;
+struct nypool_mesh mesh_pool = {.buf = NULL, .count = 0, .next = 0};
+struct nypool_tex tex_pool = {.buf = NULL, .count = 0, .next = 0};
 shdr_t *shader_pool;
 fb_t *framebuffer_pool;
 
 static void
-nyas__file_reader(void *, const char *path, int, const char *, char **buf, size_t *size)
+nyas__file_reader(void *_1, const char *path, int _2, const char * _3, char **buf, size_t *size)
 {
+	(void)_1, (void)_2, (void)_3;
 	nyas_file_read(path, buf, size);
 }
 
 static nyas_mesh
 nyas__create_mesh_handle(void)
 {
-	nyas_mesh mesh = (nyas_mesh)nyas_arr_count(mesh_pool);
-	nyas_arr_push(mesh_pool);
-	return mesh;
+	//nyas_mesh mesh = (nyas_mesh)nyas_arr_count(mesh_pool);
+	//nyas_arr_push(mesh_pool);
+	return nypool_mesh_add(&mesh_pool);
 }
 
 static nyas_framebuffer
@@ -90,8 +99,8 @@ nyas_px_init(void)
 	pixmem->cap = NYAS_MB(16);
 	pixmem->tail = 0;
 
-	mesh_pool = nyas_arr_create(mesh_t, NYAS_MESH_RESERVE);
-	tex_pool = nyas_arr_create(tex_t, NYAS_TEX_RESERVE);
+	//mesh_pool = nyas_arr_create(mesh_t, NYAS_MESH_RESERVE);
+	//tex_pool = nyas_arr_create(tex_t, NYAS_TEX_RESERVE);
 	framebuffer_pool = nyas_arr_create(fb_t, NYAS_FB_RESERVE);
 	shader_pool = nyas_arr_create(shdr_t, NYAS_SHADER_RESERVE);
 
@@ -186,25 +195,23 @@ nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, in
 nyas_tex
 nyas_tex_create(int count)
 {
-	nyas_tex tex = (nyas_tex)nyas_arr_count(tex_pool);
-	nyas_arr_push(tex_pool, count);
-	for (int i = 0; i < count; ++i) {
-		tex_pool[tex + i].res = (struct nyas_resource_internal){ .id = 0, .flags = 0 };
-		tex_pool[tex + i].data = (struct nyas_texture_desc){
-			.flags = NYAS_TEX_FLAG_DEFAULT,
-			.type = NYAS_TEX_2D,
-			.width = 0,
-			.height = 0,
-			.fmt = NYAS_TEX_FMT_SRGB,
-			.min_filter = NYAS_TEX_FLTR_LINEAR,
-			.mag_filter = NYAS_TEX_FLTR_LINEAR,
-			.wrap_s = NYAS_TEX_WRAP_REPEAT,
-			.wrap_t = NYAS_TEX_WRAP_REPEAT,
-			.wrap_r = NYAS_TEX_WRAP_REPEAT,
-			.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-		};
-		tex_pool[tex + i].img = NULL;
-	}
+	(void)count;
+	int tex = nypool_tex_add(&tex_pool);
+	tex_pool.buf->at[tex].res = (struct nyas_resource_internal){ .id = 0, .flags = 0 };
+	tex_pool.buf->at[tex].data = (struct nyas_texture_desc){
+	  .flags = NYAS_TEX_FLAG_DEFAULT,
+	  .type = NYAS_TEX_2D,
+	  .width = 0,
+	  .height = 0,
+	  .fmt = NYAS_TEX_FMT_SRGB,
+	  .min_filter = NYAS_TEX_FLTR_LINEAR,
+	  .mag_filter = NYAS_TEX_FLTR_LINEAR,
+	  .wrap_s = NYAS_TEX_WRAP_REPEAT,
+	  .wrap_t = NYAS_TEX_WRAP_REPEAT,
+	  .wrap_r = NYAS_TEX_WRAP_REPEAT,
+	  .border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+	tex_pool.buf->at[tex].img = NULL;
 	return tex;
 }
 
@@ -212,7 +219,7 @@ void
 nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path)
 {
 	NYAS_ASSERT(*path != '\0' && "For empty textures use nyas_tex_set");
-	tex_t *t = &tex_pool[tex];
+	tex_t *t = &tex_pool.buf->at[tex];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data = *desc;
@@ -244,7 +251,7 @@ void
 nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc)
 {
 	NYAS_ASSERT(desc->width > 0 && desc->height > 0 && "Incorrect dimensions");
-	tex_t *t = &tex_pool[tex];
+	tex_t *t = &tex_pool.buf->at[tex];
 	t->res.flags |= NYAS_IRF_DIRTY;
 	t->data = *desc;
 	if (!t->img) {
@@ -262,7 +269,7 @@ nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc)
 struct nyas_point
 nyas_tex_size(nyas_tex tex)
 {
-	return (struct nyas_point){ tex_pool[tex].data.width, tex_pool[tex].data.height };
+	return (struct nyas_point){ tex_pool.buf->at[tex].data.width, tex_pool.buf->at[tex].data.height };
 }
 
 void
@@ -278,7 +285,7 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	}
 
 	*sky = nyas_tex_create(1);
-	tex_t *t = &tex_pool[*sky];
+	tex_t *t = &tex_pool.buf->at[*sky];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
@@ -303,7 +310,7 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	}
 
 	*irr = nyas_tex_create(1);
-	t = &tex_pool[*irr];
+	t = &tex_pool.buf->at[*irr];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
@@ -327,7 +334,7 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	}
 
 	*pref = nyas_tex_create(1);
-	t = &tex_pool[*pref];
+	t = &tex_pool.buf->at[*pref];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
@@ -355,7 +362,7 @@ nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	}
 
 	*lut = nyas_tex_create(1);
-	t = &tex_pool[*lut];
+	t = &tex_pool.buf->at[*lut];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_2D;
@@ -725,7 +732,7 @@ nyas__mesh_set_msh(mesh_t *mesh, const char *path)
 void
 nyas_mesh_reload_file(nyas_mesh mesh, const char *path)
 {
-	mesh_t *m = &mesh_pool[mesh];
+	mesh_t *m = &mesh_pool.buf->at[mesh];
 	size_t len = strlen(path);
 	const char *extension = path + len;
 	while (*--extension != '.') {}
@@ -744,7 +751,7 @@ nyas_mesh_reload_file(nyas_mesh mesh, const char *path)
 void
 nyas_mesh_reload_geometry(nyas_mesh mesh, enum nyas_geometry geo)
 {
-	mesh_t *m = &mesh_pool[mesh];
+	mesh_t *m = &mesh_pool.buf->at[mesh];
 
 	switch (geo) {
 	case NYAS_QUAD: nyas__mesh_set_quad(m); break;
@@ -760,17 +767,17 @@ static nyas_mesh
 nyas__mesh_create(void)
 {
 	nyas_mesh mesh_handle = nyas__create_mesh_handle();
-	mesh_pool[mesh_handle].res.id = 0;
-	mesh_pool[mesh_handle].res.flags = NYAS_IRF_DIRTY;
-	mesh_pool[mesh_handle].attrib = 0;
-	mesh_pool[mesh_handle].vtx = NULL;
-	mesh_pool[mesh_handle].idx = NULL;
-	mesh_pool[mesh_handle].vtx_size = 0;
-	mesh_pool[mesh_handle].elem_count = 0;
-	mesh_pool[mesh_handle].res_vb.id = 0;
-	mesh_pool[mesh_handle].res_vb.flags = NYAS_IRF_DIRTY;
-	mesh_pool[mesh_handle].res_ib.id = 0;
-	mesh_pool[mesh_handle].res_ib.flags = NYAS_IRF_DIRTY;
+	mesh_pool.buf->at[mesh_handle].res.id = 0;
+	mesh_pool.buf->at[mesh_handle].res.flags = NYAS_IRF_DIRTY;
+	mesh_pool.buf->at[mesh_handle].attrib = 0;
+	mesh_pool.buf->at[mesh_handle].vtx = NULL;
+	mesh_pool.buf->at[mesh_handle].idx = NULL;
+	mesh_pool.buf->at[mesh_handle].vtx_size = 0;
+	mesh_pool.buf->at[mesh_handle].elem_count = 0;
+	mesh_pool.buf->at[mesh_handle].res_vb.id = 0;
+	mesh_pool.buf->at[mesh_handle].res_vb.flags = NYAS_IRF_DIRTY;
+	mesh_pool.buf->at[mesh_handle].res_ib.id = 0;
+	mesh_pool.buf->at[mesh_handle].res_ib.flags = NYAS_IRF_DIRTY;
 
 	return mesh_handle;
 }
@@ -861,9 +868,9 @@ nyas_mat_tex(nyas_mat mat)
 static void
 nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 {
-	nypx__check_handle(mesh, mesh_pool);
+	//nypx__check_handle(mesh, mesh_pool);
 	nypx__check_handle(shader, shader_pool);
-	mesh_t *m = &mesh_pool[mesh];
+	mesh_t *m = &mesh_pool.buf->at[mesh];
 
 	if (!(m->res.flags & NYAS_IRF_CREATED)) {
 		nypx_mesh_create(&m->res.id, &m->res_vb.id, &m->res_ib.id);
@@ -879,8 +886,8 @@ nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 static tex_t *
 nyas__sync_gpu_tex(nyas_tex tex)
 {
-	nypx__check_handle(tex, tex_pool);
-	tex_t *t = &tex_pool[tex];
+	//nypx__check_handle(tex, tex_pool);
+	tex_t *t = &tex_pool.buf->at[tex];
 	if (!(t->res.flags & NYAS_IRF_CREATED)) {
 		nypx_tex_create(t);
 		t->res.flags |= (NYAS_IRF_CREATED | NYAS_IRF_DIRTY);
@@ -1083,8 +1090,8 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 		for (int cmd = 0; cmd < nyas_arr_count(frame->draw_lists[i].cmds); ++cmd) {
 			nyas_mesh mesh = frame->draw_lists[i].cmds[cmd].mesh;
 			nyas_mat mat = frame->draw_lists[i].cmds[cmd].material;
-			mesh_t *imsh = &mesh_pool[mesh];
-			nypx__check_handle(mesh, mesh_pool);
+			mesh_t *imsh = &mesh_pool.buf->at[mesh];
+			//nypx__check_handle(mesh, mesh_pool);
 			NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
 
 			if (imsh->res.flags & NYAS_IRF_DIRTY) {

@@ -493,6 +493,7 @@ nypx__gl_cull(enum nyas_cull_face cull)
 	case NYAS_CULL_FRONT: return GL_FRONT;
 	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
 	case NYAS_CULL_CURRENT: return 0;
+	default: return NYAS_ERR_SWITCH_DEFAULT;
 	}
 }
 
@@ -512,6 +513,7 @@ nypx__gl_depth(enum nyas_depth_func df)
 	case NYAS_DEPTH_LEQUAL: return GL_LEQUAL;
 	case NYAS_DEPTH_LESS: return GL_LESS;
 	case NYAS_DEPTH_CURRENT: return 0;
+	default: return NYAS_ERR_SWITCH_DEFAULT;
 	}
 }
 

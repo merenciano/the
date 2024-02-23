@@ -137,9 +137,8 @@ static void load_textures(void)
 	  .mpath = "assets/tex/foam/foam_M.png",
 	}};
 
-	nyas_tex begin = nyas_tex_create(9 * 4);
-	for (int i = 0; i < 9; ++i, begin += 4) {
-		*img_files[i].tex = (struct pbr_tex_t){ .a = begin, .n = begin + 1, .r = begin + 2, .m = begin + 3 };
+	for (int i = 0; i < 9; ++i) {
+		*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
 		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
 		nyas_sched_do(job);
 	}
@@ -400,7 +399,7 @@ Init(void)
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
-	fb_tex = nyas_tex_create(2);
+	fb_tex = nyas_tex_create(1);
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
 		.tex = fb_tex,
@@ -411,9 +410,10 @@ Init(void)
 
 	struct nyas_texture_desc depthscriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
-	nyas_tex_set(fb_tex + 1, &depthscriptor);
+	nyas_tex fb_depth = nyas_tex_create(1);
+	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
-	  .tex = fb_tex + 1,
+	  .tex = fb_depth,
 	  .attach = NYAS_ATTACH_DEPTH,
 	  .face = NYAS_FACE_2D,
 	  .lod_level = 0
@@ -509,8 +509,7 @@ void BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 int
 main(int argc, char **argv)
 {
-	(void)argc;
-	(void)argv;
+	(void)argc, (void)argv;
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("NYAS PBR Material Demo", (struct nyas_point){1920, 1080});
 	nyas_io_poll();
