@@ -153,11 +153,16 @@ typedef struct nyas_texture_internal tex;
 NYAS_DECL_ARR(tex);
 NYAS_DECL_POOL(tex);
 
+typedef struct nyas_shader_internal shad;
+NYAS_DECL_ARR(shad);
+NYAS_DECL_POOL(shad);
+
 //extern struct nyas_mesh_internal *mesh_pool;
 //extern struct nyas_texture_internal *tex_pool;
+//extern struct nyas_shader_internal *shader_pool;
 extern struct nypool_mesh mesh_pool;
 extern struct nypool_tex tex_pool;
-extern struct nyas_shader_internal *shader_pool;
+extern struct nypool_shad shader_pool;
 extern struct nyas_framebuffer_internal *framebuffer_pool;
 
 #endif // NYASPIX_H

@@ -31,9 +31,10 @@
 
 NYAS_IMPL_ARR(mesh);
 NYAS_IMPL_POOL(mesh);
-
 NYAS_IMPL_ARR(tex);
 NYAS_IMPL_POOL(tex);
+NYAS_IMPL_ARR(shad);
+NYAS_IMPL_POOL(shad);
 
 static inline void
 nypx__check_handle(int h, void *arr)
@@ -56,9 +57,10 @@ nyas_mesh QUAD_MESH;
 
 //mesh_t *mesh_pool;
 //tex_t *tex_pool;
+//shdr_t *shader_pool;
 struct nypool_mesh mesh_pool = {.buf = NULL, .count = 0, .next = 0};
 struct nypool_tex tex_pool = {.buf = NULL, .count = 0, .next = 0};
-shdr_t *shader_pool;
+struct nypool_shad shader_pool = {.buf = NULL, .count = 0, .next = 0};
 fb_t *framebuffer_pool;
 
 static void
@@ -87,9 +89,9 @@ nyas__create_fb_handle(void)
 static nyas_shader
 nyas__create_shader_handle(void)
 {
-	nyas_shader shdr = (nyas_shader)nyas_arr_count(shader_pool);
-	nyas_arr_push(shader_pool);
-	return shdr;
+	//nyas_shader shdr = (nyas_shader)nyas_arr_count(shader_pool);
+	//nyas_arr_push(shader_pool);
+	return nypool_shad_add(&shader_pool);
 }
 
 void
@@ -102,7 +104,7 @@ nyas_px_init(void)
 	//mesh_pool = nyas_arr_create(mesh_t, NYAS_MESH_RESERVE);
 	//tex_pool = nyas_arr_create(tex_t, NYAS_TEX_RESERVE);
 	framebuffer_pool = nyas_arr_create(fb_t, NYAS_FB_RESERVE);
-	shader_pool = nyas_arr_create(shdr_t, NYAS_SHADER_RESERVE);
+	//shader_pool = nyas_arr_create(shdr_t, NYAS_SHADER_RESERVE);
 
 	SPHERE_MESH = nyas_mesh_load_geometry(NYAS_SPHERE);
 	CUBE_MESH = nyas_mesh_load_geometry(NYAS_CUBE);
@@ -390,16 +392,16 @@ nyas_shader
 nyas_shader_create(const nyas_shader_desc *desc)
 {
 	nyas_shader ret = nyas__create_shader_handle();
-	shader_pool[ret].name = desc->name;
-	shader_pool[ret].res.id = 0;
-	shader_pool[ret].res.flags = NYAS_IRF_DIRTY;
-	shader_pool[ret].count[0].data = desc->data_count;
-	shader_pool[ret].count[0].tex = desc->tex_count;
-	shader_pool[ret].count[0].cubemap = desc->cubemap_count;
-	shader_pool[ret].count[1].data = desc->shared_data_count;
-	shader_pool[ret].count[1].tex = desc->common_tex_count;
-	shader_pool[ret].count[1].cubemap = desc->common_cubemap_count;
-	shader_pool[ret].common = nyas_alloc(
+	shader_pool.buf->at[ret].name = desc->name;
+	shader_pool.buf->at[ret].res.id = 0;
+	shader_pool.buf->at[ret].res.flags = NYAS_IRF_DIRTY;
+	shader_pool.buf->at[ret].count[0].data = desc->data_count;
+	shader_pool.buf->at[ret].count[0].tex = desc->tex_count;
+	shader_pool.buf->at[ret].count[0].cubemap = desc->cubemap_count;
+	shader_pool.buf->at[ret].count[1].data = desc->shared_data_count;
+	shader_pool.buf->at[ret].count[1].tex = desc->common_tex_count;
+	shader_pool.buf->at[ret].count[1].cubemap = desc->common_cubemap_count;
+	shader_pool.buf->at[ret].common = nyas_alloc(
 	  (desc->shared_data_count + desc->common_tex_count + desc->common_cubemap_count) *
 	  sizeof(float));
 	return ret;
@@ -408,27 +410,27 @@ nyas_shader_create(const nyas_shader_desc *desc)
 void *
 nyas_shader_data(nyas_shader shader)
 {
-	return shader_pool[shader].common;
+	return shader_pool.buf->at[shader].common;
 }
 
 nyas_tex *
 nyas_shader_tex(nyas_shader shader)
 {
-	shdr_t *shdr = &shader_pool[shader];
+	shdr_t *shdr = &shader_pool.buf->at[shader];
 	return (nyas_tex *)shdr->common + shdr->count[1].data;
 }
 
 nyas_tex *
 nyas_shader_cubemap(nyas_shader shader)
 {
-	shdr_t *shdr = &shader_pool[shader];
+	shdr_t *shdr = &shader_pool.buf->at[shader];
 	return nyas_shader_tex(shader) + shdr->count[1].tex;
 }
 
 void
 nyas_shader_reload(nyas_shader shader)
 {
-	shader_pool[shader].res.flags |= NYAS_IRF_DIRTY;
+	shader_pool.buf->at[shader].res.flags |= NYAS_IRF_DIRTY;
 }
 
 static void
@@ -821,7 +823,7 @@ nyas_mat
 nyas_mat_create(nyas_shader shader)
 {
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
-	shdr_t *s = &shader_pool[shader];
+	shdr_t *s = &shader_pool.buf->at[shader];
 	int elements = s->count[0].data + s->count[0].tex + s->count[0].cubemap;
 	ret.ptr = nyas_alloc(elements * sizeof(float));
 	return ret;
@@ -831,7 +833,7 @@ nyas_mat
 nyas_mat_tmp(nyas_shader shader)
 {
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
-	shdr_t *s = &shader_pool[shader];
+	shdr_t *s = &shader_pool.buf->at[shader];
 	int elements = s->count[0].data + s->count[0].tex + s->count[0].cubemap;
 	ret.ptr = nyas_frame_alloc(elements * sizeof(float));
 	return ret;
@@ -841,7 +843,7 @@ nyas_mat
 nyas_mat_copy(nyas_mat mat)
 {
 	nyas_mat ret = { .shader = mat.shader };
-	shdr_t *s = &shader_pool[mat.shader];
+	shdr_t *s = &shader_pool.buf->at[mat.shader];
 	size_t size = (s->count[0].data + s->count[0].tex + s->count[0].cubemap) * 4;
 	ret.ptr = nyas_frame_alloc(size);
 	memcpy(ret.ptr, mat.ptr, size);
@@ -852,7 +854,7 @@ nyas_mat
 nyas_mat_copy_shader(nyas_shader shader)
 {
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
-	shdr_t *s = &shader_pool[shader];
+	shdr_t *s = &shader_pool.buf->at[shader];
 	int elements = s->count[1].data + s->count[1].tex + s->count[1].cubemap;
 	ret.ptr = nyas_frame_alloc(elements * sizeof(float));
 	memcpy(ret.ptr, s->common, elements * sizeof(float));
@@ -862,14 +864,14 @@ nyas_mat_copy_shader(nyas_shader shader)
 nyas_tex *
 nyas_mat_tex(nyas_mat mat)
 {
-	return (nyas_tex *)mat.ptr + shader_pool[mat.shader].count[0].data;
+	return (nyas_tex *)mat.ptr + shader_pool.buf->at[mat.shader].count[0].data;
 }
 
 static void
 nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 {
 	//nypx__check_handle(mesh, mesh_pool);
-	nypx__check_handle(shader, shader_pool);
+	//nypx__check_handle(shader, shader_pool);
 	mesh_t *m = &mesh_pool.buf->at[mesh];
 
 	if (!(m->res.flags & NYAS_IRF_CREATED)) {
@@ -878,7 +880,7 @@ nyas__sync_gpu_mesh(nyas_mesh mesh, nyas_shader shader)
 	}
 
 	if (m->res.flags & NYAS_IRF_DIRTY) {
-		nypx_mesh_set(m, shader_pool[shader].res.id);
+		nypx_mesh_set(m, shader_pool.buf->at[shader].res.id);
 		m->res.flags &= ~NYAS_IRF_DIRTY;
 	}
 }
@@ -1020,8 +1022,8 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 		nyas_mat mat = rs->pipeline.shared_data;
 		nyas_shader shdr = rs->pipeline.shader;
 		if (shdr != NYAS_NOOP) {
-			nypx__check_handle(shdr, shader_pool);
-			shdr_t *s = &shader_pool[shdr];
+			//nypx__check_handle(shdr, shader_pool);
+			shdr_t *s = &shader_pool.buf->at[shdr];
 			nyas__sync_shader(s);
 			nypx_shader_use(s->res.id);
 			nyas__set_shader_data(s, mat.ptr, true);
@@ -1098,7 +1100,7 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 				nyas__sync_gpu_mesh(mesh, mat.shader);
 			}
 
-			shdr_t *s = &shader_pool[mat.shader];
+			shdr_t *s = &shader_pool.buf->at[mat.shader];
 			nyas__set_shader_data(s, mat.ptr, false);
 			nypx_mesh_use(imsh, s);
 			nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);

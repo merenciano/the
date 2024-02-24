@@ -69,7 +69,7 @@ nuklear_draw(void)
 			if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED, NK_FILE_LINE,
 			                        nk_strlen(NK_FILE_LINE), i)) {
 				nyas_pbr_desc_unit *unit = e->mat.ptr;
-				nyas_pbr_desc_scene *scene = (shader_pool + e->mat.shader)->common;
+				nyas_pbr_desc_scene *scene = (shader_pool.buf->at + e->mat.shader)->common;
 				struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
 
 				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED, NK_FILE_LINE,
@@ -142,11 +142,11 @@ nuklear_draw(void)
 			          nyas_arr_count(framebuffer_pool), nyas_arr_capacity(framebuffer_pool),
 			          sizeof(struct nyas_framebuffer_internal));
 			nk_labelf(
-			  ctx, NK_TEXT_LEFT, "Shaders: %d / %d (%lu Bytes)", nyas_arr_count(shader_pool),
-			  nyas_arr_capacity(shader_pool), sizeof(struct nyas_shader_internal));
+			  ctx, NK_TEXT_LEFT, "Shaders: %d / %ld (%lu Bytes)", shader_pool.count,
+			  shader_pool.buf->count, sizeof(struct nyas_shader_internal));
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
-				for (int i = 0; i < nyas_arr_count(shader_pool); ++i) {
-					nk_label(ctx, shader_pool[i].name, NK_TEXT_LEFT);
+				for (int i = 0; i < shader_pool.count; ++i) {
+					nk_label(ctx, shader_pool.buf->at[i].name, NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
 						nyas_shader_reload(i);
 					}
