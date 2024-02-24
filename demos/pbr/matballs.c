@@ -139,6 +139,10 @@ static void load_textures(void)
 
 	for (int i = 0; i < 9; ++i) {
 		*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
+	}
+
+	for (int i = 0; i < 9; ++i) {
+		//*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
 		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
 		nyas_sched_do(job);
 	}
