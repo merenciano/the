@@ -57,7 +57,7 @@ static void load_pbr_map(void *pbr_maps)
 	nyas_tex_load(maps->tex->m, &maps->desc->pbr_map, maps->mpath);
 }
 
-static void load_textures(void)
+static void load_textures(const nysched *s)
 {
 	g_tex_desc.albedo = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0);
 	g_tex_desc.normal = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0);
@@ -144,9 +144,9 @@ static void load_textures(void)
 	for (int i = 0; i < 9; ++i) {
 		//*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
 		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
-		nyas_sched_do(job);
+		nyas_sched_do(s, job);
 	}
-	nyas_sched_wait();
+	nyas_sched_wait(s);
 }
 
 struct mesh_args {
@@ -174,35 +174,37 @@ static void load_env(void *args)
 	nyas_load_env(ea->path, ea->out_lut, ea->out_sky, ea->out_irr, ea->out_pref);
 }
 
-static void load_assets(void)
+static void load_assets(nysched *s)
 {
 	struct mesh_args mshargs = { .path = "assets/obj/matball.msh", .out_mesh = &g_mesh };
 	struct env_args envargs = {.path = "assets/env/canyon.env", .out_sky = &g_tex.sky, .out_irr = &g_tex.irradiance, .out_pref = &g_tex.prefilter, .out_lut = &g_tex.lut};
 	{
 		struct nyas_job job = { .job = load_mesh, .args = &mshargs};
-		nyas_sched_do(job);
+		nyas_sched_do(s, job);
 	}
 	{
 		struct nyas_job job = { .job = load_env, .args = &envargs};
-		nyas_sched_do(job);
+		nyas_sched_do(s, job);
 	}
-	load_textures();
+	load_textures(s);
 
-	nyas_sched_wait();
+	nyas_sched_wait(s);
 }
 
 void
 Init(void)
 {
+	nysched *resource_load_sched = nyas_sched_create(9, 32);
+
 	g_fb = nyas_fb_create();
 
 	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
 	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
 	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
 
-	load_assets();
+	load_assets(resource_load_sched);
 
-	struct nyas_pbr_desc_unit pbr;
+	nyas_pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
 	pbr.color[1] = 1.0f;
 	pbr.color[2] = 1.0f;
@@ -426,6 +428,8 @@ Init(void)
 	nyas_fb_set_target(g_fb, 0, color);
 	nyas_fb_set_target(g_fb, 1, depth);
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
+
+	nyas_sched_destroy(resource_load_sched);
 }
 
 static void *renderalloc(void *ptr, ptrdiff_t size, void *_2)
@@ -517,7 +521,6 @@ main(int argc, char **argv)
 	nyas_mem_init(NYAS_GB(1));
 	nyas_io_init("NYAS PBR Material Demo", (struct nyas_point){1920, 1080});
 	nyas_io_poll();
-	nyas_sched_init(9, 32);
 	nyas_px_init();
 	nyas_camera_init_default(&camera);
 	nuklear_init();

@@ -1,41 +1,51 @@
+#include "core/nyas_core.h"
 #include "core/io.h"
+#include "core/mem.h"
 #include "sched.h"
 #include "utils/array.h"
 #include <pthread.h>
 
-static enum sched_states {
+enum sched_states {
 	SCHED_UNINIT = 0,
 	SCHED_RUNNING,
 	SCHED_CLOSING,
 	SCHED_CLOSED
-} state = SCHED_UNINIT;
+};
 
-static struct nyas_job *queue;
-static pthread_t *threads;
-static pthread_mutex_t mtx;
-static pthread_cond_t cond;
-static int waiting = 0;
+struct nysched {
+	struct nysched *next;
+	struct nyas_job *queue;
+	pthread_t *threads;
+	pthread_mutex_t mtx;
+	pthread_cond_t cond;
+	int waiting;
+	enum sched_states state;
+};
+
+static nysched *scheds = NULL;
+static pthread_mutex_t scheds_mtx;
+static bool initialized = false;
 
 static void *
 nyas__worker(void *data)
 {
-	(void)data;
+	nysched *s = data;
 	while (1) {
-		++waiting;
-		pthread_mutex_lock(&mtx);
-		while (!nyas_arr_count(queue)) {
-			pthread_cond_wait(&cond, &mtx);
-			if (state == SCHED_CLOSING) {
-				--waiting;
-				pthread_mutex_unlock(&mtx);
+		++s->waiting;
+		pthread_mutex_lock(&s->mtx);
+		while (!nyas_arr_count(s->queue)) {
+			pthread_cond_wait(&s->cond, &s->mtx);
+			if (s->state == SCHED_CLOSING) {
+				--s->waiting;
+				pthread_mutex_unlock(&s->mtx);
 				goto exit_worker;
 			}
 		}
 
-		--waiting;
-		struct nyas_job job = *nyas_arr_last(queue);
-		nyas_arr_pop(queue);
-		pthread_mutex_unlock(&mtx);
+		--s->waiting;
+		struct nyas_job job = *nyas_arr_last(s->queue);
+		nyas_arr_pop(s->queue);
+		pthread_mutex_unlock(&s->mtx);
 		(*(job.job))(job.args);
 	}
 
@@ -43,70 +53,104 @@ exit_worker:
 	return NULL;
 }
 
-int
-nyas_sched_init(int thread_count, int queue_capacity)
+nysched *
+nyas_sched_create(int thread_count, int queue_capacity)
 {
-	threads = nyas_arr_create(pthread_t, thread_count);
-	queue = nyas_arr_create(struct nyas_job, queue_capacity);
+	if (!initialized) {
+		pthread_mutex_init(&scheds_mtx, NULL);
+		initialized = true;
+	}
 
-	pthread_mutex_init(&mtx, NULL);
-	pthread_cond_init(&cond, NULL);
+	nysched *s = NYAS_ALLOC(sizeof(struct nysched));
+	s->waiting = 0;
+	s->threads = nyas_arr_create(pthread_t, thread_count);
+	s->queue = nyas_arr_create(struct nyas_job, queue_capacity);
 
-	nyas_arr_push(threads, thread_count);
-	for (int i = 0; i < nyas_arr_count(threads); ++i) {
-		if (pthread_create(threads + i, NULL, nyas__worker, NULL)) {
+	pthread_mutex_init(&s->mtx, NULL);
+	pthread_cond_init(&s->cond, NULL);
+
+	nyas_arr_push(s->threads, thread_count);
+	for (int i = 0; i < nyas_arr_count(s->threads); ++i) {
+		if (pthread_create(s->threads + i, NULL, nyas__worker, s)) {
 			NYAS_LOG_ERR("Thread creation error.");
-			return NYAS_ERR_THREAD;
+			return NULL;
 		}
 	}
 
-	state = SCHED_RUNNING;
-	return NYAS_OK;
+	s->state = SCHED_RUNNING;
+	pthread_mutex_lock(&scheds_mtx);
+	s->next = scheds;
+	scheds = s;
+	pthread_mutex_unlock(&scheds_mtx);
+	return s;
 }
 
 void
-nyas_sched_do(struct nyas_job job)
+nyas_sched_do(nysched *s, struct nyas_job job)
 {
-	if (!nyas_arr_count(threads)) {
+	if (!nyas_arr_count(s->threads)) {
 		(*(job.job))(job.args);
 		return;
 	}
-	pthread_mutex_lock(&mtx);
-	struct nyas_job *next = nyas_arr_push(queue);
+	pthread_mutex_lock(&s->mtx);
+	struct nyas_job *next = nyas_arr_push(s->queue);
 	*next = job;
-	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&mtx);
+	pthread_cond_signal(&s->cond);
+	pthread_mutex_unlock(&s->mtx);
 }
 
 void
-nyas_sched_wait(void)
+nyas_sched_wait(nysched *s)
 {
-	if (!nyas_arr_count(threads)) {
+	if (!nyas_arr_count(s->threads)) {
 		return;
 	}
 
-	while (nyas_arr_count(queue) || waiting != nyas_arr_count(threads)) {
-		pthread_cond_broadcast(&cond);
+	while (nyas_arr_count(s->queue) || s->waiting != nyas_arr_count(s->threads)) {
+		pthread_cond_broadcast(&s->cond);
 		nanosleep((const struct timespec[]){ { 0, 50000000L } }, NULL);
 	}
 }
 
 int
-nyas_sched_destroy(void)
+nyas_sched_destroy(nysched *s)
 {
-	pthread_mutex_lock(&mtx);
-	state = SCHED_CLOSING;
-	pthread_cond_broadcast(&cond);
-	pthread_mutex_unlock(&mtx);
-	for (int i = 0; i < nyas_arr_count(threads); ++i) {
-		pthread_join(threads[i], NULL);
+	pthread_mutex_lock(&s->mtx);
+	s->state = SCHED_CLOSING;
+	pthread_cond_broadcast(&s->cond);
+	pthread_mutex_unlock(&s->mtx);
+	for (int i = 0; i < nyas_arr_count(s->threads); ++i) {
+		pthread_join(s->threads[i], NULL);
 	}
-	nyas_arr_release(threads);
-	nyas_arr_release(queue);
-	pthread_mutex_lock(&mtx);
-	pthread_mutex_unlock(&mtx);
-	pthread_mutex_destroy(&mtx);
-	pthread_cond_destroy(&cond);
-	state = SCHED_CLOSED;
+	nyas_arr_release(s->threads);
+	nyas_arr_release(s->queue);
+	pthread_mutex_lock(&s->mtx);
+	pthread_mutex_unlock(&s->mtx);
+	pthread_mutex_destroy(&s->mtx);
+	pthread_cond_destroy(&s->cond);
+	s->state = SCHED_CLOSED;
+
+	pthread_mutex_lock(&scheds_mtx);
+	if (s == scheds) {
+		scheds = scheds->next;
+	} else {
+		nysched *i = scheds;
+		while (i) {
+			if (s == i->next) {
+				i->next = s->next;
+				break;
+			}
+			i = i->next;
+		}
+
+		if (!i) {
+			/* That scheduler does not exist in the schedulers list */
+			pthread_mutex_unlock(&scheds_mtx);
+			return NYAS_ERR_INVALID_PTR;
+		}
+	}
+
+	pthread_mutex_unlock(&scheds_mtx);
+	NYAS_FREE(s);
 	return NYAS_OK;
 }
