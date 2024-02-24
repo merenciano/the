@@ -166,7 +166,7 @@ struct nyas_texture_target {
 	int lod_level;
 };
 
-typedef struct nyas_shader_desc {
+struct nyas_shader_desc {
 	const char *name;
 	int data_count;
 	int tex_count;
@@ -174,7 +174,7 @@ typedef struct nyas_shader_desc {
 	int shared_data_count;
 	int common_tex_count;
 	int common_cubemap_count;
-} nyas_shader_desc;
+};
 
 typedef struct nyas_mat {
 	void *ptr; // TODO deprecar
@@ -270,7 +270,7 @@ nyas_mesh nyas_mesh_load_geometry(enum nyas_geometry geo);
 void nyas_mesh_reload_file(nyas_mesh mesh, const char *path);
 void nyas_mesh_reload_geometry(nyas_mesh mesh, enum nyas_geometry geo);
 
-nyas_shader nyas_shader_create(const nyas_shader_desc *desc);
+nyas_shader nyas_shader_create(const struct nyas_shader_desc *desc);
 void *nyas_shader_data(nyas_shader shader);
 void nyas_shader_reload(nyas_shader shader);
 nyas_tex *nyas_shader_tex(nyas_shader shader);

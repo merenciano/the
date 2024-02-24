@@ -4,44 +4,42 @@
 #include <mathc.h>
 #include <string.h>
 
-struct Shaders {
+struct {
 	nyas_shader fullscreen_img;
 	nyas_shader skybox;
 	nyas_shader pbr;
-};
+} g_shaders;
 
-struct pbr_tex_t {
-	nyas_tex a, n, r, m;
-};
-
-struct Textures {
+struct {
 	nyas_tex sky;
 	nyas_tex lut;
 	nyas_tex prefilter;
 	nyas_tex irradiance;
 
-	struct pbr_tex_t rusted;
-	struct pbr_tex_t cliff;
-	struct pbr_tex_t peeled;
-	struct pbr_tex_t plastic;
-	struct pbr_tex_t tiles;
-	struct pbr_tex_t gold;
-	struct pbr_tex_t shore;
-	struct pbr_tex_t granite;
-	struct pbr_tex_t foam;
-};
+	struct pbr_maps rusted;
+	struct pbr_maps cliff;
+	struct pbr_maps peeled;
+	struct pbr_maps plastic;
+	struct pbr_maps tiles;
+	struct pbr_maps gold;
+	struct pbr_maps shore;
+	struct pbr_maps granite;
+	struct pbr_maps foam;
+} g_tex;
 
-struct Shaders g_shaders;
-struct Textures g_tex;
 nyas_framebuffer g_fb;
 nyas_tex fb_tex;
 nyas_mesh g_mesh;
 
-static struct pbr_tex_desc g_tex_desc;
+static struct pbr_tex_desc {
+	struct nyas_texture_desc albedo;
+	struct nyas_texture_desc normal;
+	struct nyas_texture_desc pbr_map;
+} g_tex_desc;
 
 struct pbr_tex_load_info_t {
 	struct pbr_tex_desc *desc;
-	struct pbr_tex_t *tex;
+	struct pbr_maps *tex;
 	const char *apath;
 	const char *npath;
 	const char *rpath;
@@ -138,7 +136,7 @@ static void load_textures(nysched *s)
 	}};
 
 	for (int i = 0; i < 9; ++i) {
-		*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(), .n = nyas_tex_create(), .r = nyas_tex_create(), .m = nyas_tex_create()};
+		*img_files[i].tex = (struct pbr_maps){ .a = nyas_tex_create(), .n = nyas_tex_create(), .r = nyas_tex_create(), .m = nyas_tex_create()};
 	}
 
 	for (int i = 0; i < 9; ++i) {
@@ -197,13 +195,13 @@ Init(void)
 
 	g_fb = nyas_fb_create();
 
-	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
-	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
-	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
+	g_shaders.fullscreen_img = nyas_shader_create(&g_shader_descriptors.fullscreen_img);
+	g_shaders.skybox = nyas_shader_create(&g_shader_descriptors.sky);
+	g_shaders.pbr = nyas_shader_create(&g_shader_descriptors.pbr);
 
 	load_assets(resource_load_sched);
 
-	nyas_pbr_desc_unit pbr;
+	struct pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
 	pbr.color[1] = 1.0f;
 	pbr.color[2] = 1.0f;
@@ -226,7 +224,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.gold.a;
 		t[1] = g_tex.gold.m;
@@ -245,7 +243,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.shore.a;
 		t[1] = g_tex.shore.m;
@@ -264,7 +262,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.peeled.a;
 		t[1] = g_tex.peeled.m;
@@ -284,7 +282,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.rusted.a;
 		t[1] = g_tex.rusted.m;
@@ -303,7 +301,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.tiles.a;
 		t[1] = g_tex.tiles.m;
@@ -322,7 +320,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.plastic.a;
 		t[1] = g_tex.plastic.m;
@@ -342,7 +340,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.cliff.a;
 		t[1] = g_tex.cliff.m;
@@ -361,7 +359,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.granite.a;
 		t[1] = g_tex.granite.m;
@@ -380,7 +378,7 @@ Init(void)
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
 		e->mat = nyas_mat_create(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
 		t[0] = g_tex.foam.a;
 		t[1] = g_tex.foam.m;
@@ -388,7 +386,7 @@ Init(void)
 		t[3] = g_tex.foam.n;
 	}
 
-	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
+	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	common_pbr->sunlight[0] = 0.0f;
 	common_pbr->sunlight[1] = -1.0f;
 	common_pbr->sunlight[2] = -0.1f;
@@ -448,7 +446,7 @@ void BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	nyas_camera_control(&camera, (struct nyas_control_config){ 10.0f, 0.001f, 1.0f, delta_time });
 
 	/* PBR common shader data. */
-	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
+	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	common_pbr->camera_position = nyas_camera_eye(&camera);
 	struct nyas_point fb_size = nyas_tex_size(fb_tex);

@@ -1,7 +1,6 @@
-#include "mathc.h"
 #include "nyas.h"
 
-typedef struct nyas_pbr_desc_unit {
+struct pbr_desc_unit {
 	float model[16];
 	float color[3];
 	float use_albedo_map;
@@ -13,59 +12,49 @@ typedef struct nyas_pbr_desc_unit {
 	float metallic;
 	float normal_map_intensity;
 	float paddingg;
-} nyas_pbr_desc_unit;
+};
 
-typedef struct nyas_pbr_desc_scene {
+struct pbr_desc_scene {
 	float view_projection[16];
 	struct nyas_vec3 camera_position;
 	float padding;
 	float sunlight[4];
-} nyas_pbr_desc_scene;
-
-static const nyas_shader_desc pbr_shader_desc = {
-	.name = "pbr",
-	.data_count = 7 * 4, // 7 vec4
-	.tex_count = 4,
-	.cubemap_count = 0,
-	.shared_data_count = 6 * 4, // 6 vec4
-	.common_tex_count = 1,
-	.common_cubemap_count = 2
 };
 
-static const nyas_shader_desc sky_shader_desc = {
-	.name = "skybox",
-	.data_count = 0,
-	.tex_count = 0,
-	.cubemap_count = 0,
-	.shared_data_count = 4 * 4, // mat4
-	.common_tex_count = 0,
-	.common_cubemap_count = 1
+struct pbr_maps {
+	nyas_tex a, n, r, m;
 };
 
-static const nyas_shader_desc fs_img_shader_desc = {
-	.name = "fullscreen-img", // fullscreen quad with texture
-	.data_count = 0,
-	.tex_count = 0,
-	.cubemap_count = 0,
-	.shared_data_count = 0,
-	.common_tex_count = 1,
-	.common_cubemap_count = 0
-};
-
-struct ShaderDescriptors {
-	const nyas_shader_desc *pbr;
-	const nyas_shader_desc *fullscreen_img;
-	const nyas_shader_desc *sky;
-};
-
-static const struct ShaderDescriptors g_shader_descriptors = {
-	.pbr = &pbr_shader_desc,
-	.fullscreen_img = &fs_img_shader_desc,
-	.sky = &sky_shader_desc,
-};
-
-struct pbr_tex_desc {
-	struct nyas_texture_desc albedo;
-	struct nyas_texture_desc normal;
-	struct nyas_texture_desc pbr_map;
+static const struct {
+	const nyas_shader_desc pbr;
+	const nyas_shader_desc fullscreen_img;
+	const nyas_shader_desc sky;
+} g_shader_descriptors = {
+	.pbr = {
+		.name = "pbr",
+		.data_count = 7 * 4, // 7 vec4
+		.tex_count = 4,
+		.cubemap_count = 0,
+		.shared_data_count = 6 * 4, // 6 vec4
+		.common_tex_count = 1,
+		.common_cubemap_count = 2
+	},
+	.fullscreen_img = {
+		.name = "fullscreen-img", // fullscreen quad with texture
+		.data_count = 0,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.shared_data_count = 0,
+		.common_tex_count = 1,
+		.common_cubemap_count = 0
+	},
+	.sky = {
+		.name = "skybox",
+		.data_count = 0,
+		.tex_count = 0,
+		.cubemap_count = 0,
+		.shared_data_count = 4 * 4, // mat4
+		.common_tex_count = 0,
+		.common_cubemap_count = 1
+	}
 };

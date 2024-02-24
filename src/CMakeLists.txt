@@ -9,6 +9,8 @@ target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/core/scene.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.c
+	${CMAKE_CURRENT_SOURCE_DIR}/core/utils.h
+	${CMAKE_CURRENT_SOURCE_DIR}/core/utils.c
 	${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
