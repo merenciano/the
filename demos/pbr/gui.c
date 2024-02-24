@@ -138,8 +138,8 @@ nuklear_draw(void)
 			          tex_pool.buf->count, sizeof(struct nyas_texture_internal));
 			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %ld (%lu Bytes)", mesh_pool.count,
 			          mesh_pool.buf->count, sizeof(struct nyas_mesh_internal));
-			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %d (%lu Bytes)",
-			          nyas_arr_count(framebuffer_pool), nyas_arr_capacity(framebuffer_pool),
+			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %ld (%lu Bytes)",
+			          framebuffer_pool.count, framebuffer_pool.buf->count,
 			          sizeof(struct nyas_framebuffer_internal));
 			nk_labelf(
 			  ctx, NK_TEXT_LEFT, "Shaders: %d / %ld (%lu Bytes)", shader_pool.count,

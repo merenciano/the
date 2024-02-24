@@ -255,7 +255,7 @@ void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr
 
 void nyas_px_init(void);
 
-nyas_tex nyas_tex_create(int count);
+nyas_tex nyas_tex_create(void);
 void nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc);
 void nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path);
 // TODO(Renderer): Cambiar viejos vec por nyas_core

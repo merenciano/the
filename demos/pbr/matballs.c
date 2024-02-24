@@ -57,7 +57,7 @@ static void load_pbr_map(void *pbr_maps)
 	nyas_tex_load(maps->tex->m, &maps->desc->pbr_map, maps->mpath);
 }
 
-static void load_textures(const nysched *s)
+static void load_textures(nysched *s)
 {
 	g_tex_desc.albedo = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0);
 	g_tex_desc.normal = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0);
@@ -138,11 +138,10 @@ static void load_textures(const nysched *s)
 	}};
 
 	for (int i = 0; i < 9; ++i) {
-		*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
+		*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(), .n = nyas_tex_create(), .r = nyas_tex_create(), .m = nyas_tex_create()};
 	}
 
 	for (int i = 0; i < 9; ++i) {
-		//*img_files[i].tex = (struct pbr_tex_t){ .a = nyas_tex_create(1), .n = nyas_tex_create(1), .r = nyas_tex_create(1), .m = nyas_tex_create(1)};
 		struct nyas_job job = { .job = load_pbr_map, .args = img_files + i};
 		nyas_sched_do(s, job);
 	}
@@ -405,7 +404,7 @@ Init(void)
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
-	fb_tex = nyas_tex_create(1);
+	fb_tex = nyas_tex_create();
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
 		.tex = fb_tex,
@@ -416,7 +415,7 @@ Init(void)
 
 	struct nyas_texture_desc depthscriptor =
 	  nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
-	nyas_tex fb_depth = nyas_tex_create(1);
+	nyas_tex fb_depth = nyas_tex_create();
 	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
 	  .tex = fb_depth,
