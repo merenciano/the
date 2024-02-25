@@ -3,6 +3,7 @@
 
 #include "core/io.h"
 #include "core/scene.h"
+#include "core/utils.h"
 #include "render/pixels_internal.h"
 #include "utils/array.h"
 
@@ -56,20 +57,20 @@ nuklear_draw(void)
 				memset(mesh_path, 0, 512);
 			}
 			if (nk_button_label(ctx, "Load Cube")) {
-				nyas_mesh_reload_geometry(e->mesh, NYAS_CUBE);
+				nyutil_mesh_set_geometry(e->mesh, NYAS_CUBE);
 			}
 			if (nk_button_label(ctx, "Load Sphere")) {
-				nyas_mesh_reload_geometry(e->mesh, NYAS_SPHERE);
+				nyutil_mesh_set_geometry(e->mesh, NYAS_SPHERE);
 			}
 			if (nk_button_label(ctx, "Load Quad")) {
-				nyas_mesh_reload_geometry(e->mesh, NYAS_QUAD);
+				nyutil_mesh_set_geometry(e->mesh, NYAS_QUAD);
 			}
 
 			// Material
 			if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Material", NK_MINIMIZED, NK_FILE_LINE,
 			                        nk_strlen(NK_FILE_LINE), i)) {
-				nyas_pbr_desc_unit *unit = e->mat.ptr;
-				nyas_pbr_desc_scene *scene = (shader_pool.buf->at + e->mat.shader)->common;
+				struct pbr_desc_unit *unit = e->mat.ptr;
+				struct pbr_desc_scene *scene = (shader_pool.buf->at + e->mat.shader)->common;
 				struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
 
 				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED, NK_FILE_LINE,

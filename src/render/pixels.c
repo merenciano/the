@@ -42,23 +42,19 @@ static inline void
 nypx__check_handle(int h, void *arr)
 {
 	(void)h;
-	struct nypool_tex* pool = arr;
+	struct nypool_tex *pool = arr;
 	NYAS_ASSERT(arr && h >= 0 && pool->buf->count > h && "Invalid handle range.");
 }
 
 struct nyas_mem *pixmem = NULL;
 
-nyas_mesh SPHERE_MESH;
-nyas_mesh CUBE_MESH;
-nyas_mesh QUAD_MESH;
-
-struct nypool_mesh mesh_pool = {.buf = NULL, .count = 0, .next = 0};
-struct nypool_tex tex_pool = {.buf = NULL, .count = 0, .next = 0};
-struct nypool_shad shader_pool = {.buf = NULL, .count = 0, .next = 0};
-struct nypool_fb framebuffer_pool = {.buf = NULL, .count = 0, .next = 0};
+struct nypool_mesh mesh_pool = { .buf = NULL, .count = 0, .next = 0 };
+struct nypool_tex tex_pool = { .buf = NULL, .count = 0, .next = 0 };
+struct nypool_shad shader_pool = { .buf = NULL, .count = 0, .next = 0 };
+struct nypool_fb framebuffer_pool = { .buf = NULL, .count = 0, .next = 0 };
 
 static void
-nyas__file_reader(void *_1, const char *path, int _2, const char * _3, char **buf, size_t *size)
+nyas__file_reader(void *_1, const char *path, int _2, const char *_3, char **buf, size_t *size)
 {
 	(void)_1, (void)_2, (void)_3;
 	nyas_file_read(path, buf, size);
@@ -88,10 +84,6 @@ nyas_px_init(void)
 	pixmem = nyas_alloc(NYAS_MB(16) + sizeof *pixmem);
 	pixmem->cap = NYAS_MB(16);
 	pixmem->tail = 0;
-
-	SPHERE_MESH = nyas_mesh_load_geometry(NYAS_SPHERE);
-	CUBE_MESH = nyas_mesh_load_geometry(NYAS_CUBE);
-	QUAD_MESH = nyas_mesh_load_geometry(NYAS_QUAD);
 }
 
 const char *
@@ -159,41 +151,23 @@ nyas__tex_is_float(nyas_texture_format fmt)
 	}
 }
 
-struct nyas_texture_desc
-nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h)
-{
-	return (struct nyas_texture_desc){
-		.flags = NYAS_TEX_FLAG_DEFAULT,
-		.type = type,
-		.width = w,
-		.height = h,
-		.fmt = fmt,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_REPEAT,
-		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-}
-
 nyas_tex
 nyas_tex_create(void)
 {
 	int tex = nypool_tex_add(&tex_pool);
 	tex_pool.buf->at[tex].res = (struct nyas_resource_internal){ .id = 0, .flags = 0 };
 	tex_pool.buf->at[tex].data = (struct nyas_texture_desc){
-	  .flags = NYAS_TEX_FLAG_DEFAULT,
-	  .type = NYAS_TEX_2D,
-	  .width = 0,
-	  .height = 0,
-	  .fmt = NYAS_TEX_FMT_SRGB,
-	  .min_filter = NYAS_TEX_FLTR_LINEAR,
-	  .mag_filter = NYAS_TEX_FLTR_LINEAR,
-	  .wrap_s = NYAS_TEX_WRAP_REPEAT,
-	  .wrap_t = NYAS_TEX_WRAP_REPEAT,
-	  .wrap_r = NYAS_TEX_WRAP_REPEAT,
-	  .border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
+		.flags = NYAS_TEX_FLAG_DEFAULT,
+		.type = NYAS_TEX_2D,
+		.width = 0,
+		.height = 0,
+		.fmt = NYAS_TEX_FMT_SRGB,
+		.min_filter = NYAS_TEX_FLTR_LINEAR,
+		.mag_filter = NYAS_TEX_FLTR_LINEAR,
+		.wrap_s = NYAS_TEX_WRAP_REPEAT,
+		.wrap_t = NYAS_TEX_WRAP_REPEAT,
+		.wrap_r = NYAS_TEX_WRAP_REPEAT,
+		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 	tex_pool.buf->at[tex].img = NULL;
 	return tex;
@@ -253,125 +227,13 @@ nyas_tex_set(nyas_tex texture, struct nyas_texture_desc *desc)
 struct nyas_point
 nyas_tex_size(nyas_tex tex)
 {
-	return (struct nyas_point){ tex_pool.buf->at[tex].data.width, tex_pool.buf->at[tex].data.height };
-}
-
-void
-nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
-{
-	FILE *f = fopen(path, "r");
-	char hdr[9];
-	fread(hdr, 8, 1, f);
-	hdr[8] = '\0';
-	if (strncmp("NYAS_ENV", hdr, 9) != 0) {
-		NYAS_LOG_ERR("Header of .env file is invalid. Aborting load_env of %s.", path);
-		return;
-	}
-
-	*sky = nyas_tex_create();
-	tex *t = &tex_pool.buf->at[*sky];
-	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
-	t->data.width = 1024;
-	t->data.height = 1024;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
-
-	t->img = nyas_arr_create(struct nyas_texture_image, 6);
-	size_t size = 1024 * 1024 * 3 * 2; // size * nchannels * sizeof(channel)
-	for (int i = 0; i < 6; ++i) {
-		struct nyas_texture_image *img = nyas_arr_push(t->img);
-		img->lod = 0;
-		img->face = i;
-		img->pix = nyas_alloc(size);
-		fread(img->pix, size, 1, f);
-		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
-	}
-
-	*irr = nyas_tex_create();
-	t = &tex_pool.buf->at[*irr];
-	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
-	t->data.width = 1024;
-	t->data.height = 1024;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
-
-	t->img = nyas_arr_create(struct nyas_texture_image, 6);
-	for (int i = 0; i < 6; ++i) {
-		struct nyas_texture_image *img = nyas_arr_push(t->img);
-		img->lod = 0;
-		img->face = i;
-		img->pix = nyas_alloc(size);
-		fread(img->pix, size, 1, f);
-		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
-	}
-
-	*pref = nyas_tex_create();
-	t = &tex_pool.buf->at[*pref];
-	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
-	t->data.width = 256;
-	t->data.height = 256;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
-
-	size = 256 * 256 * 3 * 2;
-	t->img = nyas_arr_create(struct nyas_texture_image, 64);
-	for (int lod = 0; lod < 9; ++lod) {
-		for (int face = 0; face < 6; ++face) {
-			struct nyas_texture_image *img = nyas_arr_push(t->img);
-			img->lod = lod;
-			img->face = face;
-			img->pix = nyas_alloc(size);
-			fread(img->pix, size, 1, f);
-			NYAS_ASSERT(img->pix && "The image couldn't be loaded");
-		}
-		size /= 4;
-	}
-
-	*lut = nyas_tex_create();
-	t = &tex_pool.buf->at[*lut];
-	t->res.id = 0;
-	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_2D;
-	t->data.fmt = NYAS_TEX_FMT_RG16F;
-	t->data.width = 512;
-	t->data.height = 512;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
-
-	size = 512 * 512 * 2 * 2;
-	t->img = nyas_arr_create(struct nyas_texture_image, 1);
-	struct nyas_texture_image *img = nyas_arr_push(t->img);
-
-	img->lod = 0;
-	img->pix = nyas_alloc(size);
-	fread(img->pix, size, 1, f);
-	NYAS_ASSERT(img->pix && "The image couldn't be loaded");
-	fclose(f);
+	return (struct nyas_point){
+		tex_pool.buf->at[tex].data.width, tex_pool.buf->at[tex].data.height
+	};
 }
 
 nyas_shader
-nyas_shader_create(const nyas_shader_desc *desc)
+nyas_shader_create(const struct nyas_shader_desc *desc)
 {
 	nyas_shader ret = nyas__create_shader_handle();
 	shader_pool.buf->at[ret].name = desc->name;
@@ -413,124 +275,6 @@ void
 nyas_shader_reload(nyas_shader shader)
 {
 	shader_pool.buf->at[shader].res.flags |= NYAS_IRF_DIRTY;
-}
-
-static void
-nyas__mesh_set_cube(mesh *mesh)
-{
-	static const float VERTICES[] = {
-		// positions          // normals           // uv
-		-0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  0.0f,  0.5f,  -0.5f, -0.5f,
-		0.0f,  0.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f,
-		1.0f,  1.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  1.0f,
-
-		-0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,  0.5f,  -0.5f, 0.5f,
-		0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		1.0f,  1.0f,  -0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-
-		-0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  -0.5f,
-		-1.0f, 0.0f,  0.0f,  1.0f,  1.0f,  -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,
-		0.0f,  1.0f,  -0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f,  0.0f,
-
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  0.5f,  0.5f,  -0.5f,
-		1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,
-		0.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-
-		-0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.5f,  -0.5f, -0.5f,
-		0.0f,  -1.0f, 0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,
-		1.0f,  0.0f,  -0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  0.0f,  0.0f,
-
-		-0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  0.5f,  0.5f,  -0.5f,
-		0.0f,  1.0f,  0.0f,  1.0f,  1.0f,  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		1.0f,  0.0f,  -0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-	};
-
-	static const nyas_idx INDICES[] = {
-		0,  2,  1,  2,  0,  3,  4,  5,  6,  6,  7,  4,  8,  9,  10, 10, 11, 8,
-		13, 12, 14, 12, 15, 14, 16, 17, 18, 18, 19, 16, 23, 22, 20, 22, 21, 20,
-	};
-
-	nyas_free(mesh->vtx);
-	nyas_free(mesh->idx);
-
-	mesh->attrib = (1 << NYAS_VA_POS) | (1 << NYAS_VA_NORMAL) | (1 << NYAS_VA_UV);
-	mesh->vtx = nyas_alloc(sizeof(VERTICES));
-	memcpy(mesh->vtx, VERTICES, sizeof(VERTICES));
-	mesh->idx = nyas_alloc(sizeof(INDICES));
-	memcpy(mesh->idx, INDICES, sizeof(INDICES));
-	mesh->vtx_size = sizeof(VERTICES);
-	mesh->elem_count = sizeof(INDICES) / sizeof(*INDICES);
-}
-
-static void
-nyas__mesh_set_sphere(mesh *mesh, int x_segments, int y_segments)
-{
-	NYAS_ASSERT(y_segments > 2 && x_segments > 2 && "Invalid number of segments");
-
-	const float x_step = 1.0f / (float)(y_segments - 1);
-	const float y_step = 1.0f / (float)(x_segments - 1);
-
-	nyas_free(mesh->vtx);
-	nyas_free(mesh->idx);
-
-	mesh->attrib = (1 << NYAS_VA_POS) | (1 << NYAS_VA_NORMAL) | (1 << NYAS_VA_UV);
-	mesh->vtx_size = y_segments * x_segments * 8 * sizeof(float);
-	mesh->elem_count = y_segments * x_segments * 6;
-	mesh->vtx = nyas_alloc(mesh->vtx_size);
-	mesh->idx = nyas_alloc(mesh->elem_count * sizeof(nyas_idx));
-
-	float *v = mesh->vtx;
-	for (int y = 0; y < x_segments; ++y) {
-		float py = sinf((float)-M_PI_2 + (float)M_PI * (float)y * x_step);
-		for (int x = 0; x < y_segments; ++x) {
-			float px = cosf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
-			float pz = sinf(M_PI * 2.0f * x * y_step) * sinf(M_PI * y * x_step);
-
-			*v++ = px;
-			*v++ = py;
-			*v++ = pz;
-			*v++ = px;
-			*v++ = py;
-			*v++ = pz;
-			*v++ = (float)x * y_step;
-			*v++ = (float)y * x_step;
-		}
-	}
-
-	nyas_idx *i = mesh->idx;
-	for (int y = 0; y < x_segments; ++y) {
-		for (int x = 0; x < y_segments; ++x) {
-			*i++ = y * y_segments + x;
-			*i++ = y * y_segments + x + 1;
-			*i++ = (y + 1) * y_segments + x + 1;
-			*i++ = y * y_segments + x;
-			*i++ = (y + 1) * y_segments + x + 1;
-			*i++ = (y + 1) * y_segments + x;
-		}
-	}
-}
-
-static void
-nyas__mesh_set_quad(mesh *mesh)
-{
-	static const float VERTICES[] = {
-		-1.0f, -1.0f, 0.0f,  0.0f, 0.0f, -1.0f, 0.0f, 0.0f,  1.0f, -1.0f, 0.0f,
-		0.0f,  0.0f,  -1.0f, 1.0f, 0.0f, 1.0f,  1.0f, 0.0f,  0.0f, 0.0f,  -1.0f,
-		1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-	};
-
-	static const nyas_idx INDICES[] = { 0, 1, 2, 0, 2, 3 };
-
-	nyas_free(mesh->vtx);
-	nyas_free(mesh->idx);
-
-	mesh->attrib = (1 << NYAS_VA_POS) | (1 << NYAS_VA_NORMAL) | (1 << NYAS_VA_UV);
-	mesh->vtx = nyas_alloc(sizeof(VERTICES));
-	memcpy(mesh->vtx, VERTICES, sizeof(VERTICES));
-	mesh->idx = nyas_alloc(sizeof(INDICES));
-	memcpy(mesh->idx, INDICES, sizeof(INDICES));
-	mesh->vtx_size = sizeof(VERTICES);
-	mesh->elem_count = sizeof(INDICES) / sizeof(*INDICES);
 }
 
 static nyas_idx
@@ -732,21 +476,6 @@ nyas_mesh_reload_file(nyas_mesh msh, const char *path)
 	m->res.flags |= NYAS_IRF_DIRTY;
 }
 
-void
-nyas_mesh_reload_geometry(nyas_mesh msh, enum nyas_geometry geo)
-{
-	mesh *m = &mesh_pool.buf->at[msh];
-
-	switch (geo) {
-	case NYAS_QUAD: nyas__mesh_set_quad(m); break;
-
-	case NYAS_CUBE: nyas__mesh_set_cube(m); break;
-
-	case NYAS_SPHERE: nyas__mesh_set_sphere(m, 32, 32); break;
-	}
-	m->res.flags |= NYAS_IRF_DIRTY;
-}
-
 static nyas_mesh
 nyas__mesh_create(void)
 {
@@ -767,18 +496,16 @@ nyas__mesh_create(void)
 }
 
 nyas_mesh
+nyas_mesh_create(void)
+{
+	return nyas__mesh_create();
+}
+
+nyas_mesh
 nyas_mesh_load_file(const char *path)
 {
 	nyas_mesh mesh_handle = nyas__mesh_create();
 	nyas_mesh_reload_file(mesh_handle, path);
-	return mesh_handle;
-}
-
-nyas_mesh
-nyas_mesh_load_geometry(enum nyas_geometry geo)
-{
-	nyas_mesh mesh_handle = nyas__mesh_create();
-	nyas_mesh_reload_geometry(mesh_handle, geo);
 	return mesh_handle;
 }
 

@@ -13,11 +13,6 @@ typedef uint16_t nyas_idx;
 typedef uint32_t nyas_idx;
 #endif
 
-#define NYAS_TEX_RESERVE 64
-#define NYAS_MESH_RESERVE 64
-#define NYAS_FB_RESERVE 32
-#define NYAS_SHADER_RESERVE 32
-
 typedef int nyas_resource_handle;
 typedef nyas_resource_handle nyas_mesh;
 typedef nyas_resource_handle nyas_tex;
@@ -238,37 +233,20 @@ struct nyas_frame_ctx {
 	struct nyas_drawlist *draw_lists; // nyas_arr
 };
 
-// Helpers
-enum nyas_geometry {
-	NYAS_QUAD,
-	NYAS_CUBE,
-	NYAS_SPHERE
-};
-
-extern nyas_mesh SPHERE_MESH;
-extern nyas_mesh CUBE_MESH;
-extern nyas_mesh QUAD_MESH;
-
-struct nyas_texture_desc nyas_tex_defined_desc(nyas_texture_type type, nyas_texture_format fmt, int w, int h);
-void nyas_load_env(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
-// --Helpers
-
 void nyas_px_init(void);
 
 nyas_tex nyas_tex_create(void);
 void nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc);
 void nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path);
-// TODO(Renderer): Cambiar viejos vec por nyas_core
 struct nyas_point nyas_tex_size(nyas_tex tex);
 
 nyas_framebuffer nyas_fb_create(void);
 void nyas_fb_set_target(nyas_framebuffer fb, int index, struct nyas_texture_target target);
 
 // TODO(Renderer): Unificar load y reload
+nyas_mesh nyas_mesh_create(void);
 nyas_mesh nyas_mesh_load_file(const char *path);
-nyas_mesh nyas_mesh_load_geometry(enum nyas_geometry geo);
 void nyas_mesh_reload_file(nyas_mesh mesh, const char *path);
-void nyas_mesh_reload_geometry(nyas_mesh mesh, enum nyas_geometry geo);
 
 nyas_shader nyas_shader_create(const struct nyas_shader_desc *desc);
 void *nyas_shader_data(nyas_shader shader);
@@ -288,21 +266,5 @@ void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op);
 void *nyas_frame_alloc(ptrdiff_t size); // Circular buffer (fixed size, not freeing)
 void nyas_frame_render(struct nyas_frame_ctx *frame);
-
-static inline void nyas_draw_state_default(struct nyas_render_state *rs)
-{
-	rs->target.fb = NYAS_NOOP;
-	rs->target.bgcolor = (struct nyas_color){0.0f, 0.0f, 0.0f, 1.0f};
-	rs->pipeline.shader = NYAS_NOOP;
-	rs->pipeline.shared_data.ptr = NULL;
-	rs->ops.viewport = (struct nyas_rect){0, 0, 0, 0};
-	rs->ops.scissor = (struct nyas_rect){0, 0, 0, 0};
-	rs->ops.enable = 0;
-	rs->ops.disable = 0;
-	rs->ops.depth_fun = NYAS_DEPTH_CURRENT;
-	rs->ops.blend_src = NYAS_BLEND_CURRENT;
-	rs->ops.blend_dst = NYAS_BLEND_CURRENT;
-	rs->ops.cull_face = NYAS_CULL_CURRENT;
-}
 
 #endif // NYAS_PIXELS_H

@@ -26,9 +26,9 @@ struct pbr_maps {
 };
 
 static const struct {
-	const nyas_shader_desc pbr;
-	const nyas_shader_desc fullscreen_img;
-	const nyas_shader_desc sky;
+	const struct nyas_shader_desc pbr;
+	const struct nyas_shader_desc fullscreen_img;
+	const struct nyas_shader_desc sky;
 } g_shader_descriptors = {
 	.pbr = {
 		.name = "pbr",
