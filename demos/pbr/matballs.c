@@ -32,7 +32,7 @@ nyas_mesh g_mesh;
 void
 Init(void)
 {
-	nyutil_mesh_init_geometry();
+	nyut_mesh_init_geometry();
 	nyas_tex irradiance;
 	nyas_tex prefilter;
 	nyas_tex lut;
@@ -42,27 +42,27 @@ Init(void)
 	g_shaders.skybox = nyas_shader_create(&g_shader_descriptors.sky);
 	g_shaders.pbr = nyas_shader_create(&g_shader_descriptors.pbr);
 
-	struct nyutil_shad_ldargs fsimgargs = {
+	struct nyut_shad_ldargs fsimgargs = {
 		.desc = g_shader_descriptors.fullscreen_img,
 		.shader = &g_shaders.fullscreen_img
 	};
 
-	struct nyutil_shad_ldargs skyargs = {
+	struct nyut_shad_ldargs skyargs = {
 		.desc = g_shader_descriptors.fullscreen_img,
 		.shader = &g_shaders.fullscreen_img
 	};
 
-	struct nyutil_shad_ldargs pbrargs = {
+	struct nyut_shad_ldargs pbrargs = {
 		.desc = g_shader_descriptors.fullscreen_img,
 		.shader = &g_shaders.fullscreen_img
 	};
 
-	struct nyutil_mesh_ldargs mesh = {
+	struct nyut_mesh_ldargs mesh = {
 		.path = "assets/obj/matball.msh",
 		.mesh = &g_mesh
 	};
 
-	struct nyutil_env_ldargs envargs = {
+	struct nyut_env_ldargs envargs = {
 		.path = "assets/env/canyon.env",
 		.sky = &g_tex.sky,
 		.irr = &irradiance,
@@ -70,18 +70,18 @@ Init(void)
 		.lut = &lut
 	};
 
-	nyut_assetldr *ldr = nyutil_assets_create();
-	nyutil_assets_add_shader(ldr, &fsimgargs);
-	nyutil_assets_add_shader(ldr, &skyargs);
-	nyutil_assets_add_shader(ldr, &pbrargs);
-	nyutil_assets_add_mesh(ldr, &mesh);
-	nyutil_assets_add_env(ldr, &envargs);
+	nyut_assetldr *ldr = nyut_assets_create();
+	nyut_assets_add_shader(ldr, &fsimgargs);
+	nyut_assets_add_shader(ldr, &skyargs);
+	nyut_assets_add_shader(ldr, &pbrargs);
+	nyut_assets_add_mesh(ldr, &mesh);
+	nyut_assets_add_env(ldr, &envargs);
 
 	struct nyas_texture_desc texdesc[] = {
-		nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0),
-		nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0),
-		nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0),
-		nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0)
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0)
 	};
 
 	const char *texpaths[] = {
@@ -123,7 +123,7 @@ Init(void)
 		"assets/tex/foam/foam_M.png"
 	};
 
-	struct nyutil_tex_ldargs loadtexargs[9 * 4];
+	struct nyut_tex_ldargs loadtexargs[9 * 4];
 	nyas_tex *tex_begin = &g_tex.gold.a;
 	for (int i = 0; i < 9 * 4; ++i) {
 		*tex_begin = nyas_tex_create();
@@ -133,10 +133,10 @@ Init(void)
 	}
 
 	for (int i = 0; i < 9 * 4; ++i) {
-		nyutil_assets_add_tex(ldr, &loadtexargs[i]);
+		nyut_assets_add_tex(ldr, &loadtexargs[i]);
 	}
 
-	nyutil_assets_load(ldr, 8);
+	nyut_assets_load(ldr, 8);
 
 	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	common_pbr->sunlight[0] = 0.0f;
@@ -152,7 +152,7 @@ Init(void)
 	g_fb = nyas_fb_create();
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
-	  nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
 	fb_tex = nyas_tex_create();
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
@@ -160,7 +160,7 @@ Init(void)
 	};
 
 	struct nyas_texture_desc depthscriptor =
-	  nyutil_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
 	nyas_tex fb_depth = nyas_tex_create();
 	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
@@ -355,11 +355,7 @@ Init(void)
 		t[3] = g_tex.foam.n;
 	}
 
-
-
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
-
-
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
 }
 
@@ -389,20 +385,16 @@ BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 
 	new_frame->draw_lists = nyas_arr_create_a(struct nyas_drawlist, 8, renderalloc, NULL);
 	struct nyas_drawlist *dl = nyas_arr_push(new_frame->draw_lists);
-	nyutil_draw_state_default(&dl->state);
-
+	dl->state = nyut_draw_state_default();
 	dl->state.target.bgcolor = (struct nyas_color){ 0.2f, 0.2f, 0.2f, 1.0f };
 	dl->state.target.fb = g_fb;
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
-
-	dl->state.pipeline.shader = g_shaders.pbr;
-	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.pbr);
-
-	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_COLOR);
-	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_CLEAR_DEPTH);
-	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_BLEND);
-	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
-	nyas_draw_op_enable(&dl->state.ops, NYAS_DRAW_WRITE_DEPTH);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_COLOR);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_DEPTH);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_BLEND);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_TEST_DEPTH);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_WRITE_DEPTH);
 	dl->state.ops.blend_src = NYAS_BLEND_ONE;
 	dl->state.ops.blend_dst = NYAS_BLEND_ZERO;
 	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
@@ -417,11 +409,10 @@ BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	}
 
 	dl = nyas_arr_push(new_frame->draw_lists);
-	nyutil_draw_state_default(&dl->state);
+	dl->state = nyut_draw_state_default();
 
 	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
-	dl->state.pipeline.shader = g_shaders.skybox;
-	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.skybox);
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
 
 	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_CULL);
 	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
@@ -429,22 +420,21 @@ BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
 	struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
 	cmd->material.shader = g_shaders.skybox;
-	cmd->mesh = CUBE_MESH;
+	cmd->mesh = NYAS_UTILS_CUBE;
 
 	dl = nyas_arr_push(new_frame->draw_lists);
-	nyutil_draw_state_default(&dl->state);
+	dl->state = nyut_draw_state_default();
 
 	dl->state.target.bgcolor = (struct nyas_color){ 1.0f, 0.0f, 0.0f, 1.0f };
 	dl->state.target.fb = NYAS_DEFAULT;
-	dl->state.pipeline.shader = g_shaders.fullscreen_img;
-	dl->state.pipeline.shared_data = nyas_mat_copy_shader(g_shaders.fullscreen_img);
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
 	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
 
 	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
 	cmd = nyas_arr_push(dl->cmds);
 	cmd->material.shader = g_shaders.fullscreen_img;
-	cmd->mesh = QUAD_MESH;
+	cmd->mesh = NYAS_UTILS_QUAD;
 }
 
 int

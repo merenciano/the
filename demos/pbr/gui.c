@@ -57,13 +57,13 @@ nuklear_draw(void)
 				memset(mesh_path, 0, 512);
 			}
 			if (nk_button_label(ctx, "Load Cube")) {
-				nyutil_mesh_set_geometry(e->mesh, NYAS_CUBE);
+				nyut_mesh_set_geometry(e->mesh, NYAS_CUBE);
 			}
 			if (nk_button_label(ctx, "Load Sphere")) {
-				nyutil_mesh_set_geometry(e->mesh, NYAS_SPHERE);
+				nyut_mesh_set_geometry(e->mesh, NYAS_SPHERE);
 			}
 			if (nk_button_label(ctx, "Load Quad")) {
-				nyutil_mesh_set_geometry(e->mesh, NYAS_QUAD);
+				nyut_mesh_set_geometry(e->mesh, NYAS_QUAD);
 			}
 
 			// Material

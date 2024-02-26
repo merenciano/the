@@ -728,11 +728,10 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 		}
 
 		// pipeline
-		nyas_mat mat = rs->pipeline.shared_data;
-		nyas_shader shdr = rs->pipeline.shader;
-		if (shdr != NYAS_NOOP) {
-			nypx__check_handle(shdr, &shader_pool);
-			shad *s = &shader_pool.buf->at[shdr];
+		nyas_mat mat = rs->pipeline.shader_mat;
+		if (mat.shader != NYAS_NOOP) {
+			nypx__check_handle(mat.shader, &shader_pool);
+			shad *s = &shader_pool.buf->at[mat.shader];
 			nyas__sync_shader(s);
 			nypx_shader_use(s->res.id);
 			nyas__set_shader_data(s, mat.ptr, true);

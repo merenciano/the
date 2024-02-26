@@ -197,8 +197,7 @@ struct nyas_draw_target {
 };
 
 struct nyas_draw_pipeline {
-	nyas_shader shader;
-	nyas_mat shared_data;
+	nyas_mat shader_mat;
 	nyas_vertex_attrib va;
 };
 

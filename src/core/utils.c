@@ -8,15 +8,15 @@
 #include <string.h>
 #include <math.h>
 
-nyas_mesh SPHERE_MESH;
-nyas_mesh CUBE_MESH;
-nyas_mesh QUAD_MESH;
+nyas_mesh NYAS_UTILS_SPHERE;
+nyas_mesh NYAS_UTILS_CUBE;
+nyas_mesh NYAS_UTILS_QUAD;
 
 typedef struct nyas_job job;
 NYAS_DECL_ARR(job);
 NYAS_IMPL_ARR(job);
 
-struct nyutil_asset_loader {
+struct nyut_asset_loader {
 	struct nyarr_job *seq;
 	struct nyarr_job *async;
 };
@@ -24,14 +24,14 @@ struct nyutil_asset_loader {
 static void
 load_tex(void *arg)
 {
-	struct nyutil_tex_ldargs *a = arg;
+	struct nyut_tex_ldargs *a = arg;
 	nyas_tex_load(a->tex, &a->desc, a->path);
 }
 
 static void
 load_mesh(void *arg)
 {
-	struct nyutil_mesh_ldargs *a = arg;
+	struct nyut_mesh_ldargs *a = arg;
 	*a->mesh = nyas_mesh_load_file(a->path); // TODO: separate create and load like textures in
 	                                         // order to avoid concurrent writes in mesh_pool
 }
@@ -39,7 +39,7 @@ load_mesh(void *arg)
 static void
 load_shader(void *arg)
 {
-	struct nyutil_shad_ldargs *a = arg;
+	struct nyut_shad_ldargs *a = arg;
 	*a->shader = nyas_shader_create(&a->desc);
 	// TODO: Shaders compilation and program linking.
 }
@@ -47,21 +47,21 @@ load_shader(void *arg)
 static void
 load_env(void *args)
 {
-	struct nyutil_env_ldargs *ea = args;
-	nyutil_env_load(ea->path, ea->lut, ea->sky, ea->irr, ea->pref);
+	struct nyut_env_ldargs *ea = args;
+	nyut_env_load(ea->path, ea->lut, ea->sky, ea->irr, ea->pref);
 }
 
-struct nyutil_asset_loader *
-nyutil_assets_create(void)
+struct nyut_asset_loader *
+nyut_assets_create(void)
 {
-	struct nyutil_asset_loader *l = malloc(sizeof(struct nyutil_asset_loader));
+	struct nyut_asset_loader *l = malloc(sizeof(struct nyut_asset_loader));
 	l->async = NULL;
 	l->seq = NULL;
 	return l;
 }
 
 void
-nyutil_assets_add_mesh(struct nyutil_asset_loader *l, struct nyutil_mesh_ldargs *args)
+nyut_assets_add_mesh(struct nyut_asset_loader *l, struct nyut_mesh_ldargs *args)
 {
 	job *job = nyarr_job_push(&l->async);
 	job->job = load_mesh;
@@ -69,7 +69,7 @@ nyutil_assets_add_mesh(struct nyutil_asset_loader *l, struct nyutil_mesh_ldargs 
 }
 
 void
-nyutil_assets_add_tex(struct nyutil_asset_loader *l, struct nyutil_tex_ldargs *args)
+nyut_assets_add_tex(struct nyut_asset_loader *l, struct nyut_tex_ldargs *args)
 {
 	job *job = nyarr_job_push(&l->async);
 	job->job = load_tex;
@@ -77,7 +77,7 @@ nyutil_assets_add_tex(struct nyutil_asset_loader *l, struct nyutil_tex_ldargs *a
 }
 
 void
-nyutil_assets_add_shader(struct nyutil_asset_loader *l, struct nyutil_shad_ldargs *args)
+nyut_assets_add_shader(struct nyut_asset_loader *l, struct nyut_shad_ldargs *args)
 {
 	job *job = nyarr_job_push(&l->seq);
 	job->job = load_shader;
@@ -85,7 +85,7 @@ nyutil_assets_add_shader(struct nyutil_asset_loader *l, struct nyutil_shad_ldarg
 }
 
 void
-nyutil_assets_add_env(struct nyutil_asset_loader *l, struct nyutil_env_ldargs *args)
+nyut_assets_add_env(struct nyut_asset_loader *l, struct nyut_env_ldargs *args)
 {
 	job *job = nyarr_job_push(&l->async);
 	job->job = load_env;
@@ -93,7 +93,7 @@ nyutil_assets_add_env(struct nyutil_asset_loader *l, struct nyutil_env_ldargs *a
 }
 
 void
-nyutil_assets_add_job(struct nyutil_asset_loader *l, struct nyas_job j, bool async)
+nyut_assets_add_job(struct nyut_asset_loader *l, struct nyas_job j, bool async)
 {
 	if (async) {
 		nyarr_job_push_value(&l->async, j);
@@ -103,7 +103,7 @@ nyutil_assets_add_job(struct nyutil_asset_loader *l, struct nyas_job j, bool asy
 }
 
 void
-nyutil_assets_load(struct nyutil_asset_loader *l, int threads)
+nyut_assets_load(struct nyut_asset_loader *l, int threads)
 {
 	nysched *load_sched = NULL;
 	if (l->async) {
@@ -246,18 +246,18 @@ nyas__mesh_set_quad(mesh *mesh)
 	mesh->elem_count = sizeof(INDICES) / sizeof(*INDICES);
 }
 
-void nyutil_mesh_init_geometry(void)
+void nyut_mesh_init_geometry(void)
 {
-	SPHERE_MESH = nyas_mesh_create();
-	CUBE_MESH = nyas_mesh_create();
-	QUAD_MESH = nyas_mesh_create();
-	nyutil_mesh_set_geometry(SPHERE_MESH, NYAS_SPHERE);
-	nyutil_mesh_set_geometry(CUBE_MESH, NYAS_CUBE);
-	nyutil_mesh_set_geometry(QUAD_MESH, NYAS_QUAD);
+	NYAS_UTILS_SPHERE = nyas_mesh_create();
+	NYAS_UTILS_CUBE = nyas_mesh_create();
+	NYAS_UTILS_QUAD = nyas_mesh_create();
+	nyut_mesh_set_geometry(NYAS_UTILS_SPHERE, NYAS_SPHERE);
+	nyut_mesh_set_geometry(NYAS_UTILS_CUBE, NYAS_CUBE);
+	nyut_mesh_set_geometry(NYAS_UTILS_QUAD, NYAS_QUAD);
 }
 
 void
-nyutil_mesh_set_geometry(nyas_mesh msh, enum nyutil_geometry geo)
+nyut_mesh_set_geometry(nyas_mesh msh, enum nyut_geometry geo)
 {
 	mesh *m = &mesh_pool.buf->at[msh];
 
@@ -270,7 +270,7 @@ nyutil_mesh_set_geometry(nyas_mesh msh, enum nyutil_geometry geo)
 }
 
 void
-nyutil_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
+nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
 {
 	FILE *f = fopen(path, "r");
 	char hdr[9];
