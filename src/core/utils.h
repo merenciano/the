@@ -25,7 +25,7 @@ nyut_texture_desc_default(nyas_texture_type type, nyas_texture_format fmt, int w
 }
 
 static inline struct nyas_render_state
-nyut_draw_state_default()
+nyut_draw_state_default(void)
 {
 	return (struct nyas_render_state){
 		.target = { .fb = NYAS_NOOP, .bgcolor = (struct nyas_color){ 0.0f, 0.0f, 0.0f, 1.0f } },
@@ -39,6 +39,12 @@ nyut_draw_state_default()
 		         .blend_dst = NYAS_BLEND_CURRENT,
 		         .cull_face = NYAS_CULL_CURRENT }
 	};
+}
+
+static inline struct nyas_draw
+nyut_draw_default(void)
+{
+	return (struct nyas_draw){ .state = nyut_draw_state_default(), .cmds = NULL };
 }
 
 // Asset loader
@@ -86,7 +92,6 @@ void nyut_mesh_init_geometry(void);
 void nyut_mesh_set_geometry(nyas_mesh mesh, enum nyut_geometry geo);
 
 // Environment maps
-void
-nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
+void nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref);
 
 #endif // NYAS_UTILS_H

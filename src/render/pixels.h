@@ -223,16 +223,16 @@ struct nyas_render_state {
 	struct nyas_draw_ops ops;
 };
 
-struct nyas_drawlist {
+typedef struct nyas_draw_cmd nydrawcmd;
+NYAS_DECL_ARR(nydrawcmd);
+
+struct nyas_draw {
 	struct nyas_render_state state;
-	struct nyas_draw_cmd *cmds; // nyas_arr
+	struct nyarr_nydrawcmd *cmds;
 };
 
-struct nyas_frame_ctx {
-	struct nyas_drawlist *draw_lists; // nyas_arr
-};
-
-void nyas_px_init(void);
+void nyas_falloc_set_buffer(void *buffer, ptrdiff_t size);
+void *nyas_falloc(ptrdiff_t size);
 
 nyas_tex nyas_tex_create(void);
 void nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc);
@@ -261,9 +261,6 @@ nyas_mat nyas_mat_copy(nyas_mat mat);
 nyas_mat nyas_mat_copy_shader(nyas_shader shader);
 nyas_tex *nyas_mat_tex(nyas_mat mat); // Ptr to first texture.
 
-void nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op);
-void nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op);
-void *nyas_frame_alloc(ptrdiff_t size); // Circular buffer (fixed size, not freeing)
-void nyas_frame_render(struct nyas_frame_ctx *frame);
+void nyas_draw(struct nyas_draw *dl);
 
 #endif // NYAS_PIXELS_H

@@ -5,6 +5,10 @@
 #include <mathc.h>
 #include <string.h>
 
+typedef struct nyas_draw nydraw;
+NYAS_DECL_ARR(nydraw);
+NYAS_IMPL_ARR_MA(nydraw, nyas_falloc);
+
 struct {
 	nyas_shader fullscreen_img;
 	nyas_shader skybox;
@@ -359,19 +363,8 @@ Init(void)
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
 }
 
-static void *
-renderalloc(void *ptr, ptrdiff_t size, void *_2)
-{
-	(void)_2;
-	void *mem = nyas_frame_alloc(size);
-	if (ptr) {
-		memcpy(mem, ptr, size / 2);
-	}
-	return mem;
-}
-
 void
-BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
+BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 {
 	nyas_io_poll();
 	struct nyas_point *vp = &nyas_io->window_size;
@@ -383,9 +376,8 @@ BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	common_pbr->camera_position = nyas_camera_eye(&camera);
 	struct nyas_point fb_size = nyas_tex_size(fb_tex);
 
-	new_frame->draw_lists = nyas_arr_create_a(struct nyas_drawlist, 8, renderalloc, NULL);
-	struct nyas_drawlist *dl = nyas_arr_push(new_frame->draw_lists);
-	dl->state = nyut_draw_state_default();
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	struct nyas_draw *dl = &(*new_frame)->at[(*new_frame)->count - 1];
 	dl->state.target.bgcolor = (struct nyas_color){ 0.2f, 0.2f, 0.2f, 1.0f };
 	dl->state.target.fb = g_fb;
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
@@ -400,39 +392,34 @@ BuildFrame(struct nyas_frame_ctx *new_frame, float delta_time)
 	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
 	dl->state.ops.cull_face = NYAS_CULL_BACK;
 
-	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 16, renderalloc, NULL);
 	for (int i = 0; i < nyas_arr_count(entities); ++i) {
-		struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
+		struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
 		mat4_assign(entities[i].mat.ptr, entities[i].transform);
 		cmd->material = nyas_mat_copy(entities[i].mat);
 		cmd->mesh = entities[i].mesh;
 	}
 
-	dl = nyas_arr_push(new_frame->draw_lists);
-	dl->state = nyut_draw_state_default();
-
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	dl = &(*new_frame)->at[(*new_frame)->count - 1];
 	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
 
-	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_CULL);
+	dl->state.ops.disable |= (1 << NYAS_DRAW_CULL);
 	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
 
-	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
-	struct nyas_draw_cmd *cmd = nyas_arr_push(dl->cmds);
+	struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
 	cmd->material.shader = g_shaders.skybox;
 	cmd->mesh = NYAS_UTILS_CUBE;
 
-	dl = nyas_arr_push(new_frame->draw_lists);
-	dl->state = nyut_draw_state_default();
-
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	dl = &(*new_frame)->at[(*new_frame)->count - 1];
 	dl->state.target.bgcolor = (struct nyas_color){ 1.0f, 0.0f, 0.0f, 1.0f };
 	dl->state.target.fb = NYAS_DEFAULT;
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
-	nyas_draw_op_disable(&dl->state.ops, NYAS_DRAW_TEST_DEPTH);
+	dl->state.ops.disable |= (1 << NYAS_DRAW_TEST_DEPTH);
 
-	dl->cmds = nyas_arr_create_a(struct nyas_draw_cmd, 2, renderalloc, NULL);
-	cmd = nyas_arr_push(dl->cmds);
+	cmd = nyarr_nydrawcmd_push(&dl->cmds);
 	cmd->material.shader = g_shaders.fullscreen_img;
 	cmd->mesh = NYAS_UTILS_QUAD;
 }
@@ -441,10 +428,10 @@ int
 main(int argc, char **argv)
 {
 	(void)argc, (void)argv;
-	nyas_mem_init(NYAS_GB(1));
+	void *mem_chunk = malloc(NYAS_MB(256));
+	nyas_mem_init(mem_chunk, NYAS_MB(256));
+	nyas_falloc_set_buffer(nyas_palloc(NYAS_MB(16)), NYAS_MB(16));
 	nyas_io_init("NYAS PBR Material Demo", (struct nyas_point){ 1920, 1080 });
-	nyas_io_poll();
-	nyas_px_init();
 	nyas_camera_init_default(&camera);
 	nuklear_init();
 	Init();
@@ -453,11 +440,13 @@ main(int argc, char **argv)
 		float delta_time = nyas_time_sec(nyas_elapsed(frame_chrono));
 		frame_chrono = nyas_time();
 
-		struct nyas_frame_ctx frame;
+		struct nyarr_nydraw *frame = NULL;
 		BuildFrame(&frame, delta_time);
 
 		// Render
-		nyas_frame_render(&frame);
+		for (int i = 0; i < frame->count; ++i) {
+			nyas_draw(&frame->at[i]);
+		}
 		nuklear_draw();
 		nyas_window_swap();
 		// End render

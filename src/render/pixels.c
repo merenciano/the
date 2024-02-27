@@ -5,7 +5,6 @@
 #include "render/pixels_internal.h"
 #include "utils/array.h"
 
-#include <math.h>
 #include <mathc.h>
 
 #ifndef STB_IMAGE_IMPLEMENTATION
@@ -38,6 +37,8 @@ NYAS_IMPL_POOL(shad);
 NYAS_IMPL_ARR(fb);
 NYAS_IMPL_POOL(fb);
 
+NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc);
+
 static inline void
 nypx__check_handle(int h, void *arr)
 {
@@ -46,12 +47,26 @@ nypx__check_handle(int h, void *arr)
 	NYAS_ASSERT(arr && h >= 0 && pool->buf->count > h && "Invalid handle range.");
 }
 
-struct nyas_mem *pixmem = NULL;
-
 struct nypool_mesh mesh_pool = { .buf = NULL, .count = 0, .next = 0 };
 struct nypool_tex tex_pool = { .buf = NULL, .count = 0, .next = 0 };
 struct nypool_shad shader_pool = { .buf = NULL, .count = 0, .next = 0 };
 struct nypool_fb framebuffer_pool = { .buf = NULL, .count = 0, .next = 0 };
+
+static struct nyas_mem *circbuf = NULL;
+
+void nyas_falloc_set_buffer(void *buffer, ptrdiff_t size)
+{
+	NYAS_ASSERT(buffer && size > 0);
+	circbuf = buffer;
+	circbuf->cap = size - sizeof(*circbuf);
+	circbuf->tail = 0;
+}
+
+void *nyas_falloc(ptrdiff_t size)
+{
+	NYAS_ASSERT(size > 0);
+	return nyas_circalloc(circbuf, size);
+}
 
 static void
 nyas__file_reader(void *_1, const char *path, int _2, const char *_3, char **buf, size_t *size)
@@ -76,14 +91,6 @@ static nyas_shader
 nyas__create_shader_handle(void)
 {
 	return nypool_shad_add(&shader_pool);
-}
-
-void
-nyas_px_init(void)
-{
-	pixmem = nyas_alloc(NYAS_MB(16) + sizeof *pixmem);
-	pixmem->cap = NYAS_MB(16);
-	pixmem->tail = 0;
 }
 
 const char *
@@ -544,7 +551,7 @@ nyas_mat_tmp(nyas_shader shader)
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
 	shad *s = &shader_pool.buf->at[shader];
 	int elements = s->count[0].data + s->count[0].tex + s->count[0].cubemap;
-	ret.ptr = nyas_frame_alloc(elements * sizeof(float));
+	ret.ptr = nyas_falloc(elements * sizeof(float));
 	return ret;
 }
 
@@ -554,7 +561,7 @@ nyas_mat_copy(nyas_mat mat)
 	nyas_mat ret = { .shader = mat.shader };
 	shad *s = &shader_pool.buf->at[mat.shader];
 	size_t size = (s->count[0].data + s->count[0].tex + s->count[0].cubemap) * 4;
-	ret.ptr = nyas_frame_alloc(size);
+	ret.ptr = nyas_falloc(size);
 	memcpy(ret.ptr, mat.ptr, size);
 	return ret;
 }
@@ -565,7 +572,7 @@ nyas_mat_copy_shader(nyas_shader shader)
 	nyas_mat ret = { .ptr = NULL, .shader = shader };
 	shad *s = &shader_pool.buf->at[shader];
 	int elements = s->count[1].data + s->count[1].tex + s->count[1].cubemap;
-	ret.ptr = nyas_frame_alloc(elements * sizeof(float));
+	ret.ptr = nyas_falloc(elements * sizeof(float));
 	memcpy(ret.ptr, s->common, elements * sizeof(float));
 	return ret;
 }
@@ -672,24 +679,6 @@ nyas__sync_shader(shad *s)
 	}
 }
 
-void
-nyas_draw_op_enable(struct nyas_draw_ops *ops, nyas_draw_flags op)
-{
-	ops->enable |= (1 << op);
-}
-
-void
-nyas_draw_op_disable(struct nyas_draw_ops *ops, nyas_draw_flags op)
-{
-	ops->disable |= (1 << op);
-}
-
-void *
-nyas_frame_alloc(ptrdiff_t size)
-{
-	return nyas_circalloc(pixmem, size);
-}
-
 static void
 nyas__fb_sync(nyas_framebuffer framebuffer)
 {
@@ -711,13 +700,10 @@ nyas__fb_sync(nyas_framebuffer framebuffer)
 }
 
 void
-nyas_frame_render(struct nyas_frame_ctx *frame)
+nyas_draw(struct nyas_draw *dl)
 {
-	for (int i = 0; i < nyas_arr_count(frame->draw_lists); ++i) {
-		struct nyas_render_state *rs = &frame->draw_lists[i].state;
-
-		// target
-		nyas_framebuffer framebuf = rs->target.fb;
+	{ // target
+		nyas_framebuffer framebuf = dl->state.target.fb;
 		if (framebuf != NYAS_NOOP) {
 			if (framebuf == NYAS_DEFAULT) {
 				nypx_fb_use(0);
@@ -726,9 +712,10 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 				nyas__fb_sync(framebuf);
 			}
 		}
+	}
 
-		// pipeline
-		nyas_mat mat = rs->pipeline.shader_mat;
+	{ // pipeline
+		nyas_mat mat = dl->state.pipeline.shader_mat;
 		if (mat.shader != NYAS_NOOP) {
 			nypx__check_handle(mat.shader, &shader_pool);
 			shad *s = &shader_pool.buf->at[mat.shader];
@@ -737,81 +724,81 @@ nyas_frame_render(struct nyas_frame_ctx *frame)
 			nyas__set_shader_data(s, mat.ptr, true);
 		}
 		// TODO: Mesh attrib
+	}
 
-		// ops
-		int enable = rs->ops.enable;
-		int disable = rs->ops.disable;
-
-		struct nyas_color bg = rs->target.bgcolor;
+	{ // ops
+		const struct nyas_draw_ops *ops = &dl->state.ops;
+		struct nyas_color bg = dl->state.target.bgcolor;
 		nypx_clear_color(bg.r, bg.g, bg.b, bg.a);
-		nypx_clear(enable & (1 << NYAS_DRAW_CLEAR_COLOR), enable & (1 << NYAS_DRAW_CLEAR_DEPTH),
-		           enable & (1 << NYAS_DRAW_CLEAR_STENCIL));
+		nypx_clear(
+		  ops->enable & (1 << NYAS_DRAW_CLEAR_COLOR), ops->enable & (1 << NYAS_DRAW_CLEAR_DEPTH),
+		  ops->enable & (1 << NYAS_DRAW_CLEAR_STENCIL));
 
-		nypx_viewport(rs->ops.viewport);
-		nypx_scissor(rs->ops.scissor);
+		nypx_viewport(ops->viewport);
+		nypx_scissor(ops->scissor);
 
-		if (disable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+		if (ops->disable & (1 << NYAS_DRAW_TEST_DEPTH)) {
 			nypx_depth_disable_test();
-		} else if (enable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_TEST_DEPTH)) {
 			nypx_depth_enable_test();
 		}
 
-		if (disable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+		if (ops->disable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
 			nypx_depth_disable_mask();
-		} else if (enable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
 			nypx_depth_enable_mask();
 		}
 
-		if (disable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+		if (ops->disable & (1 << NYAS_DRAW_TEST_STENCIL)) {
 			nypx_stencil_disable_test();
-		} else if (enable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_TEST_STENCIL)) {
 			nypx_stencil_enable_test();
 		}
 
-		if (disable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+		if (ops->disable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
 			nypx_stencil_disable_mask();
-		} else if (enable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
 			nypx_stencil_enable_mask();
 		}
 
-		if (disable & (1 << NYAS_DRAW_BLEND)) {
+		if (ops->disable & (1 << NYAS_DRAW_BLEND)) {
 			nypx_blend_disable();
-		} else if (enable & (1 << NYAS_DRAW_BLEND)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_BLEND)) {
 			nypx_blend_enable();
 		}
 
-		if (disable & (1 << NYAS_DRAW_CULL)) {
+		if (ops->disable & (1 << NYAS_DRAW_CULL)) {
 			nypx_cull_disable();
-		} else if (enable & (1 << NYAS_DRAW_CULL)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_CULL)) {
 			nypx_cull_enable();
 		}
 
-		if (disable & (1 << NYAS_DRAW_SCISSOR)) {
+		if (ops->disable & (1 << NYAS_DRAW_SCISSOR)) {
 			nypx_scissor_disable();
-		} else if (enable & (1 << NYAS_DRAW_SCISSOR)) {
+		} else if (ops->enable & (1 << NYAS_DRAW_SCISSOR)) {
 			nypx_scissor_enable();
 		}
 
-		nypx_depth_set(rs->ops.depth_fun);
-		nypx_blend_set(rs->ops.blend_src, rs->ops.blend_dst);
-		nypx_cull_set(rs->ops.cull_face);
+		nypx_depth_set(ops->depth_fun);
+		nypx_blend_set(ops->blend_src, ops->blend_dst);
+		nypx_cull_set(ops->cull_face);
+	}
 
-		// commands
-		for (int cmd = 0; cmd < nyas_arr_count(frame->draw_lists[i].cmds); ++cmd) {
-			nyas_mesh msh = frame->draw_lists[i].cmds[cmd].mesh;
-			nyas_mat mat = frame->draw_lists[i].cmds[cmd].material;
-			mesh *imsh = &mesh_pool.buf->at[msh];
-			nypx__check_handle(msh, &mesh_pool);
-			NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
+	// commands
+	for (int cmd = 0; cmd < dl->cmds->count; ++cmd) {
+		nyas_mesh msh = dl->cmds->at[cmd].mesh;
+		nyas_mat mat = dl->cmds->at[cmd].material;
+		mesh *imsh = &mesh_pool.buf->at[msh];
+		nypx__check_handle(msh, &mesh_pool);
+		NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
 
-			if (imsh->res.flags & NYAS_IRF_DIRTY) {
-				nyas__sync_gpu_mesh(msh, mat.shader);
-			}
-
-			shad *s = &shader_pool.buf->at[mat.shader];
-			nyas__set_shader_data(s, mat.ptr, false);
-			nypx_mesh_use(imsh, s);
-			nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
+		if (imsh->res.flags & NYAS_IRF_DIRTY) {
+			nyas__sync_gpu_mesh(msh, mat.shader);
 		}
+
+		shad *s = &shader_pool.buf->at[mat.shader];
+		nyas__set_shader_data(s, mat.ptr, false);
+		nypx_mesh_use(imsh, s);
+		nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
 	}
 }

@@ -204,6 +204,7 @@ nyas_io_init(const char *title, struct nyas_point window_size)
 	io.capture_mouse = true;
 	io.capture_keyboard = true;
 
+	nyas_io_poll();
 	return true;
 }
 

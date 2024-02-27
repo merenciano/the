@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #define NYAS_ASSERT(X) (assert(X))
 
@@ -16,27 +15,31 @@
 	T *nyarr_##T##_push(struct nyarr_##T **arr); \
 	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)
 
-#define NYAS_IMPL_ARR(T)                                                                       \
-	T *nyarr_##T##_push(struct nyarr_##T **arr)                                                \
-	{                                                                                          \
-		ptrdiff_t count = *arr ? (*arr)->count : 0;                                            \
-		if (!(count & (count + 1))) {                                                          \
-			void *new =                                                                        \
-			  realloc(*arr, sizeof(struct nyarr_##T) + (count + 1) * 2 * sizeof(*(*arr)->at)); \
-			if (!new) {                                                                        \
-				return NULL;                                                                   \
-			}                                                                                  \
-			*arr = new;                                                                        \
-		}                                                                                      \
-		(*arr)->count = count + 1;                                                             \
-		return &(*arr)->at[count];                                                             \
-	}                                                                                          \
-                                                                                               \
-	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)                               \
-	{                                                                                          \
-		*(nyarr_##T##_push(arr)) = value;                                                      \
-	}                                                                                          \
+#define NYAS_IMPL_ARR_MA(T, MALLOC)                                                      \
+	T *nyarr_##T##_push(struct nyarr_##T **arr)                                          \
+	{                                                                                    \
+		ptrdiff_t count = *arr ? (*arr)->count : 0;                                      \
+		if (!(count & (count + 1))) {                                                    \
+			struct nyarr_##T *mem = MALLOC(sizeof(**arr) + (count + 1) * 2 * sizeof(T)); \
+			if (!mem) {                                                                  \
+				return NULL;                                                             \
+			}                                                                            \
+			for (int i = 0; i < count; ++i) {                                            \
+				mem->at[i] = (*arr)->at[i];                                              \
+			}                                                                            \
+			*arr = mem;                                                                  \
+		}                                                                                \
+		(*arr)->count = count + 1;                                                       \
+		return &(*arr)->at[count];                                                       \
+	}                                                                                    \
+                                                                                         \
+	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)                         \
+	{                                                                                    \
+		*(nyarr_##T##_push(arr)) = value;                                                \
+	}                                                                                    \
 	int main(int argc, char **argv)
+
+#define NYAS_IMPL_ARR(TYPE) NYAS_IMPL_ARR_MA(TYPE, malloc)
 
 #define NYAS_DECL_POOL(TYPE)                             \
 	struct nypool_##TYPE {                               \
