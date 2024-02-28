@@ -138,13 +138,13 @@ nypx_tex_set(struct nyas_texture_internal *t)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(type, t->res.id);
 	struct gltfmt_result fmt = gltfmt(t->data.fmt);
-	for (int i = 0; i < nyas_arr_count(t->img); ++i) {
+	for (int i = 0; i < t->img->count; ++i) {
 		GLint target = (t->data.type == NYAS_TEX_2D) ?
 		  GL_TEXTURE_2D :
-		  GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img[i].face;
-		int w = t->data.width >> t->img[i].lod;
-		int h = t->data.height >> t->img[i].lod;
-		glTexImage2D(target, t->img[i].lod, fmt.ifmt, w, h, 0, fmt.fmt, fmt.type, t->img[i].pix);
+		  GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img->at[i].face;
+		int w = t->data.width >> t->img->at[i].lod;
+		int h = t->data.height >> t->img->at[i].lod;
+		glTexImage2D(target, t->img->at[i].lod, fmt.ifmt, w, h, 0, fmt.fmt, fmt.type, t->img->at[i].pix);
 	}
 
 	if (t->data.flags & NYAS_TEX_FLAG_GENERATE_MIPMAPS) {

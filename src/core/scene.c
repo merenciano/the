@@ -1,10 +1,14 @@
 #include "io.h"
 #include "scene.h"
 #include <mathc.h>
+#include <stdlib.h>
 
 #define VEC3_UP ((float[3]){ 0.0f, 1.0f, 0.0f })
 
-struct nyas_entity *entities;
+NYAS_IMPL_ARR(nyent);
+NYAS_IMPL_POOL(nyent);
+
+struct nypool_nyent entity_pool = {.buf = NULL, .next = 0, .count = 0};
 struct nyas_cam camera;
 
 static inline struct nyas_vec3

@@ -23,7 +23,11 @@ struct nyas_entity {
 	nyas_mat mat;
 };
 
-extern struct nyas_entity *entities;
+typedef struct nyas_entity nyent;
+NYAS_DECL_ARR(nyent);
+NYAS_DECL_POOL(nyent);
+
+extern struct nypool_nyent entity_pool;
 extern struct nyas_cam camera;
 
 void nyas_camera_init_default(struct nyas_cam *cam);

@@ -189,10 +189,10 @@ Init(void)
 
 	float position[3] = { -2.0f, 0.0f, 0.0f };
 
-	entities = nyas_arr_create(struct nyas_entity, 16);
 	// CelticGold
 	{
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -210,7 +210,8 @@ Init(void)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
@@ -230,7 +231,8 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.7f;
 		position[0] = 2.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -250,7 +252,8 @@ Init(void)
 		pbr.normal_map_intensity = 0.2f;
 		position[0] = -2.0f;
 		position[2] = -2.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -269,7 +272,8 @@ Init(void)
 		pbr.tiling_y = 4.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -288,7 +292,8 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 2.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -308,7 +313,8 @@ Init(void)
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = -2.0f;
 		position[2] = -4.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -327,7 +333,8 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -346,7 +353,8 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
 		position[0] = 2.0f;
-		struct nyas_entity *e = nyas_arr_push(entities);
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
 		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
@@ -392,11 +400,11 @@ BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
 	dl->state.ops.cull_face = NYAS_CULL_BACK;
 
-	for (int i = 0; i < nyas_arr_count(entities); ++i) {
+	for (int i = 0; i < entity_pool.count; ++i) {
 		struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
-		mat4_assign(entities[i].mat.ptr, entities[i].transform);
-		cmd->material = nyas_mat_copy(entities[i].mat);
-		cmd->mesh = entities[i].mesh;
+		mat4_assign(entity_pool.buf->at[i].mat.ptr, entity_pool.buf->at[i].transform);
+		cmd->material = nyas_mat_copy(entity_pool.buf->at[i].mat);
+		cmd->mesh = entity_pool.buf->at[i].mesh;
 	}
 
 	nyarr_nydraw_push_value(new_frame, nyut_draw_default());

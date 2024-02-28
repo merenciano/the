@@ -46,8 +46,8 @@ nuklear_draw(void)
 	if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
 	             NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 	               NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
-		for (int i = 0; i < nyas_arr_count(entities); ++i) {
-			struct nyas_entity *e = entities + i;
+		for (int i = 0; i < entity_pool.count; ++i) {
+			struct nyas_entity *e = entity_pool.buf->at + i;
 			// Mesh
 			nk_layout_row_dynamic(ctx, 30, 1);
 			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);

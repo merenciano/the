@@ -294,11 +294,11 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->img = NULL;
 
-	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 	size_t size = 1024 * 1024 * 3 * 2; // size * nchannels * sizeof(channel)
 	for (int i = 0; i < 6; ++i) {
-		struct nyas_texture_image *img = nyas_arr_push(t->img);
+		struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
 		img->lod = 0;
 		img->face = i;
 		img->pix = nyas_alloc(size);
@@ -319,10 +319,10 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->img = NULL;
 
-	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 	for (int i = 0; i < 6; ++i) {
-		struct nyas_texture_image *img = nyas_arr_push(t->img);
+		struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
 		img->lod = 0;
 		img->face = i;
 		img->pix = nyas_alloc(size);
@@ -343,12 +343,12 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->img = NULL;
 
 	size = 256 * 256 * 3 * 2;
-	t->img = nyas_arr_create(struct nyas_texture_image, 64);
 	for (int lod = 0; lod < 9; ++lod) {
 		for (int face = 0; face < 6; ++face) {
-			struct nyas_texture_image *img = nyas_arr_push(t->img);
+			struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
 			img->lod = lod;
 			img->face = face;
 			img->pix = nyas_alloc(size);
@@ -371,10 +371,10 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
 	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->img = NULL;
 
 	size = 512 * 512 * 2 * 2;
-	t->img = nyas_arr_create(struct nyas_texture_image, 1);
-	struct nyas_texture_image *img = nyas_arr_push(t->img);
+	struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
 
 	img->lod = 0;
 	img->pix = nyas_alloc(size);

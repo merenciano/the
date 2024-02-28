@@ -37,6 +37,8 @@ NYAS_IMPL_POOL(shad);
 NYAS_IMPL_ARR(fb);
 NYAS_IMPL_POOL(fb);
 
+NYAS_IMPL_ARR(nyteximg);
+
 NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc);
 
 static inline void
@@ -188,25 +190,24 @@ nyas_tex_load(nyas_tex texture, struct nyas_texture_desc *desc, const char *path
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data = *desc;
-	t->img = nyas_arr_create(struct nyas_texture_image, 6);
 
 	int fmt_ch = nyas__tex_channels(t->data.fmt);
 	stbi_set_flip_vertically_on_load(t->data.flags & NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD);
 
 	int channels = 0;
 	int face_count = nyas__tex_faces(t->data.type);
-	struct nyas_texture_image *img = nyas_arr_push(t->img, face_count);
 	for (int i = 0; i < face_count; ++i) {
+		struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
 		const char *p = nyas__face_img_path(path, i, face_count);
-		img[i].lod = 0;
-		img[i].face = i;
+		img->lod = 0;
+		img->face = i;
 		if (nyas__tex_is_float(t->data.fmt)) {
-			img[i].pix = stbi_loadf(p, &t->data.width, &t->data.height, &channels, fmt_ch);
+			img->pix = stbi_loadf(p, &t->data.width, &t->data.height, &channels, fmt_ch);
 		} else {
-			img[i].pix = stbi_load(p, &t->data.width, &t->data.height, &channels, fmt_ch);
+			img->pix = stbi_load(p, &t->data.width, &t->data.height, &channels, fmt_ch);
 		}
 
-		if (!img[i].pix) {
+		if (!img->pix) {
 			NYAS_LOG_ERR("The image '%s' couldn't be loaded", p);
 		}
 	}
@@ -221,12 +222,11 @@ nyas_tex_set(nyas_tex texture, struct nyas_texture_desc *desc)
 	t->data = *desc;
 	if (!t->img) {
 		int face_count = nyas__tex_faces(t->data.type);
-		t->img = nyas_arr_create(struct nyas_texture_image, face_count);
-		struct nyas_texture_image *img = nyas_arr_push(t->img, face_count);
 		for (int i = 0; i < face_count; ++i) {
-			img[i].lod = 0;
-			img[i].face = i;
-			img[i].pix = NULL;
+			struct nyas_texture_image *img = nyarr_nyteximg_push(&t->img);
+			img->lod = 0;
+			img->face = i;
+			img->pix = NULL;
 		}
 	}
 }

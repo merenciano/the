@@ -45,10 +45,13 @@ struct nyas_texture_image {
 	int lod;
 };
 
+typedef struct nyas_texture_image nyteximg;
+NYAS_DECL_ARR(nyteximg);
+
 struct nyas_texture_internal {
 	struct nyas_resource_internal res;
 	struct nyas_texture_desc data;
-	struct nyas_texture_image *img; // nyas_arr
+	struct nyarr_nyteximg *img;
 };
 
 struct nyas_shader_internal {
