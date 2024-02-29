@@ -5,9 +5,14 @@
 #include <mathc.h>
 #include <string.h>
 
+static void dummyfree(void *p)
+{
+	(void)p;
+}
+
 typedef struct nyas_draw nydraw;
 NYAS_DECL_ARR(nydraw);
-NYAS_IMPL_ARR_MA(nydraw, nyas_falloc);
+NYAS_IMPL_ARR_MA(nydraw, nyas_falloc, dummyfree);
 
 struct {
 	nyas_shader fullscreen_img;
@@ -140,7 +145,7 @@ Init(void)
 		nyut_assets_add_tex(ldr, &loadtexargs[i]);
 	}
 
-	nyut_assets_load(ldr, 8);
+	nyut_assets_load(ldr, 24);
 
 	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	common_pbr->sunlight[0] = 0.0f;

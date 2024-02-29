@@ -5,6 +5,16 @@
 #include "utils/array.h"
 #include <pthread.h>
 
+typedef struct nyas_job job;
+NYAS_DECL_ARR(job);
+NYAS_IMPL_ARR(job);
+NYAS_DECL_STACK(job);
+NYAS_IMPL_STACK(job);
+
+typedef pthread_t thread;
+NYAS_DECL_ARR(thread);
+NYAS_IMPL_ARR(thread);
+
 enum sched_states {
 	SCHED_UNINIT = 0,
 	SCHED_RUNNING,
@@ -14,8 +24,8 @@ enum sched_states {
 
 struct nysched {
 	struct nysched *next;
-	struct nyas_job *queue;
-	pthread_t *threads;
+	struct nystack_job queue;
+	struct nyarr_thread *threads;
 	pthread_mutex_t mtx;
 	pthread_cond_t cond;
 	int waiting;
@@ -33,7 +43,7 @@ nyas__worker(void *data)
 	while (1) {
 		++s->waiting;
 		pthread_mutex_lock(&s->mtx);
-		while (!nyas_arr_count(s->queue)) {
+		while (!(s->queue.tail)) {
 			pthread_cond_wait(&s->cond, &s->mtx);
 			if (s->state == SCHED_CLOSING) {
 				--s->waiting;
@@ -43,8 +53,7 @@ nyas__worker(void *data)
 		}
 
 		--s->waiting;
-		struct nyas_job job = *nyas_arr_last(s->queue);
-		nyas_arr_pop(s->queue);
+		struct nyas_job job = *(nystack_job_pop(&s->queue));
 		pthread_mutex_unlock(&s->mtx);
 		(*(job.job))(job.args);
 	}
@@ -54,7 +63,7 @@ exit_worker:
 }
 
 nysched *
-nyas_sched_create(int thread_count, int queue_capacity)
+nyas_sched_create(int thread_count)
 {
 	if (!initialized) {
 		pthread_mutex_init(&scheds_mtx, NULL);
@@ -63,15 +72,14 @@ nyas_sched_create(int thread_count, int queue_capacity)
 
 	nysched *s = NYAS_ALLOC(sizeof(struct nysched));
 	s->waiting = 0;
-	s->threads = nyas_arr_create(pthread_t, thread_count);
-	s->queue = nyas_arr_create(struct nyas_job, queue_capacity);
+	s->threads = NULL;
+	s->queue = (struct nystack_job){.buf = NULL, .tail = 0};
 
 	pthread_mutex_init(&s->mtx, NULL);
 	pthread_cond_init(&s->cond, NULL);
 
-	nyas_arr_push(s->threads, thread_count);
-	for (int i = 0; i < nyas_arr_count(s->threads); ++i) {
-		if (pthread_create(s->threads + i, NULL, nyas__worker, s)) {
+	for (int i = 0; i < thread_count; ++i) {
+		if (pthread_create(nyarr_thread_push(&s->threads), NULL, nyas__worker, s)) {
 			NYAS_LOG_ERR("Thread creation error.");
 			return NULL;
 		}
@@ -88,12 +96,12 @@ nyas_sched_create(int thread_count, int queue_capacity)
 void
 nyas_sched_do(nysched *s, struct nyas_job job)
 {
-	if (!nyas_arr_count(s->threads)) {
+	if (!s->threads->count) {
 		(*(job.job))(job.args);
 		return;
 	}
 	pthread_mutex_lock(&s->mtx);
-	struct nyas_job *next = nyas_arr_push(s->queue);
+	struct nyas_job *next = nystack_job_push(&s->queue);
 	*next = job;
 	pthread_cond_signal(&s->cond);
 	pthread_mutex_unlock(&s->mtx);
@@ -102,11 +110,11 @@ nyas_sched_do(nysched *s, struct nyas_job job)
 void
 nyas_sched_wait(nysched *s)
 {
-	if (!nyas_arr_count(s->threads)) {
+	if (!s || !s->threads || !s->threads->count) {
 		return;
 	}
 
-	while (nyas_arr_count(s->queue) || s->waiting != nyas_arr_count(s->threads)) {
+	while (s->queue.tail || s->waiting != s->threads->count) {
 		pthread_cond_broadcast(&s->cond);
 		nanosleep((const struct timespec[]){ { 0, 50000000L } }, NULL);
 	}
@@ -119,11 +127,14 @@ nyas_sched_destroy(nysched *s)
 	s->state = SCHED_CLOSING;
 	pthread_cond_broadcast(&s->cond);
 	pthread_mutex_unlock(&s->mtx);
-	for (int i = 0; i < nyas_arr_count(s->threads); ++i) {
-		pthread_join(s->threads[i], NULL);
+	for (int i = 0; i < s->threads->count; ++i) {
+		pthread_join(s->threads->at[i], NULL);
 	}
-	nyas_arr_release(s->threads);
-	nyas_arr_release(s->queue);
+
+	nyarr_thread_release(s->threads);
+	nyarr_job_release(s->queue.buf);
+	s->threads = NULL;
+	s->queue = (struct nystack_job){.buf = NULL, .tail = 0};
 	pthread_mutex_lock(&s->mtx);
 	pthread_mutex_unlock(&s->mtx);
 	pthread_mutex_destroy(&s->mtx);

@@ -39,7 +39,13 @@ NYAS_IMPL_POOL(fb);
 
 NYAS_IMPL_ARR(nyteximg);
 
-NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc);
+static void
+dummyfree(void *p)
+{
+	(void)p;
+}
+
+NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc, dummyfree);
 
 static inline void
 nypx__check_handle(int h, void *arr)
@@ -56,7 +62,8 @@ struct nypool_fb framebuffer_pool = { .buf = NULL, .count = 0, .next = 0 };
 
 static struct nyas_mem *circbuf = NULL;
 
-void nyas_falloc_set_buffer(void *buffer, ptrdiff_t size)
+void
+nyas_falloc_set_buffer(void *buffer, ptrdiff_t size)
 {
 	NYAS_ASSERT(buffer && size > 0);
 	circbuf = buffer;
@@ -64,7 +71,8 @@ void nyas_falloc_set_buffer(void *buffer, ptrdiff_t size)
 	circbuf->tail = 0;
 }
 
-void *nyas_falloc(ptrdiff_t size)
+void *
+nyas_falloc(ptrdiff_t size)
 {
 	NYAS_ASSERT(size > 0);
 	return nyas_circalloc(circbuf, size);

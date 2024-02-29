@@ -14,7 +14,6 @@ nyas_mesh NYAS_UTILS_QUAD;
 
 typedef struct nyas_job job;
 NYAS_DECL_ARR(job);
-NYAS_IMPL_ARR(job);
 
 struct nyut_asset_loader {
 	struct nyarr_job *seq;
@@ -107,7 +106,7 @@ nyut_assets_load(struct nyut_asset_loader *l, int threads)
 {
 	nysched *load_sched = NULL;
 	if (l->async) {
-		load_sched = nyas_sched_create(threads, l->async->count);
+		load_sched = nyas_sched_create(threads);
 		for (int i = 0; i < l->async->count; ++i) {
 			nyas_sched_do(load_sched, l->async->at[i]);
 		}

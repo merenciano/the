@@ -13,9 +13,9 @@
 		T at[];                                  \
 	};                                           \
 	T *nyarr_##T##_push(struct nyarr_##T **arr); \
-	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)
-
-#define NYAS_IMPL_ARR_MA(T, MALLOC)                                                      \
+	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value); \
+	void nyarr_##T##_release(void *arr)
+#define NYAS_IMPL_ARR_MA(T, MALLOC, FREE)                                                \
 	T *nyarr_##T##_push(struct nyarr_##T **arr)                                          \
 	{                                                                                    \
 		ptrdiff_t count = *arr ? (*arr)->count : 0;                                      \
@@ -36,10 +36,15 @@
 	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)                         \
 	{                                                                                    \
 		*(nyarr_##T##_push(arr)) = value;                                                \
-	}                                                                                    \
+	}                                                                                       \
+                                                                                         \
+	void nyarr_##T##_release(void *arr)                                                     \
+	{                                                   \
+		FREE(arr);\
+	}\
 	int main(int argc, char **argv)
 
-#define NYAS_IMPL_ARR(TYPE) NYAS_IMPL_ARR_MA(TYPE, malloc)
+#define NYAS_IMPL_ARR(TYPE) NYAS_IMPL_ARR_MA(TYPE, malloc, free)
 
 #define NYAS_DECL_POOL(TYPE)                             \
 	struct nypool_##TYPE {                               \
@@ -83,6 +88,39 @@
 			pool->count--;                                     \
 		}                                                      \
 	}                                                          \
+	int main(int argc, char **argv)
+
+#define NYAS_DECL_STACK(TYPE)                                  \
+	struct nystack_##TYPE {                                    \
+		struct nyarr_##TYPE *buf;                              \
+		ptrdiff_t tail;                                        \
+	};                                                         \
+                                                               \
+	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack); \
+	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack);
+
+#define NYAS_IMPL_STACK(TYPE)                                   \
+	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack)   \
+	{                                                           \
+		if (!stack) {                                           \
+			return NULL;                                        \
+		}                                                       \
+                                                                \
+		int cap = stack->buf ? stack->buf->count : 0;           \
+		if (stack->tail == cap) {                               \
+			nyarr_##TYPE##_push(&stack->buf);                   \
+		}                                                       \
+		stack->tail++;                                          \
+		return &stack->buf->at[stack->tail - 1];                \
+	}                                                           \
+                                                                \
+	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack)    \
+	{                                                           \
+		if (!stack || !(stack->tail) || !(stack->buf->count)) { \
+			return NULL;                                        \
+		}                                                       \
+		return &stack->buf->at[--(stack->tail)];                \
+	}                                                           \
 	int main(int argc, char **argv)
 
 enum nyas_defs {
