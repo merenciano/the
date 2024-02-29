@@ -3,7 +3,6 @@
 #include "core/io.h"
 #include "core/mem.h"
 #include "render/pixels_internal.h"
-#include "utils/array.h"
 
 #include <mathc.h>
 

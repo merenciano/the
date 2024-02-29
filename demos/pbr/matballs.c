@@ -4,6 +4,7 @@
 #include "pbr.h"
 #include <mathc.h>
 #include <string.h>
+#include <stdlib.h>
 
 static void dummyfree(void *p)
 {

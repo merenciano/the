@@ -3,10 +3,10 @@
 #include "core/io.h"
 #include "core/mem.h"
 #include "render/pixels_internal.h"
-#include "utils/array.h"
 
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 nyas_mesh NYAS_UTILS_SPHERE;
 nyas_mesh NYAS_UTILS_CUBE;

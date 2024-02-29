@@ -2,7 +2,7 @@
 #include "core/io.h"
 #include "core/mem.h"
 #include "sched.h"
-#include "utils/array.h"
+#include <stdlib.h>
 #include <pthread.h>
 
 typedef struct nyas_job job;

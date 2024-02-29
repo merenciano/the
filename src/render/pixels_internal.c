@@ -2,7 +2,6 @@
 
 #include "core/io.h"
 #include "core/mem.h" // free --shader source buffer
-#include "utils/array.h"
 
 #include <string.h> // shader path manipulation
 #include <glad/glad.h>

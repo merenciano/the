@@ -5,7 +5,6 @@
 #include "core/scene.h"
 #include "core/utils.h"
 #include "render/pixels_internal.h"
-#include "utils/array.h"
 
 #include <glad/glad.h>
 
