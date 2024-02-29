@@ -22,7 +22,7 @@ typedef nyas_resource_handle nyas_framebuffer;
 typedef nyas_resource_handle nyas_shader;
 
 typedef int nyas_vertex_attrib;
-enum nyas_vertex_attrib {
+enum NYAS_VA_ {
 	NYAS_VA_POS = 0,
 	NYAS_VA_NORMAL,
 	NYAS_VA_TAN,
@@ -32,7 +32,7 @@ enum nyas_vertex_attrib {
 };
 
 typedef int nyas_blend_func;
-enum nyas_blend_func {
+enum NYAS_BLEND_ {
 	NYAS_BLEND_CURRENT = 0,
 	NYAS_BLEND_ONE,
 	NYAS_BLEND_SRC_ALPHA,
@@ -41,7 +41,7 @@ enum nyas_blend_func {
 };
 
 typedef int nyas_cull_face;
-enum nyas_cull_face {
+enum NYAS_CULL_ {
 	NYAS_CULL_CURRENT = 0,
 	NYAS_CULL_FRONT,
 	NYAS_CULL_BACK,
@@ -49,7 +49,7 @@ enum nyas_cull_face {
 };
 
 typedef int nyas_depth_func;
-enum nyas_depth_func {
+enum NYAS_DEPTH_ {
 	// TODO: Add as needed.
 	NYAS_DEPTH_CURRENT = 0,
 	NYAS_DEPTH_LEQUAL,
@@ -57,7 +57,7 @@ enum nyas_depth_func {
 };
 
 typedef int nyas_texture_face;
-enum nyas_texture_face {
+enum NYAS_FACE_ {
 	NYAS_FACE_POS_X = 0,
 	NYAS_FACE_NEG_X,
 	NYAS_FACE_POS_Y,
@@ -69,7 +69,7 @@ enum nyas_texture_face {
 };
 
 typedef int nyas_framebuffer_attach;
-enum nyas_framebuffer_attach {
+enum NYAS_ATTACH_ {
 	NYAS_ATTACH_DEPTH_STENCIL = -3,
 	NYAS_ATTACH_STENCIL = -2,
 	NYAS_ATTACH_DEPTH = -1,
@@ -83,7 +83,7 @@ enum nyas_framebuffer_attach {
 };
 
 typedef int nyas_texture_flags;
-enum nyas_texture_flags {
+enum NYAS_TEX_FLAG_ {
 	NYAS_TEX_FLAG_DEFAULT = 0,
 	NYAS_TEX_FLAG_GENERATE_MIPMAPS = 1,
 	NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD = 1 << 1,
@@ -91,7 +91,7 @@ enum nyas_texture_flags {
 };
 
 typedef int nyas_texture_type;
-enum nyas_texture_type {
+enum NYAS_TEX_ {
 	NYAS_TEX_DEFAULT = 0,
 	NYAS_TEX_2D,
 	NYAS_TEX_ARRAY_2D,
@@ -101,7 +101,7 @@ enum nyas_texture_type {
 };
 
 typedef int nyas_texture_format; // enum nyas_texture_formats
-enum nyas_texture_format {
+enum NYAS_TEX_FMT_ {
 	NYAS_TEX_FMT_DEFAULT = 0,
 	NYAS_TEX_FMT_DEPTH,
 	NYAS_TEX_FMT_STENCIL,
@@ -121,7 +121,7 @@ enum nyas_texture_format {
 };
 
 typedef int nyas_texture_filter; // enum nyas_texture_filters
-enum nyas_texture_filter {
+enum NYAS_TEX_FLTR_ {
 	NYAS_TEX_FLTR_DEFAULT = 0,
 	NYAS_TEX_FLTR_LINEAR,
 	NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR,
@@ -133,7 +133,7 @@ enum nyas_texture_filter {
 };
 
 typedef int nyas_texture_wrap;
-enum nyas_texture_wrap {
+enum NYAS_TEX_WRAP_ {
 	NYAS_TEX_WRAP_DEFAULT = 0,
 	NYAS_TEX_WRAP_CLAMP,
 	NYAS_TEX_WRAP_REPEAT,
@@ -179,7 +179,7 @@ typedef struct nyas_mat {
 } nyas_mat;
 
 typedef int nyas_draw_flags;
-enum nyas_draw_flags {
+enum NYAS_DRAW_ {
 	NYAS_DRAW_CLEAR_COLOR,
 	NYAS_DRAW_CLEAR_DEPTH,
 	NYAS_DRAW_CLEAR_STENCIL,

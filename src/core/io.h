@@ -40,7 +40,7 @@ typedef int64_t nyas_chrono;
 nyas_chrono nyas_time(void);
 
 typedef int8_t nyas_keystate;
-enum nyas_keystate {
+enum NYAS_KEYSTATE {
 	NYAS_KEYSTATE_RELEASED = 0, /* Not pressed */
 	NYAS_KEYSTATE_DOWN = 1, /* From released to pressed this frame */
 	NYAS_KEYSTATE_UP = 2, /* From pressed to released this frame */
@@ -48,14 +48,14 @@ enum nyas_keystate {
 };
 
 typedef int nyas_mouse_button;
-enum nyas_mouse_button {
+enum NYAS_MOUSE_BUTTON {
 	NYAS_MOUSE_LEFT = 0,
 	NYAS_MOUSE_RIGHT = 1,
 	NYAS_MOUSE_MIDDLE = 2,
 };
 
 typedef int nyas_key;
-enum nyas_key {
+enum NYAS_KEY {
 	NYAS_KEY_INVALID = 0,
 	NYAS_KEY_SPACE = 32,
 	NYAS_KEY_APOSTROPHE = 39, /* ' */

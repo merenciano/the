@@ -49,9 +49,8 @@ NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc, dummyfree);
 static inline void
 nypx__check_handle(int h, void *arr)
 {
-	(void)h;
-	struct nypool_tex *pool = arr;
-	NYAS_ASSERT(arr && h >= 0 && pool->buf->count > h && "Invalid handle range.");
+	(void)h, (void)arr;
+	NYAS_ASSERT(arr && h >= 0 && ((struct nypool_tex*)arr)->buf->count > h && "Invalid handle range.");
 }
 
 struct nypool_mesh mesh_pool = { .buf = NULL, .count = 0, .next = 0 };

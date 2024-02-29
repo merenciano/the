@@ -155,21 +155,23 @@ struct nyas_vec3 {
 	float x, y, z;
 };
 
+struct nyas_vec4 {
+	float x, y, z, w;
+};
+
+struct nyas_color {
+	float r, g, b, a;
+};
+
 union nyas4f {
-	struct nyas_vec4 {
-		float x, y, z, w;
-	} p;
-
-	struct nyas_color {
-		float r, g, b, a;
-	} c;
-
+	struct nyas_vec4 p;
+	struct nyas_color c;
 	float v[4];
 };
 
 typedef float nyas_mat4[16];
 
-union nyas_mat4 {
+union nyas16f {
 	struct nyas_vec4 r[4];
 	struct nyas_4x4 {
 		struct nyas_vec4 x;
