@@ -153,8 +153,8 @@ Load(const char *path, obj_t *obj)
 			float dp1[3], dp2[3], duv1[2], duv2[2];
 			v3sub(dp1, v2, v1);
 			v3sub(dp2, v3, v1);
-			v2sub(duv1, &v2[12], v1);
-			v2sub(duv2, &v3[12], v1);
+			v2sub(duv1, &v2[12], &v1[12]);
+			v2sub(duv2, &v3[12], &v1[12]);
 			float r = 1.0f / (duv1[0] * duv2[1] - duv1[1] * duv2[0]);
 
 			float tn[3], bitn[3], tmp[3];

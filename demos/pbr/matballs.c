@@ -1,73 +1,40 @@
+#include "core/utils.h"
+#include "gui.h"
 #include "nyas.h"
 #include "pbr.h"
-#include "pbr_types.h"
-#include "gui.h"
 #include <mathc.h>
 #include <string.h>
+#include <stdlib.h>
 
-struct Shaders {
+static void dummyfree(void *p)
+{
+	(void)p;
+}
+
+typedef struct nyas_draw nydraw;
+NYAS_DECL_ARR(nydraw);
+NYAS_IMPL_ARR_MA(nydraw, nyas_falloc, dummyfree);
+
+struct {
 	nyas_shader fullscreen_img;
 	nyas_shader skybox;
-	nyas_shader eqr_to_cube;
-	nyas_shader prefilter_env;
-	nyas_shader lut_gen;
 	nyas_shader pbr;
-};
+} g_shaders;
 
-struct Textures {
+struct {
 	nyas_tex sky;
-	nyas_tex lut;
-	nyas_tex prefilter;
-	nyas_tex irradiance;
 
-	nyas_tex rusted_a;
-	nyas_tex rusted_n;
-	nyas_tex rusted_r;
-	nyas_tex rusted_m;
+	struct pbr_maps gold;
+	struct pbr_maps peeled;
+	struct pbr_maps rusted;
+	struct pbr_maps tiles;
+	struct pbr_maps plastic;
+	struct pbr_maps shore;
+	struct pbr_maps cliff;
+	struct pbr_maps granite;
+	struct pbr_maps foam;
+} g_tex;
 
-	nyas_tex cliff_a;
-	nyas_tex cliff_n;
-	nyas_tex cliff_r;
-	nyas_tex cliff_m;
-
-	nyas_tex peeled_a;
-	nyas_tex peeled_n;
-	nyas_tex peeled_r;
-	nyas_tex peeled_m;
-
-	nyas_tex plastic_a;
-	nyas_tex plastic_n;
-	nyas_tex plastic_r;
-	nyas_tex plastic_m;
-
-	nyas_tex tiles_a;
-	nyas_tex tiles_n;
-	nyas_tex tiles_r;
-	nyas_tex tiles_m;
-
-	nyas_tex gold_a;
-	nyas_tex gold_n;
-	nyas_tex gold_r;
-	nyas_tex gold_m;
-
-	nyas_tex shore_a;
-	nyas_tex shore_n;
-	nyas_tex shore_r;
-	nyas_tex shore_m;
-
-	nyas_tex granite_a;
-	nyas_tex granite_n;
-	nyas_tex granite_r;
-	nyas_tex granite_m;
-
-	nyas_tex foam_a;
-	nyas_tex foam_n;
-	nyas_tex foam_r;
-	nyas_tex foam_m;
-};
-
-struct Shaders g_shaders;
-struct Textures g_tex;
 nyas_framebuffer g_fb;
 nyas_tex fb_tex;
 nyas_mesh g_mesh;
@@ -75,72 +42,145 @@ nyas_mesh g_mesh;
 void
 Init(void)
 {
+	nyut_mesh_init_geometry();
+	nyas_tex irradiance;
+	nyas_tex prefilter;
+	nyas_tex lut;
+
+	// TODO: create repe, porque peta sino?
+	g_shaders.fullscreen_img = nyas_shader_create(&g_shader_descriptors.fullscreen_img);
+	g_shaders.skybox = nyas_shader_create(&g_shader_descriptors.sky);
+	g_shaders.pbr = nyas_shader_create(&g_shader_descriptors.pbr);
+
+	struct nyut_shad_ldargs fsimgargs = {
+		.desc = g_shader_descriptors.fullscreen_img,
+		.shader = &g_shaders.fullscreen_img
+	};
+
+	struct nyut_shad_ldargs skyargs = {
+		.desc = g_shader_descriptors.fullscreen_img,
+		.shader = &g_shaders.fullscreen_img
+	};
+
+	struct nyut_shad_ldargs pbrargs = {
+		.desc = g_shader_descriptors.fullscreen_img,
+		.shader = &g_shaders.fullscreen_img
+	};
+
+	struct nyut_mesh_ldargs mesh = {
+		.path = "assets/obj/matball.msh",
+		.mesh = &g_mesh
+	};
+
+	struct nyut_env_ldargs envargs = {
+		.path = "assets/env/canyon.env",
+		.sky = &g_tex.sky,
+		.irr = &irradiance,
+		.pref = &prefilter,
+		.lut = &lut
+	};
+
+	nyut_assetldr *ldr = nyut_assets_create();
+	nyut_assets_add_shader(ldr, &fsimgargs);
+	nyut_assets_add_shader(ldr, &skyargs);
+	nyut_assets_add_shader(ldr, &pbrargs);
+	nyut_assets_add_mesh(ldr, &mesh);
+	nyut_assets_add_env(ldr, &envargs);
+
+	struct nyas_texture_desc texdesc[] = {
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0)
+	};
+
+	const char *texpaths[] = {
+		"assets/tex/celtic-gold/celtic-gold_A.png",
+		"assets/tex/celtic-gold/celtic-gold_N.png",
+		"assets/tex/celtic-gold/celtic-gold_R.png",
+		"assets/tex/celtic-gold/celtic-gold_M.png",
+		"assets/tex/peeling/peeling_A.png",
+		"assets/tex/peeling/peeling_N.png",
+		"assets/tex/peeling/peeling_R.png",
+		"assets/tex/peeling/peeling_M.png",
+		"assets/tex/rusted/rusted_A.png",
+		"assets/tex/rusted/rusted_N.png",
+		"assets/tex/rusted/rusted_R.png",
+		"assets/tex/rusted/rusted_M.png",
+		"assets/tex/tiles/tiles_A.png",
+		"assets/tex/tiles/tiles_N.png",
+		"assets/tex/tiles/tiles_R.png",
+		"assets/tex/tiles/tiles_M.png",
+		"assets/tex/ship-panels/ship-panels_A.png",
+		"assets/tex/ship-panels/ship-panels_N.png",
+		"assets/tex/ship-panels/ship-panels_R.png",
+		"assets/tex/ship-panels/ship-panels_M.png",
+		"assets/tex/shore/shore_A.png",
+		"assets/tex/shore/shore_N.png",
+		"assets/tex/shore/shore_R.png",
+		"assets/tex/shore/shore_M.png",
+		"assets/tex/cliff/cliff_A.png",
+		"assets/tex/cliff/cliff_N.png",
+		"assets/tex/cliff/cliff_R.png",
+		"assets/tex/cliff/cliff_M.png",
+		"assets/tex/granite/granite_A.png",
+		"assets/tex/granite/granite_N.png",
+		"assets/tex/granite/granite_R.png",
+		"assets/tex/granite/granite_M.png",
+		"assets/tex/foam/foam_A.png",
+		"assets/tex/foam/foam_N.png",
+		"assets/tex/foam/foam_R.png",
+		"assets/tex/foam/foam_M.png"
+	};
+
+	struct nyut_tex_ldargs loadtexargs[9 * 4];
+	nyas_tex *tex_begin = &g_tex.gold.a;
+	for (int i = 0; i < 9 * 4; ++i) {
+		*tex_begin = nyas_tex_create();
+		loadtexargs[i].tex = *tex_begin++;
+		loadtexargs[i].desc = texdesc[i & 3];
+		loadtexargs[i].path = texpaths[i];
+	}
+
+	for (int i = 0; i < 9 * 4; ++i) {
+		nyut_assets_add_tex(ldr, &loadtexargs[i]);
+	}
+
+	nyut_assets_load(ldr, 24);
+
+	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
+	common_pbr->sunlight[0] = 0.0f;
+	common_pbr->sunlight[1] = -1.0f;
+	common_pbr->sunlight[2] = -0.1f;
+	common_pbr->sunlight[3] = 0.0f;
+
+	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
+	pbr_scene_tex[0] = lut;
+	pbr_scene_tex[1] = irradiance;
+	pbr_scene_tex[2] = prefilter;
+
 	g_fb = nyas_fb_create();
+	struct nyas_point *vp = &nyas_io->window_size;
+	struct nyas_texture_desc descriptor =
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
+	fb_tex = nyas_tex_create();
+	nyas_tex_set(fb_tex, &descriptor);
+	struct nyas_texture_target color = {
+		.tex = fb_tex, .attach = NYAS_ATTACH_COLOR, .face = NYAS_FACE_2D, .lod_level = 0
+	};
 
-	g_shaders.fullscreen_img = nyas_shader_create(g_shader_descriptors.fullscreen_img);
-	g_shaders.skybox = nyas_shader_create(g_shader_descriptors.sky);
-	g_shaders.eqr_to_cube = nyas_shader_create(g_shader_descriptors.cubemap_from_equirect);
-	g_shaders.prefilter_env = nyas_shader_create(g_shader_descriptors.prefilter);
-	g_shaders.lut_gen = nyas_shader_create(g_shader_descriptors.lut);
-	g_shaders.pbr = nyas_shader_create(g_shader_descriptors.pbr);
+	struct nyas_texture_desc depthscriptor =
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
+	nyas_tex fb_depth = nyas_tex_create();
+	nyas_tex_set(fb_depth, &depthscriptor);
+	struct nyas_texture_target depth = {
+		.tex = fb_depth, .attach = NYAS_ATTACH_DEPTH, .face = NYAS_FACE_2D, .lod_level = 0
+	};
 
-	g_mesh = nyas_mesh_load_file("assets/obj/matball.obj");
-	g_tex.sky = nyas_tex_empty(1024, 1024, g_tex_flags.sky);
-	g_tex.irradiance = nyas_tex_empty(1024, 1024, g_tex_flags.irr);
-	g_tex.prefilter = nyas_tex_empty(256, 256, g_tex_flags.prefilter);
-	g_tex.lut = nyas_tex_empty(512, 512, g_tex_flags.lut);
+	nyas_fb_set_target(g_fb, 0, color);
+	nyas_fb_set_target(g_fb, 1, depth);
 
-	g_tex.gold_a = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_A.png", 1, g_tex_flags.albedo);
-	g_tex.gold_n = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_N.png", 1, g_tex_flags.normal);
-	g_tex.gold_r = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.gold_m = nyas_tex_load("assets/tex/celtic-gold/celtic-gold_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.peeled_a = nyas_tex_load("assets/tex/peeling/peeling_A.png", 1, g_tex_flags.albedo);
-	g_tex.peeled_n = nyas_tex_load("assets/tex/peeling/peeling_N.png", 1, g_tex_flags.normal);
-	g_tex.peeled_r = nyas_tex_load("assets/tex/peeling/peeling_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.peeled_m = nyas_tex_load("assets/tex/peeling/peeling_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.rusted_a = nyas_tex_load("assets/tex/rusted/rusted_A.png", 1, g_tex_flags.albedo);
-	g_tex.rusted_n = nyas_tex_load("assets/tex/rusted/rusted_N.png", 1, g_tex_flags.normal);
-	g_tex.rusted_r = nyas_tex_load("assets/tex/rusted/rusted_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.rusted_m = nyas_tex_load("assets/tex/rusted/rusted_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.tiles_a = nyas_tex_load("assets/tex/tiles/tiles_A.png", 1, g_tex_flags.albedo);
-	g_tex.tiles_n = nyas_tex_load("assets/tex/tiles/tiles_N.png", 1, g_tex_flags.normal);
-	g_tex.tiles_r = nyas_tex_load("assets/tex/tiles/tiles_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.tiles_m = nyas_tex_load("assets/tex/tiles/tiles_M.png", 1, g_tex_flags.pbr_map);
-	
-	g_tex.plastic_a = nyas_tex_load("assets/tex/ship-panels/ship-panels_A.png", 1, g_tex_flags.albedo);
-	g_tex.plastic_n = nyas_tex_load("assets/tex/ship-panels/ship-panels_N.png", 1, g_tex_flags.normal);
-	g_tex.plastic_r = nyas_tex_load("assets/tex/ship-panels/ship-panels_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.plastic_m = nyas_tex_load("assets/tex/ship-panels/ship-panels_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.shore_a = nyas_tex_load("assets/tex/shore/shore_A.png", 1, g_tex_flags.albedo);
-	g_tex.shore_n = nyas_tex_load("assets/tex/shore/shore_N.png", 1, g_tex_flags.normal);
-	g_tex.shore_r = nyas_tex_load("assets/tex/shore/shore_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.shore_m = nyas_tex_load("assets/tex/shore/shore_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.cliff_a = nyas_tex_load("assets/tex/cliff/cliff_A.png", 1, g_tex_flags.albedo);
-	g_tex.cliff_n = nyas_tex_load("assets/tex/cliff/cliff_N.png", 1, g_tex_flags.normal);
-	g_tex.cliff_r = nyas_tex_load("assets/tex/cliff/cliff_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.cliff_m = nyas_tex_load("assets/tex/cliff/cliff_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.granite_a = nyas_tex_load("assets/tex/granite/granite_A.png", 1, g_tex_flags.albedo);
-	g_tex.granite_n = nyas_tex_load("assets/tex/granite/granite_N.png", 1, g_tex_flags.normal);
-	g_tex.granite_r = nyas_tex_load("assets/tex/granite/granite_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.granite_m = nyas_tex_load("assets/tex/granite/granite_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.granite_a = nyas_tex_load("assets/tex/granite/granite_A.png", 1, g_tex_flags.albedo);
-	g_tex.granite_n = nyas_tex_load("assets/tex/granite/granite_N.png", 1, g_tex_flags.normal);
-	g_tex.granite_r = nyas_tex_load("assets/tex/granite/granite_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.granite_m = nyas_tex_load("assets/tex/granite/granite_M.png", 1, g_tex_flags.pbr_map);
-
-	g_tex.foam_a = nyas_tex_load("assets/tex/foam/foam_A.png", 1, g_tex_flags.albedo);
-	g_tex.foam_n = nyas_tex_load("assets/tex/foam/foam_N.png", 1, g_tex_flags.normal);
-	g_tex.foam_r = nyas_tex_load("assets/tex/foam/foam_R.png", 1, g_tex_flags.pbr_map);
-	g_tex.foam_m = nyas_tex_load("assets/tex/foam/foam_M.png", 1, g_tex_flags.pbr_map);
-
-	struct nyas_pbr_desc_unit pbr;
+	struct pbr_desc_unit pbr;
 	pbr.color[0] = 1.0f;
 	pbr.color[1] = 1.0f;
 	pbr.color[2] = 1.0f;
@@ -157,16 +197,18 @@ Init(void)
 
 	// CelticGold
 	{
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.gold_a;
-		t[1] = g_tex.gold_m;
-		t[2] = g_tex.gold_r;
-		t[3] = g_tex.gold_n;
+		t[0] = g_tex.gold.a;
+		t[1] = g_tex.gold.m;
+		t[2] = g_tex.gold.r;
+		t[3] = g_tex.gold.n;
 	}
 
 	// Shore
@@ -174,17 +216,19 @@ Init(void)
 		pbr.tiling_x = 2.0f;
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		position[0] = 0.0f;
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.shore_a;
-		t[1] = g_tex.shore_m;
-		t[2] = g_tex.shore_r;
-		t[3] = g_tex.shore_n;
+		t[0] = g_tex.shore.a;
+		t[1] = g_tex.shore.m;
+		t[2] = g_tex.shore.r;
+		t[3] = g_tex.shore.n;
 	}
 
 	// Peeling
@@ -193,16 +237,18 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 0.7f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.peeled_a;
-		t[1] = g_tex.peeled_m;
-		t[2] = g_tex.peeled_r;
-		t[3] = g_tex.peeled_n;
+		t[0] = g_tex.peeled.a;
+		t[1] = g_tex.peeled.m;
+		t[2] = g_tex.peeled.r;
+		t[3] = g_tex.peeled.n;
 	}
 
 	// Rusted
@@ -212,16 +258,18 @@ Init(void)
 		pbr.normal_map_intensity = 0.2f;
 		position[0] = -2.0f;
 		position[2] = -2.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.rusted_a;
-		t[1] = g_tex.rusted_m;
-		t[2] = g_tex.rusted_r;
-		t[3] = g_tex.rusted_n;
+		t[0] = g_tex.rusted.a;
+		t[1] = g_tex.rusted.m;
+		t[2] = g_tex.rusted.r;
+		t[3] = g_tex.rusted.n;
 	}
 
 	// Tiles
@@ -230,16 +278,18 @@ Init(void)
 		pbr.tiling_y = 4.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.tiles_a;
-		t[1] = g_tex.tiles_m;
-		t[2] = g_tex.tiles_r;
-		t[3] = g_tex.tiles_n;
+		t[0] = g_tex.tiles.a;
+		t[1] = g_tex.tiles.m;
+		t[2] = g_tex.tiles.r;
+		t[3] = g_tex.tiles.n;
 	}
 
 	// Ship Panels
@@ -248,16 +298,18 @@ Init(void)
 		pbr.tiling_y = 1.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.plastic_a;
-		t[1] = g_tex.plastic_m;
-		t[2] = g_tex.plastic_r;
-		t[3] = g_tex.plastic_n;
+		t[0] = g_tex.plastic.a;
+		t[1] = g_tex.plastic.m;
+		t[2] = g_tex.plastic.r;
+		t[3] = g_tex.plastic.n;
 	}
 
 	// Cliff
@@ -267,16 +319,18 @@ Init(void)
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = -2.0f;
 		position[2] = -4.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.cliff_a;
-		t[1] = g_tex.cliff_m;
-		t[2] = g_tex.cliff_r;
-		t[3] = g_tex.cliff_n;
+		t[0] = g_tex.cliff.a;
+		t[1] = g_tex.cliff.m;
+		t[2] = g_tex.cliff.r;
+		t[3] = g_tex.cliff.n;
 	}
 
 	// Granite
@@ -285,16 +339,18 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 1.0f;
 		position[0] = 0.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.granite_a;
-		t[1] = g_tex.granite_m;
-		t[2] = g_tex.granite_r;
-		t[3] = g_tex.granite_n;
+		t[0] = g_tex.granite.a;
+		t[1] = g_tex.granite.m;
+		t[2] = g_tex.granite.r;
+		t[3] = g_tex.granite.n;
 	}
 
 	// Foam
@@ -303,184 +359,111 @@ Init(void)
 		pbr.tiling_y = 2.0f;
 		pbr.normal_map_intensity = 0.5f;
 		position[0] = 2.0f;
-		nyas_entity *e = nyas_entity_create();
+		int eidx = nypool_nyent_add(&entity_pool);
+		struct nyas_entity *e = &entity_pool.buf->at[eidx];
+		mat4_identity(e->transform);
 		mat4_translation(e->transform, e->transform, position);
 		e->mesh = g_mesh;
-		e->mat = nyas_mat_pers(g_shaders.pbr);
-		*(nyas_pbr_desc_unit *)e->mat.ptr = pbr;
+		e->mat = nyas_mat_create(g_shaders.pbr);
+		*(struct pbr_desc_unit *)e->mat.ptr = pbr;
 		nyas_tex *t = nyas_mat_tex(e->mat);
-		t[0] = g_tex.foam_a;
-		t[1] = g_tex.foam_m;
-		t[2] = g_tex.foam_r;
-		t[3] = g_tex.foam_n;
+		t[0] = g_tex.foam.a;
+		t[1] = g_tex.foam.m;
+		t[2] = g_tex.foam.r;
+		t[3] = g_tex.foam.n;
 	}
 
-	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
-	common_pbr->sunlight[0] = 0.0f;
-	common_pbr->sunlight[1] = -1.0f;
-	common_pbr->sunlight[2] = -0.1f;
-	common_pbr->sunlight[4] = 0.0f;
-
-	nyas_tex *pbr_scene_tex = nyas_shader_tex(g_shaders.pbr);
-	pbr_scene_tex[0] = g_tex.lut;
-	pbr_scene_tex[1] = g_tex.irradiance;
-	pbr_scene_tex[2] = g_tex.prefilter;
-
 	*nyas_shader_tex(g_shaders.skybox) = g_tex.sky;
-
-	nyas_tex eqr_in_tex = nyas_tex_load("assets/tex/env/helipad-env.hdr", 1, g_tex_flags.env);
-	nyas_tex irr_in_tex = nyas_tex_load("assets/tex/env/helipad-dif.hdr", 1, g_tex_flags.env);
-
-	GenEnv env = {
-		.eqr_sh = g_shaders.eqr_to_cube,
-		.lut_sh = g_shaders.lut_gen,
-		.pref_sh = g_shaders.prefilter_env,
-		.eqr_in = eqr_in_tex,
-		.eqr_out = g_tex.sky,
-		.irr_in = irr_in_tex,
-		.irr_out = g_tex.irradiance,
-		.pref_out = g_tex.prefilter,
-		.lut = g_tex.lut
-	};
-
-	GeneratePbrEnv(&env);
-	fb_tex = InitMainFramebuffer(g_fb);
 	*nyas_shader_tex(g_shaders.fullscreen_img) = fb_tex;
 }
 
 void
-Update(nyas_chrono *chrono)
+BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 {
-	float dt = nyas_time_sec(nyas_elapsed(*chrono));
-	*chrono = nyas_time();
-
 	nyas_io_poll();
-	nyas_input_read();
-	nyas_v2i vp = nyas_window_size();
-	nyas_camera_control(&camera, dt);
+	struct nyas_point *vp = &nyas_io->window_size;
+	nyas_camera_control(&camera, (struct nyas_control_config){ 10.0f, 0.001f, 1.0f, delta_time });
 
 	/* PBR common shader data. */
-	struct nyas_pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
+	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
-	nyas_camera_pos(common_pbr->camera_position, &camera);
+	common_pbr->camera_position = nyas_camera_eye(&camera);
+	struct nyas_point fb_size = nyas_tex_size(fb_tex);
 
-	int fb_size[2];
-	nyas_tex_size(fb_tex, fb_size);
-	nyas_cmd *fbuff = nyas_cmd_alloc();
-	fbuff->data.set_fb.fb = g_fb;
-	fbuff->data.set_fb.vp_x = fb_size[0];
-	fbuff->data.set_fb.vp_y = fb_size[1];
-	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
-	fbuff->execute = nyas_setfb_fn;
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	struct nyas_draw *dl = &(*new_frame)->at[(*new_frame)->count - 1];
+	dl->state.target.bgcolor = (struct nyas_color){ 0.2f, 0.2f, 0.2f, 1.0f };
+	dl->state.target.fb = g_fb;
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
+	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
+	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_COLOR);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_DEPTH);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_BLEND);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_TEST_DEPTH);
+	dl->state.ops.enable |= (1 << NYAS_DRAW_WRITE_DEPTH);
+	dl->state.ops.blend_src = NYAS_BLEND_ONE;
+	dl->state.ops.blend_dst = NYAS_BLEND_ZERO;
+	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
+	dl->state.ops.cull_face = NYAS_CULL_BACK;
 
-	nyas_cmd *rops = nyas_cmd_alloc();
-	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST |
-	  NYAS_DEPTH_WRITE;
-	rops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
-	rops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LESS;
-	rops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
-	rops->execute = nyas_rops_fn;
-	fbuff->next = rops;
+	for (int i = 0; i < entity_pool.count; ++i) {
+		struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
+		mat4_assign(entity_pool.buf->at[i].mat.ptr, entity_pool.buf->at[i].transform);
+		cmd->material = nyas_mat_copy(entity_pool.buf->at[i].mat);
+		cmd->mesh = entity_pool.buf->at[i].mesh;
+	}
 
-	nyas_cmd *clear = nyas_cmd_alloc();
-	clear->data.clear.color_buffer = true;
-	clear->data.clear.depth_buffer = true;
-	clear->data.clear.stencil_buffer = false;
-	nyas_set_color(clear->data.clear.color, 0.2f, 0.2f, 0.2f, 1.0f);
-	clear->execute = nyas_clear_fn;
-	rops->next = clear;
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	dl = &(*new_frame)->at[(*new_frame)->count - 1];
+	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
 
-	nyas_cmd *use_pbr = nyas_cmd_alloc();
-	use_pbr->data.mat = nyas_mat_copy_shader(g_shaders.pbr);
-	use_pbr->execute = nyas_setshader_fn;
-	clear->next = use_pbr;
-	use_pbr->next = NULL;
+	dl->state.ops.disable |= (1 << NYAS_DRAW_CULL);
+	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
 
-	nyas_cmd_add(fbuff);
+	struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
+	cmd->material.shader = g_shaders.skybox;
+	cmd->mesh = NYAS_UTILS_CUBE;
 
-	nyas_entity_draw(nyas_entities(), nyas_entity_count());
+	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	dl = &(*new_frame)->at[(*new_frame)->count - 1];
+	dl->state.target.bgcolor = (struct nyas_color){ 1.0f, 0.0f, 0.0f, 1.0f };
+	dl->state.target.fb = NYAS_DEFAULT;
+	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
+	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
+	dl->state.ops.disable |= (1 << NYAS_DRAW_TEST_DEPTH);
 
-	rops = nyas_cmd_alloc();
-	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
-	rops->execute = nyas_rops_fn;
-
-	nyas_camera_static_vp(nyas_shader_data(g_shaders.skybox), &camera);
-	nyas_cmd *use_sky_shader = nyas_cmd_alloc();
-	use_sky_shader->data.mat = nyas_mat_copy_shader(g_shaders.skybox);
-	use_sky_shader->execute = nyas_setshader_fn;
-	rops->next = use_sky_shader;
-
-	nyas_cmd *draw_sky = nyas_cmd_alloc();
-	draw_sky->data.draw.mesh = CUBE_MESH;
-	draw_sky->data.draw.material.shader = g_shaders.skybox;
-	draw_sky->execute = nyas_draw_fn;
-	use_sky_shader->next = draw_sky;
-
-	fbuff = nyas_cmd_alloc();
-	fbuff->data.set_fb.fb = NYAS_DEFAULT;
-	fbuff->data.set_fb.vp_x = vp.x;
-	fbuff->data.set_fb.vp_y = vp.y;
-	fbuff->data.set_fb.attach.type = NYAS_IGNORE;
-	fbuff->execute = nyas_setfb_fn;
-	draw_sky->next = fbuff;
-
-	nyas_cmd *rops2 = nyas_cmd_alloc();
-	memset(&rops2->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops2->data.rend_opts.disable_flags = NYAS_DEPTH_TEST;
-	rops2->execute = nyas_rops_fn;
-	fbuff->next = rops2;
-
-	clear = nyas_cmd_alloc();
-	clear->data.clear.color_buffer = true;
-	clear->data.clear.depth_buffer = false;
-	clear->data.clear.stencil_buffer = false;
-	nyas_set_color(clear->data.clear.color, 1.0f, 0.0f, 0.0f, 1.0f);
-	clear->execute = nyas_clear_fn;
-	rops2->next = clear;
-
-	nyas_cmd *usefullscreen = nyas_cmd_alloc();
-	usefullscreen->data.mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
-	usefullscreen->execute = nyas_setshader_fn;
-	clear->next = usefullscreen;
-
-	nyas_cmd *draw = nyas_cmd_alloc();
-	draw->data.draw.mesh = QUAD_MESH;
-	draw->data.draw.material.shader = g_shaders.fullscreen_img;
-	draw->execute = nyas_draw_fn;
-	usefullscreen->next = draw;
-	draw->next = NULL;
-
-	nyas_cmd_add(rops);
-}
-
-void
-Render(void)
-{
-	nyas_px_render();
-	nuklear_draw();
-	nyas_window_swap();
-	nyas_frame_end();
+	cmd = nyarr_nydrawcmd_push(&dl->cmds);
+	cmd->material.shader = g_shaders.fullscreen_img;
+	cmd->mesh = NYAS_UTILS_QUAD;
 }
 
 int
 main(int argc, char **argv)
 {
-	(void)argc; (void)argv;
-	nyas_mem_init(NYAS_GB(1));
-	nyas_io_init("NYAS PBR Material Demo", 1920, 1080, true);
-	nyas_px_init();
-	nyas_camera_init(&camera, 70.0f, 300.0f, 1280, 720);
+	(void)argc, (void)argv;
+	void *mem_chunk = malloc(NYAS_MB(256));
+	nyas_mem_init(mem_chunk, NYAS_MB(256));
+	nyas_falloc_set_buffer(nyas_palloc(NYAS_MB(16)), NYAS_MB(16));
+	nyas_io_init("NYAS PBR Material Demo", (struct nyas_point){ 1920, 1080 });
+	nyas_camera_init_default(&camera);
 	nuklear_init();
 	Init();
-
 	nyas_chrono frame_chrono = nyas_time();
-	while (!nyas_window_closed()) {
-		Update(&frame_chrono);
-		Render();
+	while (!nyas_io->window_closed) {
+		float delta_time = nyas_time_sec(nyas_elapsed(frame_chrono));
+		frame_chrono = nyas_time();
+
+		struct nyarr_nydraw *frame = NULL;
+		BuildFrame(&frame, delta_time);
+
+		// Render
+		for (int i = 0; i < frame->count; ++i) {
+			nyas_draw(&frame->at[i]);
+		}
+		nuklear_draw();
+		nyas_window_swap();
+		// End render
 	}
 
 	return 0;

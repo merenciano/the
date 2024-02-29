@@ -2,6 +2,10 @@ BasedOnStyle: Mozilla
 AlignAfterOpenBracket: Align
 AlignEscapedNewlines: Left
 AlignOperands: DontAlign
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortCaseLabelsOnASingleLine: true
 AlwaysBreakAfterReturnType: TopLevelDefinitions
 BinPackArguments: true
 BinPackParameters: false
@@ -17,7 +21,7 @@ IncludeCategories:
     Priority:        0
 IncludeIsMainRegex: "(_test)?$"
 IndentCaseLabels: false
-#InsertNewlineAtEOF: true
+InsertNewlineAtEOF: true
 MaxEmptyLinesToKeep: 1
 PenaltyBreakAssignment: 30
 PenaltyBreakBeforeFirstCallParameter: 100
@@ -35,6 +39,6 @@ SeparateDefinitionBlocks: Leave
 SpacesInSquareBrackets: false
 IndentWidth: 4
 TabWidth: 4
-ColumnLimit: 79
+ColumnLimit: 99
 UseTab: AlignWithSpaces
 WhitespaceSensitiveMacros: [ERR_IF]

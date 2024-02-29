@@ -9,5 +9,7 @@ demos/*/imgui.ini
 demos/pbr/matballs
 demos/pbr/inspector
 demos/hello/hello
-tools/tomsh
+demos/emsc/emsc.**
+tools/tomesh
+tools/genenv
 compile_commands.json

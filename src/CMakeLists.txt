@@ -1,23 +1,17 @@
 target_sources(${LIB_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.h
-	${CMAKE_CURRENT_SOURCE_DIR}/core/chrono.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_defs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/nyas_core.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.c
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/mem.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/string.h
-	${CMAKE_CURRENT_SOURCE_DIR}/utils/hmap.h
-	${CMAKE_CURRENT_SOURCE_DIR}/utils/hmap.c
+	${CMAKE_CURRENT_SOURCE_DIR}/core/scene.h
+	${CMAKE_CURRENT_SOURCE_DIR}/core/scene.c
+	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.h
+	${CMAKE_CURRENT_SOURCE_DIR}/core/sched.c
+	${CMAKE_CURRENT_SOURCE_DIR}/core/utils.h
+	${CMAKE_CURRENT_SOURCE_DIR}/core/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.h
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
-	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.c
-	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.h
-	${CMAKE_CURRENT_SOURCE_DIR}/scene/camera.c
-	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.h
-	${CMAKE_CURRENT_SOURCE_DIR}/scene/entity.c
 )

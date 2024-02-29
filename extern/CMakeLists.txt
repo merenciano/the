@@ -1,39 +1,26 @@
 
 target_sources(${LIB_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/mathc.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/GLFW/glfw3.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/GLFW/glfw3native.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/tinyobj_loader_c.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/KHR/khrplatform.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mathc.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/glad.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_thread.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/vulkan.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/internal.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_thread.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/xkb_unicode.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/monitor.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/init.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_window.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_time.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_platform.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/mappings.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/context.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/linux_joystick.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/glx_context.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_init.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_time.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/glx_context.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/osmesa_context.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/egl_context.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/xkb_unicode.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/window.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/osmesa_context.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/input.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/linux_joystick.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/egl_context.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_monitor.c
 	)
 
+if (NOT NYAS_EMSC)
+	target_sources(${LIB_NAME} PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src/glad.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/vulkan.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_thread.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/monitor.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/init.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_window.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/posix_time.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/context.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/glx_context.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_init.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/osmesa_context.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/xkb_unicode.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/window.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/input.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/linux_joystick.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/egl_context.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/GLFW/x11_monitor.c
+	)
+endif()

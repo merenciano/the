@@ -1,25 +1,36 @@
 #include "mem.h"
 
-#include "log.h"
+#include "io.h"
 #include <stdlib.h>
 
 #define MEM_ALIGN 8
-#define MEM_ALIGN_MOD(ADDRESS) (ADDRESS & (MEM_ALIGN - 1))
+#define MEM_ALIGN_MOD(ADDRESS) ((ADDRESS) & (MEM_ALIGN - 1))
 
-static unsigned char *mem;
-static size_t offset;
-static size_t capacity;
+static struct nyas_mem *persistent = NULL;
 
 void *
-nyas_mem_reserve(size_t size)
+nyas_palloc(ptrdiff_t size)
 {
-	offset += MEM_ALIGN_MOD(MEM_ALIGN - MEM_ALIGN_MOD(offset));
-	offset += size;
-	NYAS_ASSERT(offset <= capacity && "Allocator out of memory");
-	return mem + offset - size; 
+	void *ptr = &persistent->buff[persistent->tail];
+	persistent->tail += size;
+	return (persistent->tail + size) <= persistent->cap ? persistent->tail += size, ptr : NULL;
 }
 
-void *nyas_alloc(size_t size)
+int
+nyas_mem_init(void *buffer, ptrdiff_t size)
+{
+	if (!buffer) {
+		NYAS_LOG_ERR("Invalid buffer");
+		return NYAS_ERR_INVALID_PTR;
+	}
+	persistent = buffer;
+	persistent->cap = size - sizeof(*persistent);
+	persistent->tail = 0;
+	return NYAS_OK;
+}
+
+void *
+nyas_alloc(size_t size)
 {
 	return malloc(size);
 }
@@ -40,42 +51,4 @@ void
 nyas_free(void *ptr)
 {
 	free(ptr);
-}
-
-void
-nyas_mem_init(size_t size)
-{
-	mem = malloc(size); // TODO: mem minimal instance in stack memory in order to alloc this chunk for itself
-	NYAS_ASSERT(!((size_t)mem % MEM_ALIGN) && "WTF");
-	if (!mem) {
-		NYAS_LOG_ERR("Error allocating initial mem chunk.");
-		exit(1);
-	}
-
-	offset = 0;
-	capacity = size;
-}
-
-void
-nyas_mem_freeall(void)
-{
-	free(mem);
-	mem = NULL;
-}
-
-float
-nyas_mem_mega_used(void)
-{
-	return nyas_mem_bytes_used() / (1024.0f * 1024.0f);
-}
-
-size_t nyas_mem_bytes_used(void)
-{
-	return offset;
-}
-
-size_t
-nyas_mem_capacity(void)
-{
-	return capacity;
 }

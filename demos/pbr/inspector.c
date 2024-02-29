@@ -1,5 +1,4 @@
 #include "pbr.h"
-#include "pbr_types.h"
 #include "gui.h"
 #include "mathc.h"
 #include "nyas.h"
@@ -67,7 +66,7 @@ Init(void)
 	float position[3] = { 0.0f, 0.0f, 0.0f };
 	mat4_translation(e.e->transform, e.e->transform, position);
 	e.e->mesh = nyas_mesh_load_file("assets/obj/matball.obj");
-	e.e->mat = nyas_mat_pers(shader);
+	e.e->mat = nyas_mat_create(shader);
 	*(nyas_pbr_desc_unit *)e.e->mat.ptr = e.upbr;
 	nyas_tex *t = nyas_mat_tex(e.e->mat);
 	t[0] = e.albedo;
