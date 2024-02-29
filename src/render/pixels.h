@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define NYAS_GL3
+
 #ifdef NYAS_ELEM_SIZE_16
 typedef uint16_t nyas_idx;
 #else

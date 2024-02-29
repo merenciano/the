@@ -15,13 +15,3 @@ target_sources(${LIB_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels.c
 	${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.h
 )
-
-if (NYAS_GLES2)
-	target_sources(${LIB_NAME} PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal_gles2.c
-	)
-else(NYAS_GL3)
-	target_sources(${LIB_NAME} PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/render/pixels_internal.c
-	)
-endif()

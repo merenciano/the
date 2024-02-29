@@ -809,3 +809,9 @@ nyas_draw(struct nyas_draw *dl)
 		nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
 	}
 }
+
+#if defined(NYAS_GL3)
+#include "pixels_gl3.c"
+#elif defined(NYAS_GLES2)
+#include "pixels_gles2.c"
+#endif

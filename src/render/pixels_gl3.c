@@ -213,7 +213,7 @@ nypx_mesh_set(struct nyas_mesh_internal *mesh, uint32_t shader_id)
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->res_ib.id);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->elem_count * sizeof(nypx_index),
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->elem_count * sizeof(nyas_idx),
 	             (const void *)mesh->idx, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);

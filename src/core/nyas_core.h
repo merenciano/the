@@ -97,7 +97,7 @@
 	};                                                         \
                                                                \
 	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack); \
-	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack);
+	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack)
 
 #define NYAS_IMPL_STACK(TYPE)                                   \
 	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack)   \
