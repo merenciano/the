@@ -7,12 +7,12 @@
 
 #define NYAS_ASSERT(X) (assert(X))
 
-#define NYAS_DECL_ARR(T)                         \
-	struct nyarr_##T {                           \
-		ptrdiff_t count;                         \
-		T at[];                                  \
-	};                                           \
-	T *nyarr_##T##_push(struct nyarr_##T **arr); \
+#define NYAS_DECL_ARR(T)                                          \
+	struct nyarr_##T {                                            \
+		ptrdiff_t count;                                          \
+		T at[];                                                   \
+	};                                                            \
+	T *nyarr_##T##_push(struct nyarr_##T **arr);                  \
 	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value); \
 	void nyarr_##T##_release(void *arr)
 #define NYAS_IMPL_ARR_MA(T, MALLOC, FREE)                                                \
@@ -36,12 +36,12 @@
 	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)                         \
 	{                                                                                    \
 		*(nyarr_##T##_push(arr)) = value;                                                \
-	}                                                                                       \
+	}                                                                                    \
                                                                                          \
-	void nyarr_##T##_release(void *arr)                                                     \
-	{                                                   \
-		FREE(arr);\
-	}\
+	void nyarr_##T##_release(void *arr)                                                  \
+	{                                                                                    \
+		FREE(arr);                                                                       \
+	}                                                                                    \
 	int main(int argc, char **argv)
 
 #define NYAS_IMPL_ARR(TYPE) NYAS_IMPL_ARR_MA(TYPE, malloc, free)
@@ -122,6 +122,17 @@
 		return &stack->buf->at[--(stack->tail)];                \
 	}                                                           \
 	int main(int argc, char **argv)
+
+struct nyarr {
+	ptrdiff_t count;
+	char at[];
+};
+
+struct nypool {
+	struct nyarr *buf;
+	int next;
+	int count;
+};
 
 enum nyas_defs {
 	NYAS_ERR = 0,
