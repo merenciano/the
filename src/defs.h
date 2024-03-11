@@ -11,28 +11,6 @@ typedef nyas_handle nyas_mesh_h;
 typedef nyas_handle nyas_shader_h;
 typedef nyas_handle nyas_fb_h;
 
-typedef struct nyas_range {
-	void *start;
-	ptrdiff_t len; // bytes
-} nyas_range;
-
-typedef struct nyas_rangef {
-	float *start;
-	ptrdiff_t len; // count
-} nyas_rangef;
-
-typedef struct nyas_rangeh {
-	nyas_handle *start;
-	ptrdiff_t len; // count
-} nyas_rangeh;
-
-typedef int nyas_texture_flags;
-typedef enum nyas_texture_flags_ {
-	NYAS_TEXTURE_FLAGS_NONE = 0,
-	NYAS_TEXTURE_FLAGS_CUBEMAP = 1 << 0,
-	NYAS_TEXTURE_FLAGS_ARRAY = 1 << 1,
-} nyas_texture_flags_;
-
 typedef int nyas_enum;
 typedef enum nyas_enum_ {
 	NYAS_NULL,
@@ -105,12 +83,17 @@ typedef enum nyas_enum_ {
 	NYAS_TEXTURE_FACE_COUNT = NYAS_TEXTURE_FACE_DEFAULT - NYAS_TEXTURE_FACE,
 	NYAS_VERTEX_ATTRIBUTE_COUNT = NYAS_VERTEX_ATTRIBUTE_DEFAULT - NYAS_VERTEX_ATTRIBUTE,
 
+	NYAS_FLAG_NONE = 0,
+
 	NYAS_FLAG_VA_POSITION = 1 << (NYAS_VERTEX_ATTRIBUTE_POSITION - NYAS_VERTEX_ATTRIBUTE),
 	NYAS_FLAG_VA_NORMAL = 1 << (NYAS_VERTEX_ATTRIBUTE_NORMAL - NYAS_VERTEX_ATTRIBUTE),
 	NYAS_FLAG_VA_TANGENT = 1 << (NYAS_VERTEX_ATTRIBUTE_TANGENT - NYAS_VERTEX_ATTRIBUTE),
 	NYAS_FLAG_VA_BITANGENT = 1 << (NYAS_VERTEX_ATTRIBUTE_BITANGENT - NYAS_VERTEX_ATTRIBUTE),
 	NYAS_FLAG_VA_UV = 1 << (NYAS_VERTEX_ATTRIBUTE_UV - NYAS_VERTEX_ATTRIBUTE),
 	NYAS_FLAG_VA_COLOR = 1 << (NYAS_VERTEX_ATTRIBUTE_COLOR - NYAS_VERTEX_ATTRIBUTE),
+
+	NYAS_FLAG_TEXTURE_CUBEMAP = 1 << 0,
+	NYAS_FLAG_TEXTURE_ARRAY = 1 << 1,
 } nyas_enum_;
 
 typedef struct nyas_texture_data {
@@ -122,12 +105,12 @@ typedef struct nyas_texture_data {
 } nyas_texture_data;
 
 typedef struct nyas_texture {
-	nyas_texture_flags flags;
+	nyas_texture_data *images;
+	int img_count;
 	int width;
 	int height;
-	nyas_texture_data *images;
-	int images_count;
-	nyas_enum format;
+	nyas_enum type; // NYAS_TEXTURE_TYPE_
+	nyas_enum format; // NYAS_TEXTURE_FORMAT_
 	nyas_enum min_filter;
 	nyas_enum mag_filter;
 	nyas_enum wrap_s;
@@ -136,40 +119,44 @@ typedef struct nyas_texture {
 } nyas_texture;
 
 typedef struct nyas_mesh {
-	nyas_rangef vertices;
-	nyas_range indices;
-	int vertex_attributes; // NYAS_FLAG_VA_
-	int index_bytes; // 2 SHORT, 4 INT
+	float *vertices;
+	void *indices;
+	int vtx_count;
+	int idx_count;
+	int indices_stride;
+	int vertex_attributes; // nyas_texture_flags_
 } nyas_mesh;
 
-typedef struct nyas_shader_uniforms {
-	nyas_rangef data;
-	nyas_rangeh textures;
-	nyas_rangeh cube_maps;
-} nyas_shader_uniforms;
+typedef struct nyas_material {
+	float *values;
+	nyas_handle *textures;
+	nyas_handle *cubemaps;
+	nyas_handle shader;
+} nyas_material;
 
 typedef struct nyas_shader {
-	nyas_shader_uniforms shared_data;
-	int shared_data_location;
+	nyas_material shared_data; // Read-only data for material instances.
+	int shared_values_location;
 	int shared_tex_location;
 	int shared_cubemap_location;
-	int data_location;
+	int shared_values_count;
+	int shared_tex_count;
+	int shared_cubemap_count;
+	int values_location;
 	int tex_location;
 	int cubemap_location;
+	int values_count;
+	int tex_count;
+	int cubemap_count;
 	int vertex_attributes; // ?? NYAS_FLAG_VA (see: struct nyas_mesh)
 } nyas_shader;
 
 #define NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES 6
 typedef struct nyas_framebuffer {
-	nyas_tex_h textures[NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES];
-	nyas_tex_h depth;
-	nyas_tex_h stencil;
+	nyas_handle textures[NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES];
+	nyas_handle depth;
+	nyas_handle stencil;
 } nyas_framebuffer;
-
-typedef struct nyas_material {
-	nyas_shader_uniforms data;
-	nyas_shader_h shader;
-} nyas_material;
 
 typedef struct nyas_draw_state {
 	int viewport_min_x;
@@ -190,7 +177,7 @@ typedef struct nyas_draw_state {
 } nyas_draw_state;
 
 typedef struct nyas_draw_unit {
-	nyas_mesh_h mesh;
+	nyas_handle mesh;
 	nyas_material material;
 } nyas_draw_unit;
 
@@ -198,8 +185,8 @@ typedef struct nyas_draw_command {
 	nyas_draw_state state;
 	nyas_draw_unit *units;
 	int unit_count;
-	nyas_fb_h framebuffer;
-	nyas_shader_h shader;
+	nyas_handle framebuffer;
+	nyas_handle shader;
 } nyas_draw_command;
 
 typedef struct nyas_draw_list {
