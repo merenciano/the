@@ -2,16 +2,15 @@
 #define NYAS_DEFS_H
 
 #include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
+
+#define NYAS_ENUM_INDEX(ENUM_TYPE, ID) (ENUM_TYPE##_##ID - ENUM_TYPE)
+#define NYAS_ENUM_FLAG(ENUM_TYPE, ID) (1U << (NYAS_ENUM_INDEX(ENUM_TYPE, ID)))
+#define NYAS_ENUM_COUNT(ENUM_TYPE) (NYAS_ENUM_INDEX(ENUM_TYPE, DEFAULT))
 
 typedef int nyas_handle;
-typedef nyas_handle nyas_tex_h;
-typedef nyas_handle nyas_mesh_h;
-typedef nyas_handle nyas_shader_h;
-typedef nyas_handle nyas_fb_h;
-
+typedef int nyas_flags;
 typedef int nyas_enum;
+
 typedef enum nyas_enum_ {
 	NYAS_NULL,
 
@@ -76,31 +75,74 @@ typedef enum nyas_enum_ {
 	NYAS_VERTEX_ATTRIBUTE_COLOR,
 	NYAS_VERTEX_ATTRIBUTE_DEFAULT,
 
+	NYAS_DRAW_BLEND,
+	NYAS_DRAW_BLEND_ONE = NYAS_DRAW_BLEND,
+	NYAS_DRAW_BLEND_SRC_ALPHA,
+	NYAS_DRAW_BLEND_ONE_MINUS_SRC_ALPHA,
+	NYAS_DRAW_BLEND_ZERO,
+	NYAS_DRAW_BLEND_DEFAULT,
+
+	NYAS_DRAW_CULL,
+	NYAS_DRAW_CULL_FRONT = NYAS_DRAW_CULL,
+	NYAS_DRAW_CULL_BACK,
+	NYAS_DRAW_CULL_FRONT_AND_BACK,
+	NYAS_DRAW_CULL_DEFAULT,
+
+	NYAS_DRAW_DEPTH,
+	NYAS_DRAW_DEPTH_LEQUAL = NYAS_DRAW_DEPTH,
+	NYAS_DRAW_DEPTH_LESS,
+	NYAS_DRAW_DEPTH_DEFAULT,
+
+	NYAS_DRAW_OP,
+	NYAS_DRAW_OP_COLOR_CLEAR = NYAS_DRAW_OP,
+	NYAS_DRAW_OP_DEPTH_CLEAR,
+	NYAS_DRAW_OP_DEPTH_TEST,
+	NYAS_DRAW_OP_DEPTH_WRITE,
+	NYAS_DRAW_OP_STENCIL_CLEAR,
+	NYAS_DRAW_OP_STENCIL_TEST,
+	NYAS_DRAW_OP_STENCIL_WRITE,
+	NYAS_DRAW_OP_BLEND,
+	NYAS_DRAW_OP_CULL,
+	NYAS_DRAW_OP_SCISSOR,
+	NYAS_DRAW_OP_DEFAULT,
+
 	NYAS_TEXTURE_TYPE_COUNT = NYAS_TEXTURE_TYPE_DEFAULT - NYAS_TEXTURE_TYPE,
 	NYAS_TEXTURE_FORMAT_COUNT = NYAS_TEXTURE_FORMAT_DEFAULT - NYAS_TEXTURE_FORMAT,
 	NYAS_TEXTURE_FILTER_COUNT = NYAS_TEXTURE_FILTER_DEFAULT - NYAS_TEXTURE_FILTER,
 	NYAS_TEXTURE_WRAP_COUNT = NYAS_TEXTURE_WRAP_DEFAULT - NYAS_TEXTURE_WRAP,
 	NYAS_TEXTURE_FACE_COUNT = NYAS_TEXTURE_FACE_DEFAULT - NYAS_TEXTURE_FACE,
 	NYAS_VERTEX_ATTRIBUTE_COUNT = NYAS_VERTEX_ATTRIBUTE_DEFAULT - NYAS_VERTEX_ATTRIBUTE,
+	NYAS_DRAW_BLEND_COUNT = NYAS_DRAW_BLEND_DEFAULT - NYAS_DRAW_BLEND,
+	NYAS_DRAW_CULL_COUNT = NYAS_DRAW_CULL_DEFAULT - NYAS_DRAW_CULL,
+	NYAS_DRAW_DEPTH_COUNT = NYAS_DRAW_DEPTH_DEFAULT - NYAS_DRAW_DEPTH,
+	NYAS_DRAW_OP_COUNT = NYAS_DRAW_OP_DEFAULT - NYAS_DRAW_OP,
 
 	NYAS_FLAG_NONE = 0,
 
-	NYAS_FLAG_VA_POSITION = 1 << (NYAS_VERTEX_ATTRIBUTE_POSITION - NYAS_VERTEX_ATTRIBUTE),
-	NYAS_FLAG_VA_NORMAL = 1 << (NYAS_VERTEX_ATTRIBUTE_NORMAL - NYAS_VERTEX_ATTRIBUTE),
-	NYAS_FLAG_VA_TANGENT = 1 << (NYAS_VERTEX_ATTRIBUTE_TANGENT - NYAS_VERTEX_ATTRIBUTE),
-	NYAS_FLAG_VA_BITANGENT = 1 << (NYAS_VERTEX_ATTRIBUTE_BITANGENT - NYAS_VERTEX_ATTRIBUTE),
-	NYAS_FLAG_VA_UV = 1 << (NYAS_VERTEX_ATTRIBUTE_UV - NYAS_VERTEX_ATTRIBUTE),
-	NYAS_FLAG_VA_COLOR = 1 << (NYAS_VERTEX_ATTRIBUTE_COLOR - NYAS_VERTEX_ATTRIBUTE),
+	NYAS_FLAG_VA_POSITION = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, POSITION),
+	NYAS_FLAG_VA_NORMAL = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, NORMAL),
+	NYAS_FLAG_VA_TANGENT = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, TANGENT),
+	NYAS_FLAG_VA_BITANGENT = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, BITANGENT),
+	NYAS_FLAG_VA_UV = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, UV),
+	NYAS_FLAG_VA_COLOR = NYAS_ENUM_FLAG(NYAS_VERTEX_ATTRIBUTE, COLOR),
 
-	NYAS_FLAG_TEXTURE_CUBEMAP = 1 << 0,
-	NYAS_FLAG_TEXTURE_ARRAY = 1 << 1,
+	NYAS_FLAG_DO_COLOR_CLEAR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, COLOR_CLEAR),
+	NYAS_FLAG_DO_DEPTH_CLEAR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, DEPTH_CLEAR),
+	NYAS_FLAG_DO_DEPTH_TEST = NYAS_ENUM_FLAG(NYAS_DRAW_OP, DEPTH_TEST),
+	NYAS_FLAG_DO_DEPTH_WRITE = NYAS_ENUM_FLAG(NYAS_DRAW_OP, DEPTH_WRITE),
+	NYAS_FLAG_DO_STENCIL_CLEAR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, STENCIL_CLEAR),
+	NYAS_FLAG_DO_STENCIL_TEST = NYAS_ENUM_FLAG(NYAS_DRAW_OP, STENCIL_TEST),
+	NYAS_FLAG_DO_STENCIL_WRITE = NYAS_ENUM_FLAG(NYAS_DRAW_OP, STENCIL_WRITE),
+	NYAS_FLAG_DO_BLEND = NYAS_ENUM_FLAG(NYAS_DRAW_OP, BLEND),
+	NYAS_FLAG_DO_CULL = NYAS_ENUM_FLAG(NYAS_DRAW_OP, CULL),
+	NYAS_FLAG_DO_SCISSOR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, SCISSOR),
 } nyas_enum_;
 
 typedef struct nyas_texture_data {
 	void *pixel_buffer;
 	ptrdiff_t pixel_buffer_size;
-	int lod; /* level of detail */
-	int index; /* texture arrays only */
+	int lod;        /* level of detail */
+	int index;      /* texture arrays only */
 	nyas_enum face; /* cubemaps only */
 } nyas_texture_data;
 
@@ -109,22 +151,22 @@ typedef struct nyas_texture {
 	int img_count;
 	int width;
 	int height;
-	nyas_enum type; // NYAS_TEXTURE_TYPE_
-	nyas_enum format; // NYAS_TEXTURE_FORMAT_
-	nyas_enum min_filter;
-	nyas_enum mag_filter;
-	nyas_enum wrap_s;
-	nyas_enum wrap_t;
-	nyas_enum wrap_r;
+	nyas_enum type;       /* NYAS_TEXTURE_TYPE */
+	nyas_enum format;     /* NYAS_TEXTURE_FORMAT */
+	nyas_enum min_filter; /* NYAS_TEXTURE_FILTER */
+	nyas_enum mag_filter; /* NYAS_TEXTURE_FILTER */
+	nyas_enum wrap_s;     /* NYAS_TEXTURE_WRAP */
+	nyas_enum wrap_t;     /* NYAS_TEXTURE_WRAP */
+	nyas_enum wrap_r;     /* NYAS_TEXTURE_WRAP */
 } nyas_texture;
 
 typedef struct nyas_mesh {
 	float *vertices;
 	void *indices;
-	int vtx_count;
-	int idx_count;
-	int indices_stride;
-	int vertex_attributes; // nyas_texture_flags_
+	ptrdiff_t vtx_count;
+	ptrdiff_t idx_count;
+	int indices_sizeof; /* 2 or 4 */
+	nyas_flags vertex_attributes;
 } nyas_mesh;
 
 typedef struct nyas_material {
@@ -135,7 +177,7 @@ typedef struct nyas_material {
 } nyas_material;
 
 typedef struct nyas_shader {
-	nyas_material shared_data; // Read-only data for material instances.
+	nyas_material shared_data; /* Read-only data for material instances. */
 	int shared_values_location;
 	int shared_tex_location;
 	int shared_cubemap_location;
@@ -148,7 +190,7 @@ typedef struct nyas_shader {
 	int values_count;
 	int tex_count;
 	int cubemap_count;
-	int vertex_attributes; // ?? NYAS_FLAG_VA (see: struct nyas_mesh)
+	nyas_flags vertex_attributes; /* ?? NYAS_FLAG_VA (see: struct nyas_mesh) */
 } nyas_shader;
 
 #define NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES 6
@@ -159,6 +201,12 @@ typedef struct nyas_framebuffer {
 } nyas_framebuffer;
 
 typedef struct nyas_draw_state {
+	nyas_flags enable_flags;
+	nyas_flags disable_flags;
+	nyas_enum blend_src_fn;
+	nyas_enum blend_dst_fn;
+	nyas_enum depth_fn;
+	nyas_enum face_culling;
 	int viewport_min_x;
 	int viewport_min_y;
 	int viewport_max_x;
@@ -171,27 +219,24 @@ typedef struct nyas_draw_state {
 	float bg_color_g;
 	float bg_color_b;
 	float bg_color_a;
-	bool clear_color;
-	bool clear_depth;
-	bool clear_stencil;
 } nyas_draw_state;
 
 typedef struct nyas_draw_unit {
-	nyas_handle mesh;
 	nyas_material material;
+	nyas_handle mesh;
 } nyas_draw_unit;
 
 typedef struct nyas_draw_command {
 	nyas_draw_state state;
 	nyas_draw_unit *units;
-	int unit_count;
+	ptrdiff_t unit_count;
 	nyas_handle framebuffer;
 	nyas_handle shader;
 } nyas_draw_command;
 
 typedef struct nyas_draw_list {
 	nyas_draw_command *commands;
-	int count;
+	ptrdiff_t count;
 } nyas_draw_list;
 
 #endif // NYAS_DEFS_H
