@@ -1,9 +1,8 @@
-#ifndef NYAS_PIXELS_H
-#define NYAS_PIXELS_H
+#ifndef NYAS_DEFS_H
+#define NYAS_DEFS_H
 
 #include "core/nyas_core.h"
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -29,43 +28,6 @@ enum NYAS_VA_ {
 	NYAS_VA_BITAN,
 	NYAS_VA_UV,
 	NYAS_VA_COUNT
-};
-
-typedef int nyas_blend_func;
-enum NYAS_BLEND_ {
-	NYAS_BLEND_CURRENT = 0,
-	NYAS_BLEND_ONE,
-	NYAS_BLEND_SRC_ALPHA,
-	NYAS_BLEND_ONE_MINUS_SRC_ALPHA,
-	NYAS_BLEND_ZERO
-};
-
-typedef int nyas_cull_face;
-enum NYAS_CULL_ {
-	NYAS_CULL_CURRENT = 0,
-	NYAS_CULL_FRONT,
-	NYAS_CULL_BACK,
-	NYAS_CULL_FRONT_AND_BACK
-};
-
-typedef int nyas_depth_func;
-enum NYAS_DEPTH_ {
-	// TODO: Add as needed.
-	NYAS_DEPTH_CURRENT = 0,
-	NYAS_DEPTH_LEQUAL,
-	NYAS_DEPTH_LESS,
-};
-
-typedef int nyas_texture_face;
-enum NYAS_FACE_ {
-	NYAS_FACE_POS_X = 0,
-	NYAS_FACE_NEG_X,
-	NYAS_FACE_POS_Y,
-	NYAS_FACE_NEG_Y,
-	NYAS_FACE_POS_Z,
-	NYAS_FACE_NEG_Z,
-	NYAS_FACE_2D,
-	NYAS_CUBE_FACE_COUNT
 };
 
 typedef int nyas_framebuffer_attach;
@@ -100,26 +62,6 @@ enum NYAS_TEX_ {
 	NYAS_TEX_COUNT
 };
 
-typedef int nyas_texture_format; // enum nyas_texture_formats
-enum NYAS_TEX_FMT_ {
-	NYAS_TEX_FMT_DEFAULT = 0,
-	NYAS_TEX_FMT_DEPTH,
-	NYAS_TEX_FMT_STENCIL,
-	NYAS_TEX_FMT_DEPTH_STENCIL,
-	NYAS_TEX_FMT_SRGB,
-	NYAS_TEX_FMT_SRGBA,
-	NYAS_TEX_FMT_R8,
-	NYAS_TEX_FMT_RG8,
-	NYAS_TEX_FMT_RGB8,
-	NYAS_TEX_FMT_RGBA8,
-	NYAS_TEX_FMT_R16F,
-	NYAS_TEX_FMT_RG16F,
-	NYAS_TEX_FMT_RGB16F,
-	NYAS_TEX_FMT_RGBA16F,
-	NYAS_TEX_FMT_RGB32F,
-	NYAS_TEX_FMT_COUNT
-};
-
 typedef int nyas_texture_filter; // enum nyas_texture_filters
 enum NYAS_TEX_FLTR_ {
 	NYAS_TEX_FLTR_DEFAULT = 0,
@@ -147,18 +89,18 @@ struct nyas_texture_desc {
 	nyas_texture_type type;
 	int width;
 	int height;
-	nyas_texture_format fmt;
-	nyas_texture_filter min_filter;
-	nyas_texture_filter mag_filter;
-	nyas_texture_wrap wrap_s;
-	nyas_texture_wrap wrap_t;
-	nyas_texture_wrap wrap_r;
+	nyas_enum fmt;
+	nyas_enum min_filter;
+	nyas_enum mag_filter;
+	nyas_enum wrap_s;
+	nyas_enum wrap_t;
+	nyas_enum wrap_r;
 	float border_color[4];
 };
 
 struct nyas_texture_target {
 	nyas_tex tex;
-	nyas_texture_face face;
+	nyas_enum face;
 	nyas_framebuffer_attach attach;
 	int lod_level;
 };
@@ -178,21 +120,6 @@ typedef struct nyas_mat {
 	nyas_shader shader;
 } nyas_mat;
 
-typedef int nyas_draw_flags;
-enum NYAS_DRAW_ {
-	NYAS_DRAW_CLEAR_COLOR,
-	NYAS_DRAW_CLEAR_DEPTH,
-	NYAS_DRAW_CLEAR_STENCIL,
-	NYAS_DRAW_TEST_DEPTH,
-	NYAS_DRAW_TEST_STENCIL,
-	NYAS_DRAW_WRITE_DEPTH,
-	NYAS_DRAW_WRITE_STENCIL,
-	NYAS_DRAW_BLEND,
-	NYAS_DRAW_CULL,
-	NYAS_DRAW_SCISSOR,
-	NYAS_DRAW_FLAGS_COUNT
-};
-
 struct nyas_draw_target {
 	nyas_framebuffer fb;
 	struct nyas_color bgcolor;
@@ -206,8 +133,8 @@ struct nyas_draw_pipeline {
 struct nyas_draw_ops {
 	struct nyas_rect viewport;
 	struct nyas_rect scissor;
-	nyas_draw_flags enable;
-	nyas_draw_flags disable;
+	nyas_flags enable;
+	nyas_flags disable;
 	uint8_t blend_src;
 	uint8_t blend_dst;
 	uint8_t cull_face;
@@ -265,4 +192,141 @@ nyas_tex *nyas_mat_tex(nyas_mat mat); // Ptr to first texture.
 
 void nyas_draw(struct nyas_draw *dl);
 
-#endif // NYAS_PIXELS_H
+#include <stddef.h>
+
+#if 0
+
+typedef struct nyas_resource {
+	void *internal;
+	nyas_flags flags;
+} nyas_resource;
+
+typedef struct nyas_texture_data {
+	void *pixel_buffer;
+	ptrdiff_t pixel_buffer_size;
+	int lod;        /* level of detail */
+	int index;      /* texture arrays only */
+	nyas_enum face; /* cubemaps only */
+} nyas_texture_data;
+
+typedef struct nyas_texture {
+	nyas_texture_data *images;
+	int img_count;
+	int width;
+	int height;
+	nyas_enum type;       /* NYAS_TEXTURE_TYPE */
+	nyas_enum format;     /* NYAS_TEXTURE_FORMAT */
+	nyas_enum min_filter; /* NYAS_TEXTURE_FILTER */
+	nyas_enum mag_filter; /* NYAS_TEXTURE_FILTER */
+	nyas_enum wrap_s;     /* NYAS_TEXTURE_WRAP */
+	nyas_enum wrap_t;     /* NYAS_TEXTURE_WRAP */
+	nyas_enum wrap_r;     /* NYAS_TEXTURE_WRAP */
+} nyas_texture;
+
+typedef struct nyas_mesh {
+	float *vertices;
+	void *indices;
+	ptrdiff_t vtx_count;
+	ptrdiff_t idx_count;
+	int indices_sizeof; /* 2 or 4 */
+	nyas_flags vertex_attributes;
+} nyas_mesh;
+
+typedef struct nyas_material_data {
+	float *values;
+	nyas_texture *textures;
+	nyas_texture *cubemaps;
+} nyas_material_data;
+
+typedef struct nyas_shader {
+	nyas_material_data shared_data; /* Read-only data for material instances. */
+	int shared_values_location;
+	int shared_tex_location;
+	int shared_cubemap_location;
+	int shared_values_count;
+	int shared_tex_count;
+	int shared_cubemap_count;
+	int values_location;
+	int tex_location;
+	int cubemap_location;
+	int values_count;
+	int tex_count;
+	int cubemap_count;
+	nyas_flags vertex_attributes; /* ?? NYAS_FLAG_VA (see: struct nyas_mesh) */
+} nyas_shader;
+
+typedef struct nyas_material {
+	nyas_material_data data;
+	nyas_shader	shader;
+} nyas_material;
+
+#define NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES 6
+typedef struct nyas_framebuffer {
+	nyas_texture textures[NYAS_CONFIG_FRAMEBUFFER_COLOR_TEXTURES];
+	nyas_texture depth;
+	nyas_texture stencil;
+} nyas_framebuffer;
+
+typedef struct nyas_draw_state {
+	nyas_flags enable_flags;
+	nyas_flags disable_flags;
+	nyas_enum blend_src_fn;
+	nyas_enum blend_dst_fn;
+	nyas_enum depth_fn;
+	nyas_enum face_culling;
+	int viewport_min_x;
+	int viewport_min_y;
+	int viewport_max_x;
+	int viewport_max_y;
+	int scissor_min_x;
+	int scissor_min_y;
+	int scissor_max_x;
+	int scissor_max_y;
+	float bg_color_r;
+	float bg_color_g;
+	float bg_color_b;
+	float bg_color_a;
+} nyas_draw_state;
+
+typedef struct nyas_draw_unit {
+	nyas_material material;
+	nyas_mesh mesh;
+} nyas_draw_unit;
+
+typedef struct nyas_draw_command {
+	nyas_draw_state state;
+	nyas_draw_unit *units;
+	ptrdiff_t unit_count;
+	nyas_framebuffer framebuffer;
+	nyas_shader shader;
+} nyas_draw_command;
+
+typedef struct nyas_draw_list {
+	nyas_draw_command *commands;
+	ptrdiff_t count;
+} nyas_draw_list;
+
+typedef struct nyas_draw_io {
+	/*
+	 * frame-lived allocate
+	 * Allocations made with this funcion are expected to be valid until the frame is drawn.
+	 * The allocations should not expect to be released by this module.
+	 */
+	void *(*falloc)(size_t size);
+
+	/*
+	 * error callback
+	 * Error reporting function.
+	 */
+	void (*error)(nyas_enum code, void *context, const char *description);
+
+	void (*log)(const char *text);
+	void (*assert)(int expression);
+} nyas_draw_io;
+
+typedef struct nyas_draw_context {
+	nyas_draw_io io;
+} nyas_draw_context;
+
+#endif
+#endif // NYAS_DEFS_H

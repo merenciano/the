@@ -13,4 +13,5 @@
 #include "core/mem.h"
 #include "core/scene.h"
 #include "core/sched.h"
-#include "render/pixels.h"
+#include "nyas_draw.h"
+

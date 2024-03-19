@@ -1,5 +1,5 @@
-#include <nyas.h>
-#include <render/pixels_internal.h>
+#include "../include/nyas.h"
+#include "draw.h"
 
 #include <mathc.h>
 #include <glad/glad.h>
@@ -259,7 +259,7 @@ GeneratePbrEnv(GenEnv *env)
 	nyas_cmd *rendops = nyas_cmd_alloc();
 	rendops->data.rend_opts.enable_flags = NYAS_DEPTH_TEST | NYAS_DEPTH_WRITE |
 	  NYAS_BLEND;
-	rendops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
+	rendops->data.rend_opts.disable_flags = nyas_enum;
 	rendops->data.rend_opts.cull_face = NYAS_CULL_BACK;
 	rendops->data.rend_opts.blend_src = NYAS_BLEND_ONE;
 	rendops->data.rend_opts.blend_dst = NYAS_BLEND_ZERO;
@@ -309,13 +309,13 @@ main(int argc, char **argv)
 	  nyas_shader_create(g_shader_descriptors.prefilter);
 	nyas_shader lut_gen = nyas_shader_create(g_shader_descriptors.lut);
 
-	g_tex_flags.sky = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEX_FMT_RGB16F, 1024, 1024);
+	g_tex_flags.sky = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 1024, 1024);
 	g_tex_flags.sky.min_filter = NYAS_TEX_FLTR_LINEAR;
-	g_tex_flags.prefilter = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEX_FMT_RGB16F, 256, 256);
+	g_tex_flags.prefilter = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 256, 256);
 	g_tex_flags.prefilter.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
 	g_tex_flags.prefilter.mag_filter = NYAS_TEX_FLTR_LINEAR;
 	g_tex_flags.prefilter.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS;
-	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEX_FMT_RG16F, 512, 512);
+	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RG16F, 512, 512);
 	nyas_tex sky = nyas_tex_empty(&g_tex_flags.sky);
 	nyas_tex irradiance = nyas_tex_empty(&g_tex_flags.sky);
 	nyas_tex prefilter = nyas_tex_empty(&g_tex_flags.prefilter);

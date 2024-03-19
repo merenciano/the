@@ -1,3 +1,4 @@
+#if 0
 #include "pbr.h"
 #include "gui.h"
 #include "mathc.h"
@@ -128,10 +129,10 @@ Update(nyas_chrono *dt)
 	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
 	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST |
 	  NYAS_DEPTH_WRITE;
-	rops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
-	rops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LESS;
-	rops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
+	rops->data.rend_opts.blend_func.src = nyas_enum_ONE;
+	rops->data.rend_opts.blend_func.dst = nyas_enum_ZERO;
+	rops->data.rend_opts.depth_func = nyas_enum_LESS;
+	rops->data.rend_opts.cull_face = nyas_enum_BACK;
 	rops->execute = nyas_rops_fn;
 	fbuff->next = rops;
 
@@ -155,8 +156,8 @@ Update(nyas_chrono *dt)
 
 	rops = nyas_cmd_alloc();
 	memset(&rops->data.rend_opts, 0, sizeof(nyas_rops_cmdata));
-	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
+	rops->data.rend_opts.disable_flags = nyas_enum;
+	rops->data.rend_opts.depth_func = nyas_enum_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
 	nyas_camera_static_vp(nyas_shader_data(skybox_sh), &camera);
@@ -237,3 +238,7 @@ main(int argc, char **argv)
 
 	return 0;
 }
+#endif
+
+int main() { return 0; }
+

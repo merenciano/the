@@ -28,6 +28,7 @@ target_compile_options(${LIB_NAME} PUBLIC
 
 target_include_directories(${LIB_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/src
+	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${CMAKE_CURRENT_SOURCE_DIR}/extern/include
 )
 

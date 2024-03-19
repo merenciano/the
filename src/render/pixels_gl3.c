@@ -1,4 +1,4 @@
-#include "pixels_internal.h"
+#include "draw.h"
 
 #include "core/io.h"
 #include "core/mem.h" // free --shader source buffer
@@ -82,20 +82,20 @@ struct gltfmt_result {
 };
 
 static struct gltfmt_result
-gltfmt(nyas_texture_format fmt)
+gltfmt(nyas_enum fmt)
 {
 	switch (fmt) {
-	case NYAS_TEX_FMT_R8: return (struct gltfmt_result){ GL_R8, GL_RED, GL_UNSIGNED_BYTE };
-	case NYAS_TEX_FMT_RG8: return (struct gltfmt_result){ GL_RG8, GL_RG, GL_UNSIGNED_BYTE };
-	case NYAS_TEX_FMT_RGB8: return (struct gltfmt_result){ GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE };
-	case NYAS_TEX_FMT_RGBA8: return (struct gltfmt_result){ GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE };
-	case NYAS_TEX_FMT_SRGB: return (struct gltfmt_result){ GL_SRGB8, GL_RGB, GL_UNSIGNED_BYTE };
-	case NYAS_TEX_FMT_R16F: return (struct gltfmt_result){ GL_R16F, GL_RED, GL_HALF_FLOAT };
-	case NYAS_TEX_FMT_RG16F: return (struct gltfmt_result){ GL_RG16F, GL_RG, GL_HALF_FLOAT };
-	case NYAS_TEX_FMT_RGB16F: return (struct gltfmt_result){ GL_RGB16F, GL_RGB, GL_HALF_FLOAT };
-	case NYAS_TEX_FMT_RGBA16F: return (struct gltfmt_result){ GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT };
-	case NYAS_TEX_FMT_RGB32F: return (struct gltfmt_result){ GL_RGB32F, GL_RGB, GL_FLOAT };
-	case NYAS_TEX_FMT_DEPTH:
+	case NYAS_TEXTURE_FORMAT_R_8: return (struct gltfmt_result){ GL_R8, GL_RED, GL_UNSIGNED_BYTE };
+	case NYAS_TEXTURE_FORMAT_RG_8: return (struct gltfmt_result){ GL_RG8, GL_RG, GL_UNSIGNED_BYTE };
+	case NYAS_TEXTURE_FORMAT_RGB_8: return (struct gltfmt_result){ GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE };
+	case NYAS_TEXTURE_FORMAT_RGBA_8: return (struct gltfmt_result){ GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE };
+	case NYAS_TEXTURE_FORMAT_SRGB_8: return (struct gltfmt_result){ GL_SRGB8, GL_RGB, GL_UNSIGNED_BYTE };
+	case NYAS_TEXTURE_FORMAT_R_16F: return (struct gltfmt_result){ GL_R16F, GL_RED, GL_HALF_FLOAT };
+	case NYAS_TEXTURE_FORMAT_RG_16F: return (struct gltfmt_result){ GL_RG16F, GL_RG, GL_HALF_FLOAT };
+	case NYAS_TEXTURE_FORMAT_RGB_16F: return (struct gltfmt_result){ GL_RGB16F, GL_RGB, GL_HALF_FLOAT };
+	case NYAS_TEXTURE_FORMAT_RGBA_16F: return (struct gltfmt_result){ GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT };
+	case NYAS_TEXTURE_FORMAT_RGB_32F: return (struct gltfmt_result){ GL_RGB32F, GL_RGB, GL_FLOAT };
+	case NYAS_TEXTURE_FORMAT_DEPTH:
 		return (struct gltfmt_result){ GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT };
 	default:
 		NYAS_LOG_ERR("Unrecognized texture format: (%d).", fmt);
@@ -371,7 +371,7 @@ void
 nypx_fb_set(uint32_t fb_id, uint32_t tex_id, struct nyas_texture_target *tt)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
-	GLenum face = tt->face == NYAS_FACE_2D ?
+	GLenum face = tt->face == NYAS_TEXTURE_FACE_2D ?
 	  GL_TEXTURE_2D :
 	  GL_TEXTURE_CUBE_MAP_POSITIVE_X + tt->face;
 	GLint slot = nypx__fb_attach_gl(tt->attach);
@@ -466,11 +466,11 @@ static GLenum
 nypx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
-	case NYAS_BLEND_CURRENT: return 0xFFFF;
-	case NYAS_BLEND_ONE: return GL_ONE;
-	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
-	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
-	case NYAS_BLEND_ZERO: return GL_ZERO;
+	case NYAS_DRAW_BLEND_DEFAULT: return 0xFFFF;
+	case NYAS_DRAW_BLEND_ONE: return GL_ONE;
+	case NYAS_DRAW_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
+	case NYAS_DRAW_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
+	case NYAS_DRAW_BLEND_ZERO: return GL_ZERO;
 	default: NYAS_ASSERT(false); return -1;
 	}
 }
@@ -485,13 +485,13 @@ nypx_blend_set(int blend_func_src, int blend_func_dst)
 }
 
 static GLenum
-nypx__gl_cull(nyas_cull_face cull)
+nypx__gl_cull(nyas_enum cull)
 {
 	switch (cull) {
-	case NYAS_CULL_BACK: return GL_BACK;
-	case NYAS_CULL_FRONT: return GL_FRONT;
-	case NYAS_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
-	case NYAS_CULL_CURRENT: return 0;
+	case NYAS_DRAW_CULL_BACK: return GL_BACK;
+	case NYAS_DRAW_CULL_FRONT: return GL_FRONT;
+	case NYAS_DRAW_CULL_FRONT_AND_BACK: return GL_FRONT_AND_BACK;
+	case NYAS_DRAW_CULL_DEFAULT: return 0;
 	default: return NYAS_ERR_SWITCH_DEFAULT;
 	}
 }
@@ -506,12 +506,12 @@ nypx_cull_set(int cull_face)
 }
 
 static GLenum
-nypx__gl_depth(nyas_depth_func df)
+nypx__gl_depth(nyas_enum df)
 {
 	switch (df) {
-	case NYAS_DEPTH_LEQUAL: return GL_LEQUAL;
-	case NYAS_DEPTH_LESS: return GL_LESS;
-	case NYAS_DEPTH_CURRENT: return 0;
+	case NYAS_DRAW_DEPTH_LEQUAL: return GL_LEQUAL;
+	case NYAS_DRAW_DEPTH_LESS: return GL_LESS;
+	case NYAS_DRAW_DEPTH_DEFAULT: return 0;
 	default: return NYAS_ERR_SWITCH_DEFAULT;
 	}
 }

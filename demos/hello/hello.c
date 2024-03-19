@@ -1,5 +1,6 @@
+#if 0 
 #include "nyas.h"
-#include "render/pixels_internal.h"
+#include "draw.h"
 #include <mathc.h>
 #include <string.h>
 
@@ -127,11 +128,11 @@ Update(void *context)
 	nyas_cmd *rops = nyas_cmd_alloc();
 	fbuff->next = rops;
 	rops->data.rend_opts.enable_flags = NYAS_BLEND | NYAS_DEPTH_TEST |
-	  NYAS_DEPTH_WRITE | NYAS_CULL_FACE;
-	rops->data.rend_opts.blend_func.src = NYAS_BLEND_FUNC_ONE;
-	rops->data.rend_opts.blend_func.dst = NYAS_BLEND_FUNC_ZERO;
-	rops->data.rend_opts.cull_face = NYAS_CULL_FACE_BACK;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LESS;
+	  NYAS_DEPTH_WRITE | nyas_enum;
+	rops->data.rend_opts.blend_func.src = nyas_enum_ONE;
+	rops->data.rend_opts.blend_func.dst = nyas_enum_ZERO;
+	rops->data.rend_opts.cull_face = nyas_enum_BACK;
+	rops->data.rend_opts.depth_func = nyas_enum_LESS;
 	rops->execute = nyas_rops_fn;
 
 	mat4_multiply(((HelloMatData *)ctx->e->mat.ptr)->vp, camera.proj,
@@ -156,8 +157,8 @@ Update(void *context)
 	nyas_entity_draw(nyas_entities(), nyas_entity_count());
 
 	rops = nyas_cmd_alloc();
-	rops->data.rend_opts.disable_flags = NYAS_CULL_FACE;
-	rops->data.rend_opts.depth_func = NYAS_DEPTH_FUNC_LEQUAL;
+	rops->data.rend_opts.disable_flags = nyas_enum;
+	rops->data.rend_opts.depth_func = nyas_enum_LEQUAL;
 	rops->execute = nyas_rops_fn;
 
 	nyas_camera_static_vp(nyas_shader_data(ctx->skybox), &camera);
@@ -237,3 +238,7 @@ main(int argc, char **argv)
 
 	return 0;
 }
+#endif 
+
+int main() { return 0; }
+

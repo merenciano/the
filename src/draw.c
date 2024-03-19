@@ -1,8 +1,8 @@
-#include "pixels.h"
+#include <nyas_draw.h>
 
 #include "core/io.h"
 #include "core/mem.h"
-#include "render/pixels_internal.h"
+#include "draw.h"
 
 #include <mathc.h>
 
@@ -125,18 +125,18 @@ nyas__face_img_path(const char *path, int face, int face_count)
 }
 
 static int
-nyas__tex_channels(nyas_texture_format fmt)
+nyas__tex_channels(nyas_enum fmt)
 {
 	switch (fmt) {
-	case NYAS_TEX_FMT_RGBA16F:
-	case NYAS_TEX_FMT_RGBA8: return 4;
-	case NYAS_TEX_FMT_RGB16F:
-	case NYAS_TEX_FMT_RGB8:
-	case NYAS_TEX_FMT_SRGB: return 3;
-	case NYAS_TEX_FMT_RG16F:
-	case NYAS_TEX_FMT_RG8: return 2;
-	case NYAS_TEX_FMT_R16F:
-	case NYAS_TEX_FMT_R8: return 1;
+	case NYAS_TEXTURE_FORMAT_RGBA_16F:
+	case NYAS_TEXTURE_FORMAT_RGBA_8: return 4;
+	case NYAS_TEXTURE_FORMAT_RGB_16F:
+	case NYAS_TEXTURE_FORMAT_RGB_8:
+	case NYAS_TEXTURE_FORMAT_SRGB_8: return 3;
+	case NYAS_TEXTURE_FORMAT_RG_16F:
+	case NYAS_TEXTURE_FORMAT_RG_8: return 2;
+	case NYAS_TEXTURE_FORMAT_R_16F:
+	case NYAS_TEXTURE_FORMAT_R_8: return 1;
 	default: return 0;
 	}
 }
@@ -154,14 +154,14 @@ nyas__tex_faces(nyas_texture_type type)
 }
 
 static bool
-nyas__tex_is_float(nyas_texture_format fmt)
+nyas__tex_is_float(nyas_enum fmt)
 {
 	switch (fmt) {
-	case NYAS_TEX_FMT_RGBA16F:
-	case NYAS_TEX_FMT_RGB16F:
-	case NYAS_TEX_FMT_RGB32F:
-	case NYAS_TEX_FMT_RG16F:
-	case NYAS_TEX_FMT_R16F: return true;
+	case NYAS_TEXTURE_FORMAT_RGBA_16F:
+	case NYAS_TEXTURE_FORMAT_RGB_16F:
+	case NYAS_TEXTURE_FORMAT_RGB_32F:
+	case NYAS_TEXTURE_FORMAT_RG_16F:
+	case NYAS_TEXTURE_FORMAT_R_16F: return true;
 	default: return false;
 	}
 }
@@ -176,7 +176,7 @@ nyas_tex_create(void)
 		.type = NYAS_TEX_2D,
 		.width = 0,
 		.height = 0,
-		.fmt = NYAS_TEX_FMT_SRGB,
+		.fmt = NYAS_TEXTURE_FORMAT_SRGB_8,
 		.min_filter = NYAS_TEX_FLTR_LINEAR,
 		.mag_filter = NYAS_TEX_FLTR_LINEAR,
 		.wrap_s = NYAS_TEX_WRAP_REPEAT,
@@ -737,51 +737,51 @@ nyas_draw(struct nyas_draw *dl)
 		struct nyas_color bg = dl->state.target.bgcolor;
 		nypx_clear_color(bg.r, bg.g, bg.b, bg.a);
 		nypx_clear(
-		  ops->enable & (1 << NYAS_DRAW_CLEAR_COLOR), ops->enable & (1 << NYAS_DRAW_CLEAR_DEPTH),
-		  ops->enable & (1 << NYAS_DRAW_CLEAR_STENCIL));
+		  ops->enable & NYAS_FLAG_DO_COLOR_CLEAR, ops->enable & NYAS_FLAG_DO_DEPTH_CLEAR,
+		  ops->enable & NYAS_FLAG_DO_STENCIL_CLEAR);
 
 		nypx_viewport(ops->viewport);
 		nypx_scissor(ops->scissor);
 
-		if (ops->disable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+		if (ops->disable & NYAS_FLAG_DO_DEPTH_TEST) {
 			nypx_depth_disable_test();
-		} else if (ops->enable & (1 << NYAS_DRAW_TEST_DEPTH)) {
+		} else if (ops->enable & NYAS_FLAG_DO_DEPTH_TEST) {
 			nypx_depth_enable_test();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+		if (ops->disable & NYAS_FLAG_DO_DEPTH_WRITE) {
 			nypx_depth_disable_mask();
-		} else if (ops->enable & (1 << NYAS_DRAW_WRITE_DEPTH)) {
+		} else if (ops->enable & NYAS_FLAG_DO_DEPTH_WRITE) {
 			nypx_depth_enable_mask();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+		if (ops->disable & NYAS_FLAG_DO_STENCIL_TEST) {
 			nypx_stencil_disable_test();
-		} else if (ops->enable & (1 << NYAS_DRAW_TEST_STENCIL)) {
+		} else if (ops->enable & NYAS_FLAG_DO_STENCIL_TEST) {
 			nypx_stencil_enable_test();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+		if (ops->disable & NYAS_FLAG_DO_STENCIL_WRITE) {
 			nypx_stencil_disable_mask();
-		} else if (ops->enable & (1 << NYAS_DRAW_WRITE_STENCIL)) {
+		} else if (ops->enable & NYAS_FLAG_DO_STENCIL_WRITE) {
 			nypx_stencil_enable_mask();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_BLEND)) {
+		if (ops->disable & NYAS_FLAG_DO_BLEND) {
 			nypx_blend_disable();
-		} else if (ops->enable & (1 << NYAS_DRAW_BLEND)) {
+		} else if (ops->enable & NYAS_FLAG_DO_BLEND) {
 			nypx_blend_enable();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_CULL)) {
+		if (ops->disable & NYAS_FLAG_DO_CULL) {
 			nypx_cull_disable();
-		} else if (ops->enable & (1 << NYAS_DRAW_CULL)) {
+		} else if (ops->enable & NYAS_FLAG_DO_CULL) {
 			nypx_cull_enable();
 		}
 
-		if (ops->disable & (1 << NYAS_DRAW_SCISSOR)) {
+		if (ops->disable & NYAS_FLAG_DO_SCISSOR) {
 			nypx_scissor_disable();
-		} else if (ops->enable & (1 << NYAS_DRAW_SCISSOR)) {
+		} else if (ops->enable & NYAS_FLAG_DO_SCISSOR) {
 			nypx_scissor_enable();
 		}
 
@@ -810,7 +810,5 @@ nyas_draw(struct nyas_draw *dl)
 }
 
 #if defined(NYAS_GL3)
-#include "pixels_gl3.c"
-#elif defined(NYAS_GLES2)
-#include "pixels_gles2.c"
+#include "render/pixels_gl3.c"
 #endif

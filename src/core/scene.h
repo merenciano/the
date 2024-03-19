@@ -1,7 +1,7 @@
 #ifndef NYAS_SCENE_H
 #define NYAS_SCENE_H
 
-#include "render/pixels.h"
+#include <nyas_draw.h>
 
 struct nyas_cam {
 	float view[16];

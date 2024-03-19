@@ -2,7 +2,7 @@
 
 #include "core/io.h"
 #include "core/mem.h"
-#include "render/pixels_internal.h"
+#include "draw.h"
 
 #include <string.h>
 #include <math.h>
@@ -285,7 +285,7 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
+	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 1024;
 	t->data.height = 1024;
 	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
@@ -310,7 +310,7 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
+	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 1024;
 	t->data.height = 1024;
 	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
@@ -334,7 +334,7 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_CUBEMAP;
-	t->data.fmt = NYAS_TEX_FMT_RGB16F;
+	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 256;
 	t->data.height = 256;
 	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
@@ -362,7 +362,7 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
 	t->data.type = NYAS_TEX_2D;
-	t->data.fmt = NYAS_TEX_FMT_RG16F;
+	t->data.fmt = NYAS_TEXTURE_FORMAT_RG_16F;
 	t->data.width = 512;
 	t->data.height = 512;
 	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;

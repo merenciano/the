@@ -88,10 +88,10 @@ Init(void)
 	nyut_assets_add_env(ldr, &envargs);
 
 	struct nyas_texture_desc texdesc[] = {
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_SRGB, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_R8, 0, 0)
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_SRGB_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RGB_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0)
 	};
 
 	const char *texpaths[] = {
@@ -162,19 +162,19 @@ Init(void)
 	g_fb = nyas_fb_create();
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
-	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_RGB32F, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RGB_32F, vp->x, vp->y);
 	fb_tex = nyas_tex_create();
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
-		.tex = fb_tex, .attach = NYAS_ATTACH_COLOR, .face = NYAS_FACE_2D, .lod_level = 0
+		.tex = fb_tex, .attach = NYAS_ATTACH_COLOR, .face = NYAS_TEXTURE_FACE_2D, .lod_level = 0
 	};
 
 	struct nyas_texture_desc depthscriptor =
-	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEX_FMT_DEPTH, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_DEPTH, vp->x, vp->y);
 	nyas_tex fb_depth = nyas_tex_create();
 	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
-		.tex = fb_depth, .attach = NYAS_ATTACH_DEPTH, .face = NYAS_FACE_2D, .lod_level = 0
+		.tex = fb_depth, .attach = NYAS_ATTACH_DEPTH, .face = NYAS_TEXTURE_FACE_2D, .lod_level = 0
 	};
 
 	nyas_fb_set_target(g_fb, 0, color);
@@ -396,15 +396,15 @@ BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 	dl->state.target.fb = g_fb;
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
-	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_COLOR);
-	dl->state.ops.enable |= (1 << NYAS_DRAW_CLEAR_DEPTH);
-	dl->state.ops.enable |= (1 << NYAS_DRAW_BLEND);
-	dl->state.ops.enable |= (1 << NYAS_DRAW_TEST_DEPTH);
-	dl->state.ops.enable |= (1 << NYAS_DRAW_WRITE_DEPTH);
-	dl->state.ops.blend_src = NYAS_BLEND_ONE;
-	dl->state.ops.blend_dst = NYAS_BLEND_ZERO;
-	dl->state.ops.depth_fun = NYAS_DEPTH_LESS;
-	dl->state.ops.cull_face = NYAS_CULL_BACK;
+	dl->state.ops.enable |= NYAS_FLAG_DO_COLOR_CLEAR;
+	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_CLEAR;
+	dl->state.ops.enable |= NYAS_FLAG_DO_BLEND;
+	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_TEST;
+	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_WRITE;
+	dl->state.ops.blend_src = NYAS_DRAW_BLEND_ONE;
+	dl->state.ops.blend_dst = NYAS_DRAW_BLEND_ZERO;
+	dl->state.ops.depth_fun = NYAS_DRAW_DEPTH_LESS;
+	dl->state.ops.cull_face = NYAS_DRAW_CULL_BACK;
 
 	for (int i = 0; i < entity_pool.count; ++i) {
 		struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
@@ -418,8 +418,8 @@ BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
 
-	dl->state.ops.disable |= (1 << NYAS_DRAW_CULL);
-	dl->state.ops.depth_fun = NYAS_DEPTH_LEQUAL;
+	dl->state.ops.disable |= NYAS_FLAG_DO_CULL;
+	dl->state.ops.depth_fun = NYAS_DRAW_DEPTH_LEQUAL;
 
 	struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
 	cmd->material.shader = g_shaders.skybox;
@@ -431,7 +431,7 @@ BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 	dl->state.target.fb = NYAS_DEFAULT;
 	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
 	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
-	dl->state.ops.disable |= (1 << NYAS_DRAW_TEST_DEPTH);
+	dl->state.ops.disable |= NYAS_FLAG_DO_DEPTH_TEST;
 
 	cmd = nyarr_nydrawcmd_push(&dl->cmds);
 	cmd->material.shader = g_shaders.fullscreen_img;

@@ -4,7 +4,7 @@
 #include "core/io.h"
 #include "core/scene.h"
 #include "core/utils.h"
-#include "render/pixels_internal.h"
+#include "draw.h"
 
 #include <glad/glad.h>
 

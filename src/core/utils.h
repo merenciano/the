@@ -3,11 +3,13 @@
 
 #include "core/nyas_core.h"
 #include "core/sched.h"
-#include "render/pixels.h"
+#include "nyas_draw.h"
+
+#include <stdbool.h>
 
 // Default values
 static inline struct nyas_texture_desc
-nyut_texture_desc_default(nyas_texture_type type, nyas_texture_format fmt, int w, int h)
+nyut_texture_desc_default(nyas_texture_type type, nyas_enum fmt, int w, int h)
 {
 	return (struct nyas_texture_desc){
 		.flags = NYAS_TEX_FLAG_DEFAULT,
@@ -34,10 +36,10 @@ nyut_draw_state_default(void)
 		         .scissor = (struct nyas_rect){ 0, 0, 0, 0 },
 		         .enable = 0,
 		         .disable = 0,
-		         .depth_fun = NYAS_DEPTH_CURRENT,
-		         .blend_src = NYAS_BLEND_CURRENT,
-		         .blend_dst = NYAS_BLEND_CURRENT,
-		         .cull_face = NYAS_CULL_CURRENT }
+		         .depth_fun = NYAS_DRAW_DEPTH_DEFAULT,
+		         .blend_src = NYAS_DRAW_BLEND_DEFAULT,
+		         .blend_dst = NYAS_DRAW_BLEND_DEFAULT,
+		         .cull_face = NYAS_DRAW_CULL_DEFAULT }
 	};
 }
 

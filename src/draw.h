@@ -1,8 +1,8 @@
-#ifndef NYASPIX_H
-#define NYASPIX_H
+#ifndef NYAS_INTERNAL_DRAW_H
+#define NYAS_INTERNAL_DRAW_H
 
 #include "core/nyas_core.h"
-#include "pixels.h"
+#include "nyas_draw.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -34,7 +34,7 @@ struct nyas_mesh_internal {
 
 struct nyas_texture_image {
 	void *pix;
-	nyas_texture_face face;
+	nyas_enum face;
 	int lod;
 };
 
@@ -128,4 +128,4 @@ extern struct nypool_tex tex_pool;
 extern struct nypool_shad shader_pool;
 extern struct nypool_fb framebuffer_pool;
 
-#endif // NYASPIX_H
+#endif //NYAS_INTERNAL_DRAW_H

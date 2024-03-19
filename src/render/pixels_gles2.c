@@ -1,4 +1,4 @@
-#include "pixels_internal.h"
+#include "draw.h"
 
 #include "core/io.h"
 #include "core/mem.h"
@@ -464,7 +464,7 @@ nypx_cull_disable(void)
 }
 
 static GLenum
-nypx__gl_cull(enum nyas_cull_face cull)
+nypx__gl_cull(enum nyas_enum cull)
 {
 	switch (cull) {
 	case NYPX_CULL_BACK:
@@ -509,7 +509,7 @@ nypx_depth_disable_mask(void)
 }
 
 static GLenum
-nypx__gl_depth(enum nyas_depth_func df)
+nypx__gl_depth(enum nyas_enum df)
 {
 	switch (df) {
 	case NYPX_DEPTH_LEQUAL:
