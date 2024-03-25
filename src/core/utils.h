@@ -9,7 +9,7 @@
 
 // Default values
 static inline struct nyas_texture_desc
-nyut_texture_desc_default(nyas_texture_type type, nyas_enum fmt, int w, int h)
+nyut_texture_desc_default(nyas_enum type, nyas_enum fmt, int w, int h)
 {
 	return (struct nyas_texture_desc){
 		.flags = NYAS_TEX_FLAG_DEFAULT,
@@ -17,11 +17,11 @@ nyut_texture_desc_default(nyas_texture_type type, nyas_enum fmt, int w, int h)
 		.width = w,
 		.height = h,
 		.fmt = fmt,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_REPEAT,
+		.min_filter = NYAS_TEXTURE_FILTER_LINEAR,
+		.mag_filter = NYAS_TEXTURE_FILTER_LINEAR,
+		.wrap_s = NYAS_TEXTURE_WRAP_REPEAT,
+		.wrap_t = NYAS_TEXTURE_WRAP_REPEAT,
+		.wrap_r = NYAS_TEXTURE_WRAP_REPEAT,
 		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 }

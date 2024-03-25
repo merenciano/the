@@ -142,13 +142,13 @@ nyas__tex_channels(nyas_enum fmt)
 }
 
 static int
-nyas__tex_faces(nyas_texture_type type)
+nyas__tex_faces(nyas_enum type)
 {
 	switch (type) {
-	case NYAS_TEX_2D:
-	case NYAS_TEX_ARRAY_2D: return 1;
-	case NYAS_TEX_CUBEMAP:
-	case NYAS_TEX_ARRAY_CUBEMAP: return 6;
+	case NYAS_TEXTURE_TYPE_2D:
+	case NYAS_TEXTURE_TYPE_2D_ARRAY: return 1;
+	case NYAS_TEXTURE_TYPE_CUBEMAP:
+	case NYAS_TEXTURE_TYPE_CUBEMAP_ARRAY: return 6;
 	default: return 0;
 	}
 }
@@ -173,15 +173,15 @@ nyas_tex_create(void)
 	tex_pool.buf->at[tex].res = (struct nyas_resource_internal){ .id = 0, .flags = 0 };
 	tex_pool.buf->at[tex].data = (struct nyas_texture_desc){
 		.flags = NYAS_TEX_FLAG_DEFAULT,
-		.type = NYAS_TEX_2D,
+		.type = NYAS_TEXTURE_TYPE_2D,
 		.width = 0,
 		.height = 0,
 		.fmt = NYAS_TEXTURE_FORMAT_SRGB_8,
-		.min_filter = NYAS_TEX_FLTR_LINEAR,
-		.mag_filter = NYAS_TEX_FLTR_LINEAR,
-		.wrap_s = NYAS_TEX_WRAP_REPEAT,
-		.wrap_t = NYAS_TEX_WRAP_REPEAT,
-		.wrap_r = NYAS_TEX_WRAP_REPEAT,
+		.min_filter = NYAS_TEXTURE_FILTER_LINEAR,
+		.mag_filter = NYAS_TEXTURE_FILTER_LINEAR,
+		.wrap_s = NYAS_TEXTURE_WRAP_REPEAT,
+		.wrap_t = NYAS_TEXTURE_WRAP_REPEAT,
+		.wrap_r = NYAS_TEXTURE_WRAP_REPEAT,
 		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 	tex_pool.buf->at[tex].img = NULL;

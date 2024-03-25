@@ -299,8 +299,8 @@ main(int argc, char **argv)
 	nyas_io_init("Environment file generation tool", 600, 400, true);
 	nyas_px_init();
 
-	g_tex_flags.env = nyas_tex_default_desc(NYAS_TEX_2D);
-	g_tex_flags.env.min_filter = NYAS_TEX_FLTR_LINEAR;
+	g_tex_flags.env = nyas_tex_default_desc(NYAS_TEXTURE_TYPE_2D);
+	g_tex_flags.env.min_filter = NYAS_TEXTURE_FILTER_LINEAR;
 	g_tex_flags.env.desired_channels = 3;
 
 	nyas_shader eqr_to_cube =
@@ -309,13 +309,13 @@ main(int argc, char **argv)
 	  nyas_shader_create(g_shader_descriptors.prefilter);
 	nyas_shader lut_gen = nyas_shader_create(g_shader_descriptors.lut);
 
-	g_tex_flags.sky = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 1024, 1024);
-	g_tex_flags.sky.min_filter = NYAS_TEX_FLTR_LINEAR;
-	g_tex_flags.prefilter = nyas_tex_defined_desc(NYAS_TEX_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 256, 256);
-	g_tex_flags.prefilter.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
-	g_tex_flags.prefilter.mag_filter = NYAS_TEX_FLTR_LINEAR;
+	g_tex_flags.sky = nyas_tex_defined_desc(NYAS_TEXTURE_TYPE_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 1024, 1024);
+	g_tex_flags.sky.min_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	g_tex_flags.prefilter = nyas_tex_defined_desc(NYAS_TEXTURE_TYPE_CUBEMAP, NYAS_TEXTURE_FORMAT_RGB_16F, 256, 256);
+	g_tex_flags.prefilter.min_filter = NYAS_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR;
+	g_tex_flags.prefilter.mag_filter = NYAS_TEXTURE_FILTER_LINEAR;
 	g_tex_flags.prefilter.flags = NYAS_TEX_FLAG_GENERATE_MIPMAPS;
-	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RG16F, 512, 512);
+	g_tex_flags.lut = nyas_tex_defined_desc(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RG16F, 512, 512);
 	nyas_tex sky = nyas_tex_empty(&g_tex_flags.sky);
 	nyas_tex irradiance = nyas_tex_empty(&g_tex_flags.sky);
 	nyas_tex prefilter = nyas_tex_empty(&g_tex_flags.prefilter);

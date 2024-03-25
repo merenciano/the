@@ -284,15 +284,15 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	tex *t = &tex_pool.buf->at[*sky];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
+	t->data.type = NYAS_TEXTURE_TYPE_CUBEMAP;
 	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 1024;
 	t->data.height = 1024;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->data.mag_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.min_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.wrap_s = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEXTURE_WRAP_CLAMP;
 	t->img = NULL;
 
 	size_t size = 1024 * 1024 * 3 * 2; // size * nchannels * sizeof(channel)
@@ -309,15 +309,15 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t = &tex_pool.buf->at[*irr];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
+	t->data.type = NYAS_TEXTURE_TYPE_CUBEMAP;
 	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 1024;
 	t->data.height = 1024;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->data.mag_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.min_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.wrap_s = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEXTURE_WRAP_CLAMP;
 	t->img = NULL;
 
 	for (int i = 0; i < 6; ++i) {
@@ -333,15 +333,15 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t = &tex_pool.buf->at[*pref];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_CUBEMAP;
+	t->data.type = NYAS_TEXTURE_TYPE_CUBEMAP;
 	t->data.fmt = NYAS_TEXTURE_FORMAT_RGB_16F;
 	t->data.width = 256;
 	t->data.height = 256;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->data.mag_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.min_filter = NYAS_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR;
+	t->data.wrap_s = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEXTURE_WRAP_CLAMP;
 	t->img = NULL;
 
 	size = 256 * 256 * 3 * 2;
@@ -361,15 +361,15 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 	t = &tex_pool.buf->at[*lut];
 	t->res.id = 0;
 	t->res.flags = NYAS_IRF_DIRTY;
-	t->data.type = NYAS_TEX_2D;
+	t->data.type = NYAS_TEXTURE_TYPE_2D;
 	t->data.fmt = NYAS_TEXTURE_FORMAT_RG_16F;
 	t->data.width = 512;
 	t->data.height = 512;
-	t->data.mag_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.min_filter = NYAS_TEX_FLTR_LINEAR;
-	t->data.wrap_s = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_t = NYAS_TEX_WRAP_CLAMP;
-	t->data.wrap_r = NYAS_TEX_WRAP_CLAMP;
+	t->data.mag_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.min_filter = NYAS_TEXTURE_FILTER_LINEAR;
+	t->data.wrap_s = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_t = NYAS_TEXTURE_WRAP_CLAMP;
+	t->data.wrap_r = NYAS_TEXTURE_WRAP_CLAMP;
 	t->img = NULL;
 
 	size = 512 * 512 * 2 * 2;

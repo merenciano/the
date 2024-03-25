@@ -249,11 +249,11 @@ typedef enum nyas_enum_ {
 	NYAS_TEXTURE_FILTER_DEFAULT,
 
 	NYAS_TEXTURE_WRAP,
-	NYAS_TEXTURE_WRAP_CLAMP_EDGE = NYAS_TEXTURE_WRAP,
+	NYAS_TEXTURE_WRAP_CLAMP = NYAS_TEXTURE_WRAP,
 	NYAS_TEXTURE_WRAP_WHITE,
 	NYAS_TEXTURE_WRAP_BLACK,
-	NYAS_TEXTURE_WRAP_CLAMP_REPEAT,
-	NYAS_TEXTURE_WRAP_CLAMP_MIRROR,
+	NYAS_TEXTURE_WRAP_REPEAT,
+	NYAS_TEXTURE_WRAP_MIRROR,
 	NYAS_TEXTURE_WRAP_DEFAULT,
 
 	NYAS_TEXTURE_FACE,
@@ -338,5 +338,21 @@ typedef enum nyas_enum_ {
 	NYAS_FLAG_DO_CULL = NYAS_ENUM_FLAG(NYAS_DRAW_OP, CULL),
 	NYAS_FLAG_DO_SCISSOR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, SCISSOR),
 } nyas_enum_;
+
+typedef int nyas_buffer_flags;
+
+typedef enum nyas_buffer_flags_ {
+	NYAS_BF_MEMORY_OWNED = 1,
+	NYAS_BF_MUTABLE = 1 << 1, /* Buffer contents can be modified even in non-owned (ref) mode */
+	NYAS_BF_VOLATILE = 1 << 2, /* Internal buffer could change or be reused or released anytime (it shouldn't be stored as a reference, so either read and discard or copy its contents somewhere) */
+} nyas_buffer_flags_;
+
+typedef struct nyas_buffer {
+	void *buf;
+	ptrdiff_t size;
+	nyas_buffer_flags flags;
+} nyas_buffer;
+
+
 
 #endif // NYAS_NYAS_CORE_H

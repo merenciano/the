@@ -22,39 +22,39 @@ typedef struct gl_tdesc_t {
 } gl_tdesc_t;
 
 static GLenum
-glttarget(nyas_texture_type type)
+glttarget(nyas_enum type)
 {
 	switch (type) {
-	case NYAS_TEX_2D: return GL_TEXTURE_2D;
-	case NYAS_TEX_CUBEMAP: return GL_TEXTURE_CUBE_MAP;
-	case NYAS_TEX_ARRAY_2D: return GL_TEXTURE_2D_ARRAY;
-	case NYAS_TEX_ARRAY_CUBEMAP: return GL_TEXTURE_CUBE_MAP_ARRAY;
+	case NYAS_TEXTURE_TYPE_2D: return GL_TEXTURE_2D;
+	case NYAS_TEXTURE_TYPE_CUBEMAP: return GL_TEXTURE_CUBE_MAP;
+	case NYAS_TEXTURE_TYPE_2D_ARRAY: return GL_TEXTURE_2D_ARRAY;
+	case NYAS_TEXTURE_TYPE_CUBEMAP_ARRAY: return GL_TEXTURE_CUBE_MAP_ARRAY;
 	default: return 0;
 	}
 }
 
 static GLint
-gltfilter(nyas_texture_filter f)
+gltfilter(nyas_enum f)
 {
 	switch (f) {
-	case NYAS_TEX_FLTR_LINEAR: return GL_LINEAR;
-	case NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR: return GL_LINEAR_MIPMAP_LINEAR;
-	case NYAS_TEX_FLTR_LINEAR_MIPMAP_NEAR: return GL_LINEAR_MIPMAP_NEAREST;
-	case NYAS_TEX_FLTR_NEAR: return GL_NEAREST;
-	case NYAS_TEX_FLTR_NEAR_MIPMAP_NEAR: return GL_NEAREST_MIPMAP_NEAREST;
-	case NYAS_TEX_FLTR_NEAR_MIPMAP_LINEAR: return GL_NEAREST_MIPMAP_LINEAR;
+	case NYAS_TEXTURE_FILTER_LINEAR: return GL_LINEAR;
+	case NYAS_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR: return GL_LINEAR_MIPMAP_LINEAR;
+	case NYAS_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST: return GL_LINEAR_MIPMAP_NEAREST;
+	case NYAS_TEXTURE_FILTER_NEAREST: return GL_NEAREST;
+	case NYAS_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST: return GL_NEAREST_MIPMAP_NEAREST;
+	case NYAS_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR: return GL_NEAREST_MIPMAP_LINEAR;
 	default: return 0;
 	}
 }
 
 static GLint
-gltwrap(nyas_texture_wrap w)
+gltwrap(nyas_enum w)
 {
 	switch (w) {
-	case NYAS_TEX_WRAP_REPEAT: return GL_REPEAT;
-	case NYAS_TEX_WRAP_CLAMP: return GL_CLAMP_TO_EDGE;
-	case NYAS_TEX_WRAP_MIRROR: return GL_MIRRORED_REPEAT;
-	case NYAS_TEX_WRAP_BORDER: return GL_CLAMP_TO_BORDER;
+	case NYAS_TEXTURE_WRAP_REPEAT: return GL_REPEAT;
+	case NYAS_TEXTURE_WRAP_CLAMP: return GL_CLAMP_TO_EDGE;
+	case NYAS_TEXTURE_WRAP_MIRROR: return GL_MIRRORED_REPEAT;
+	case NYAS_TEXTURE_WRAP_BLACK: return GL_CLAMP_TO_BORDER;
 	default: return 0;
 	}
 }
@@ -138,7 +138,7 @@ nypx_tex_set(struct nyas_texture_internal *t)
 	glBindTexture(type, t->res.id);
 	struct gltfmt_result fmt = gltfmt(t->data.fmt);
 	for (int i = 0; i < t->img->count; ++i) {
-		GLint target = (t->data.type == NYAS_TEX_2D) ?
+		GLint target = (t->data.type == NYAS_TEXTURE_TYPE_2D) ?
 		  GL_TEXTURE_2D :
 		  GL_TEXTURE_CUBE_MAP_POSITIVE_X + t->img->at[i].face;
 		int w = t->data.width >> t->img->at[i].lod;

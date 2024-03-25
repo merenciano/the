@@ -88,10 +88,10 @@ Init(void)
 	nyut_assets_add_env(ldr, &envargs);
 
 	struct nyas_texture_desc texdesc[] = {
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_SRGB_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RGB_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0)
+		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_SRGB_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0),
+		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0)
 	};
 
 	const char *texpaths[] = {
@@ -162,7 +162,7 @@ Init(void)
 	g_fb = nyas_fb_create();
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
-	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_RGB_32F, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_32F, vp->x, vp->y);
 	fb_tex = nyas_tex_create();
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
@@ -170,7 +170,7 @@ Init(void)
 	};
 
 	struct nyas_texture_desc depthscriptor =
-	  nyut_texture_desc_default(NYAS_TEX_2D, NYAS_TEXTURE_FORMAT_DEPTH, vp->x, vp->y);
+	  nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_DEPTH, vp->x, vp->y);
 	nyas_tex fb_depth = nyas_tex_create();
 	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
