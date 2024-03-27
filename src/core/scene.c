@@ -38,13 +38,13 @@ nyas_camera_init_default(struct nyas_cam *cam)
 struct nyas_vec3
 nyas_camera_eye(struct nyas_cam *cam)
 {
-	nyas_mat4 inv;
+	float inv[16];
 	mat4_inverse(inv, cam->view);
 	return (struct nyas_vec3){ inv[12], inv[13], inv[14] };
 }
 
 float *
-nyas_camera_static_vp(struct nyas_cam *cam, nyas_mat4 out)
+nyas_camera_static_vp(struct nyas_cam *cam, float out[16])
 {
 	mat4_assign(out, cam->view);
 	out[3] = 0.0f;

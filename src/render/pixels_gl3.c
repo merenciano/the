@@ -411,7 +411,9 @@ nypx_draw(int elem_count, int index_type)
 void
 nypx_clear_color(float r, float g, float b, float a)
 {
-	glClearColor(r, g, b, a);
+	if (a >= 0.0f) {
+		glClearColor(r, g, b, a);
+	}
 }
 
 void
@@ -564,7 +566,7 @@ nypx_scissor_disable(void)
 void
 nypx_viewport(struct nyas_rect rect)
 {
-	if (rect.w) {
+	if (rect.x != rect.w) {
 		glViewport(rect.x, rect.y, rect.w, rect.h);
 	}
 }
@@ -572,7 +574,7 @@ nypx_viewport(struct nyas_rect rect)
 void
 nypx_scissor(struct nyas_rect rect)
 {
-	if (rect.w) {
+	if (rect.x != rect.w) {
 		glScissor(rect.x, rect.y, rect.w, rect.h);
 	}
 }

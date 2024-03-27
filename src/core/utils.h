@@ -1,53 +1,11 @@
 #ifndef NYAS_UTILS_H
 #define NYAS_UTILS_H
 
-#include "core/nyas_core.h"
-#include "core/sched.h"
-#include "nyas_draw.h"
+#include "sched.h"
+#include <nyas_core.h>
+#include <nyas_draw.h>
 
 #include <stdbool.h>
-
-// Default values
-static inline struct nyas_texture_desc
-nyut_texture_desc_default(nyas_enum type, nyas_enum fmt, int w, int h)
-{
-	return (struct nyas_texture_desc){
-		.flags = NYAS_TEX_FLAG_DEFAULT,
-		.type = type,
-		.width = w,
-		.height = h,
-		.fmt = fmt,
-		.min_filter = NYAS_TEXTURE_FILTER_LINEAR,
-		.mag_filter = NYAS_TEXTURE_FILTER_LINEAR,
-		.wrap_s = NYAS_TEXTURE_WRAP_REPEAT,
-		.wrap_t = NYAS_TEXTURE_WRAP_REPEAT,
-		.wrap_r = NYAS_TEXTURE_WRAP_REPEAT,
-		.border_color = { 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-}
-
-static inline struct nyas_render_state
-nyut_draw_state_default(void)
-{
-	return (struct nyas_render_state){
-		.target = { .fb = NYAS_NOOP, .bgcolor = (struct nyas_color){ 0.0f, 0.0f, 0.0f, 1.0f } },
-		.pipeline = { .shader_mat = { .shader = NYAS_NOOP, .ptr = NULL } },
-		.ops = { .viewport = (struct nyas_rect){ 0, 0, 0, 0 },
-		         .scissor = (struct nyas_rect){ 0, 0, 0, 0 },
-		         .enable = 0,
-		         .disable = 0,
-		         .depth_fun = NYAS_DRAW_DEPTH_DEFAULT,
-		         .blend_src = NYAS_DRAW_BLEND_DEFAULT,
-		         .blend_dst = NYAS_DRAW_BLEND_DEFAULT,
-		         .cull_face = NYAS_DRAW_CULL_DEFAULT }
-	};
-}
-
-static inline struct nyas_draw
-nyut_draw_default(void)
-{
-	return (struct nyas_draw){ .state = nyut_draw_state_default(), .cmds = NULL };
-}
 
 // Asset loader
 struct nyut_tex_ldargs {

@@ -1,7 +1,7 @@
-#include "core/utils.h"
 #include "gui.h"
-#include "nyas.h"
 #include "pbr.h"
+#include <nyas.h>
+#include <core/utils.h>
 #include <mathc.h>
 #include <string.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@ static void dummyfree(void *p)
 	(void)p;
 }
 
-typedef struct nyas_draw nydraw;
+typedef nyas_draw_cmd nydraw;
 NYAS_DECL_ARR(nydraw);
 NYAS_IMPL_ARR_MA(nydraw, nyas_falloc, dummyfree);
 
@@ -47,24 +47,19 @@ Init(void)
 	nyas_tex prefilter;
 	nyas_tex lut;
 
-	// TODO: create repe, porque peta sino?
-	g_shaders.fullscreen_img = nyas_shader_create(&g_shader_descriptors.fullscreen_img);
-	g_shaders.skybox = nyas_shader_create(&g_shader_descriptors.sky);
-	g_shaders.pbr = nyas_shader_create(&g_shader_descriptors.pbr);
-
 	struct nyut_shad_ldargs fsimgargs = {
 		.desc = g_shader_descriptors.fullscreen_img,
 		.shader = &g_shaders.fullscreen_img
 	};
 
 	struct nyut_shad_ldargs skyargs = {
-		.desc = g_shader_descriptors.fullscreen_img,
-		.shader = &g_shaders.fullscreen_img
+		.desc = g_shader_descriptors.sky,
+		.shader = &g_shaders.skybox
 	};
 
 	struct nyut_shad_ldargs pbrargs = {
-		.desc = g_shader_descriptors.fullscreen_img,
-		.shader = &g_shaders.fullscreen_img
+		.desc = g_shader_descriptors.pbr,
+		.shader = &g_shaders.pbr
 	};
 
 	struct nyut_mesh_ldargs mesh = {
@@ -88,10 +83,10 @@ Init(void)
 	nyut_assets_add_env(ldr, &envargs);
 
 	struct nyas_texture_desc texdesc[] = {
-		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_SRGB_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0),
-		nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0)
+		nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_SRGB_8, 0, 0),
+		nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_8, 0, 0),
+		nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0),
+		nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_R_8, 0, 0)
 	};
 
 	const char *texpaths[] = {
@@ -162,7 +157,7 @@ Init(void)
 	g_fb = nyas_fb_create();
 	struct nyas_point *vp = &nyas_io->window_size;
 	struct nyas_texture_desc descriptor =
-	  nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_32F, vp->x, vp->y);
+	  nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_RGB_32F, vp->x, vp->y);
 	fb_tex = nyas_tex_create();
 	nyas_tex_set(fb_tex, &descriptor);
 	struct nyas_texture_target color = {
@@ -170,7 +165,7 @@ Init(void)
 	};
 
 	struct nyas_texture_desc depthscriptor =
-	  nyut_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_DEPTH, vp->x, vp->y);
+	  nyas_texture_desc_default(NYAS_TEXTURE_TYPE_2D, NYAS_TEXTURE_FORMAT_DEPTH, vp->x, vp->y);
 	nyas_tex fb_depth = nyas_tex_create();
 	nyas_tex_set(fb_depth, &depthscriptor);
 	struct nyas_texture_target depth = {
@@ -388,54 +383,70 @@ BuildFrame(struct nyarr_nydraw **new_frame, float delta_time)
 	struct pbr_desc_scene *common_pbr = nyas_shader_data(g_shaders.pbr);
 	mat4_multiply(common_pbr->view_projection, camera.proj, camera.view);
 	common_pbr->camera_position = nyas_camera_eye(&camera);
-	struct nyas_point fb_size = nyas_tex_size(fb_tex);
 
-	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
-	struct nyas_draw *dl = &(*new_frame)->at[(*new_frame)->count - 1];
-	dl->state.target.bgcolor = (struct nyas_color){ 0.2f, 0.2f, 0.2f, 1.0f };
-	dl->state.target.fb = g_fb;
-	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
-	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, fb_size.x, fb_size.y };
-	dl->state.ops.enable |= NYAS_FLAG_DO_COLOR_CLEAR;
-	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_CLEAR;
-	dl->state.ops.enable |= NYAS_FLAG_DO_BLEND;
-	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_TEST;
-	dl->state.ops.enable |= NYAS_FLAG_DO_DEPTH_WRITE;
-	dl->state.ops.blend_src = NYAS_DRAW_BLEND_ONE;
-	dl->state.ops.blend_dst = NYAS_DRAW_BLEND_ZERO;
-	dl->state.ops.depth_fun = NYAS_DRAW_DEPTH_LESS;
-	dl->state.ops.cull_face = NYAS_DRAW_CULL_BACK;
+	// Scene entities
+	nyarr_nydraw_push_value(new_frame, nyas_draw_cmd_default());
+	nyas_draw_cmd *dl = &(*new_frame)->at[(*new_frame)->count - 1];
+	dl->fb = g_fb;
+	dl->shader_mat = nyas_mat_copy_shader(g_shaders.pbr);
+	dl->state.bg_color_r = 0.2f;
+	dl->state.bg_color_g = 0.2f;
+	dl->state.bg_color_b = 0.2f;
+	dl->state.bg_color_a = 1.0f;
+	dl->state.viewport_min_x = 0;
+	dl->state.viewport_min_y = 0;
+	dl->state.viewport_max_x = vp->x;
+	dl->state.viewport_max_y = vp->y;
+	dl->state.enable_flags |= NYAS_FLAG_DO_COLOR_CLEAR;
+	dl->state.enable_flags |= NYAS_FLAG_DO_DEPTH_CLEAR;
+	dl->state.enable_flags |= NYAS_FLAG_DO_BLEND;
+	dl->state.enable_flags |= NYAS_FLAG_DO_DEPTH_TEST;
+	dl->state.enable_flags |= NYAS_FLAG_DO_DEPTH_WRITE;
+	dl->state.blend_src_fn = NYAS_DRAW_BLEND_ONE;
+	dl->state.blend_dst_fn = NYAS_DRAW_BLEND_ZERO;
+	dl->state.depth_fn = NYAS_DRAW_DEPTH_LESS;
+	dl->state.face_culling = NYAS_DRAW_CULL_BACK;
 
+	dl->unit_count = entity_pool.count;
+	dl->units = nyas_falloc(entity_pool.count * sizeof(nyas_draw_unit));
 	for (int i = 0; i < entity_pool.count; ++i) {
-		struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
 		mat4_assign(entity_pool.buf->at[i].mat.ptr, entity_pool.buf->at[i].transform);
-		cmd->material = nyas_mat_copy(entity_pool.buf->at[i].mat);
-		cmd->mesh = entity_pool.buf->at[i].mesh;
+		dl->units[i].material = nyas_mat_copy(entity_pool.buf->at[i].mat);
+		dl->units[i].mesh = entity_pool.buf->at[i].mesh;
 	}
 
-	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	// Skybox
+	nyarr_nydraw_push_value(new_frame, nyas_draw_cmd_default());
 	dl = &(*new_frame)->at[(*new_frame)->count - 1];
 	nyas_camera_static_vp(&camera, nyas_shader_data(g_shaders.skybox));
-	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
+	dl->shader_mat = nyas_mat_copy_shader(g_shaders.skybox);
+	dl->state.disable_flags |= NYAS_FLAG_DO_CULL;
+	dl->state.depth_fn = NYAS_DRAW_DEPTH_LEQUAL;
 
-	dl->state.ops.disable |= NYAS_FLAG_DO_CULL;
-	dl->state.ops.depth_fun = NYAS_DRAW_DEPTH_LEQUAL;
+	dl->unit_count = 1;
+	dl->units = nyas_falloc(sizeof(nyas_draw_unit));
+	dl->units->material.shader = g_shaders.skybox;
+	dl->units->mesh = NYAS_UTILS_CUBE;
 
-	struct nyas_draw_cmd *cmd = nyarr_nydrawcmd_push(&dl->cmds);
-	cmd->material.shader = g_shaders.skybox;
-	cmd->mesh = NYAS_UTILS_CUBE;
-
-	nyarr_nydraw_push_value(new_frame, nyut_draw_default());
+	// Frame texture
+	nyarr_nydraw_push_value(new_frame, nyas_draw_cmd_default());
 	dl = &(*new_frame)->at[(*new_frame)->count - 1];
-	dl->state.target.bgcolor = (struct nyas_color){ 1.0f, 0.0f, 0.0f, 1.0f };
-	dl->state.target.fb = NYAS_DEFAULT;
-	dl->state.pipeline.shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
-	dl->state.ops.viewport = (struct nyas_rect){ 0, 0, vp->x, vp->y };
-	dl->state.ops.disable |= NYAS_FLAG_DO_DEPTH_TEST;
+	dl->fb = NYAS_DEFAULT;
+	dl->shader_mat = nyas_mat_copy_shader(g_shaders.fullscreen_img);
+	dl->state.bg_color_r = 1.0f;
+	dl->state.bg_color_g = 0.0f;
+	dl->state.bg_color_b = 0.0f;
+	dl->state.bg_color_a = 1.0f;
+	dl->state.viewport_min_x = 0;
+	dl->state.viewport_min_y = 0;
+	dl->state.viewport_max_x = vp->x;
+	dl->state.viewport_max_y = vp->y;
+	dl->state.disable_flags |= NYAS_FLAG_DO_DEPTH_TEST;
 
-	cmd = nyarr_nydrawcmd_push(&dl->cmds);
-	cmd->material.shader = g_shaders.fullscreen_img;
-	cmd->mesh = NYAS_UTILS_QUAD;
+	dl->unit_count = 1;
+	dl->units = nyas_falloc(sizeof(nyas_draw_unit));
+	dl->units->material.shader = g_shaders.fullscreen_img;
+	dl->units->mesh = NYAS_UTILS_QUAD;
 }
 
 int

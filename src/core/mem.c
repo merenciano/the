@@ -21,7 +21,7 @@ nyas_mem_init(void *buffer, ptrdiff_t size)
 {
 	if (!buffer) {
 		NYAS_LOG_ERR("Invalid buffer");
-		return NYAS_ERR_INVALID_PTR;
+		return NYAS_ERR_NULLARG;
 	}
 	persistent = buffer;
 	persistent->cap = size - sizeof(*persistent);

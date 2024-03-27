@@ -36,6 +36,6 @@ struct nyas_vec3 nyas_camera_eye(struct nyas_cam *cam);
 void nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg);
 
 // Matrix with zeroed translation i.e. projection * vec4(vec3(view)). For skybox.
-float *nyas_camera_static_vp(struct nyas_cam *cam, nyas_mat4 out);
+float *nyas_camera_static_vp(struct nyas_cam *cam, float out[16]);
 
 #endif // NYAS_SCENE_H

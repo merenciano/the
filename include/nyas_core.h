@@ -134,22 +134,6 @@ struct nypool {
 	int count;
 };
 
-enum nyas_defs {
-	NYAS_ERR = 0,
-	NYAS_OK = 1,
-	NYAS_END = -2,
-	//NYAS_NULL = -3,
-	NYAS_ERR_SWITCH_DEFAULT = -4,
-	NYAS_ERR_INVALID_PTR = -5,
-	NYAS_ERR_ALLOC = -10,
-	NYAS_ERR_FILE = -20,
-	NYAS_ERR_THREAD = -30,
-	NYAS_DEFAULT = -50,
-	NYAS_NOOP = -51,
-	NYAS_INVALID = -52,
-	NYAS_NONE = -53,
-};
-
 struct nyas_point {
 	int x, y;
 };
@@ -166,43 +150,13 @@ struct nyas_vec3 {
 	float x, y, z;
 };
 
-struct nyas_vec4 {
-	float x, y, z, w;
-};
-
-struct nyas_color {
-	float r, g, b, a;
-};
-
-union nyas4f {
-	struct nyas_vec4 p;
-	struct nyas_color c;
-	float v[4];
-};
-
-typedef float nyas_mat4[16];
-
-union nyas16f {
-	struct nyas_vec4 r[4];
-	struct nyas_4x4 {
-		struct nyas_vec4 x;
-		struct nyas_vec4 y;
-		struct nyas_vec4 z;
-		struct nyas_vec4 w;
-	} row;
-	float v[16];
-	float p[4][4];
-	struct nyas_mat4x4 {
-		float m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33;
-	} m;
-};
-
 #define NYAS_ENUM_INDEX(ENUM_TYPE, ID) (ENUM_TYPE##_##ID - ENUM_TYPE)
 #define NYAS_ENUM_FLAG(ENUM_TYPE, ID) (1U << (NYAS_ENUM_INDEX(ENUM_TYPE, ID)))
 #define NYAS_ENUM_COUNT(ENUM_TYPE) (NYAS_ENUM_INDEX(ENUM_TYPE, DEFAULT))
 
 typedef int nyas_flags;
 typedef int nyas_enum;
+typedef int nyas_error;
 
 typedef enum nyas_enum_ {
 	NYAS_NULL,
@@ -337,22 +291,27 @@ typedef enum nyas_enum_ {
 	NYAS_FLAG_DO_BLEND = NYAS_ENUM_FLAG(NYAS_DRAW_OP, BLEND),
 	NYAS_FLAG_DO_CULL = NYAS_ENUM_FLAG(NYAS_DRAW_OP, CULL),
 	NYAS_FLAG_DO_SCISSOR = NYAS_ENUM_FLAG(NYAS_DRAW_OP, SCISSOR),
+
+	NYAS_OK = 0,
+	NYAS_ERROR = -1,
+	NYAS_DEFAULT = -50,
+	NYAS_NOOP = -51,
+	NYAS_NONE = -53,
+
+	NYAS_ERR_FAIL = -90,
+	NYAS_ERR_NULL = -91,
+	NYAS_ERR_UNINIT = -92,
+	NYAS_ERR_MEM = -100,
+	NYAS_ERR_ALLOC = -110,
+	NYAS_ERR_RANGE = -120, // Out of bounds access.
+	NYAS_ERR_STREAM = -200,
+	NYAS_ERR_FILE = -210,
+	NYAS_ERR_THREAD = -300,
+	NYAS_ERR_ARG = -400,
+	NYAS_ERR_NULLARG = -401,
+	NYAS_ERR_BADARG = -402,
+	NYAS_ERR_SWITCH = -500,
+	NYAS_ERR_SWITCH_DEFAULT = -501, // Switch default label.
 } nyas_enum_;
-
-typedef int nyas_buffer_flags;
-
-typedef enum nyas_buffer_flags_ {
-	NYAS_BF_MEMORY_OWNED = 1,
-	NYAS_BF_MUTABLE = 1 << 1, /* Buffer contents can be modified even in non-owned (ref) mode */
-	NYAS_BF_VOLATILE = 1 << 2, /* Internal buffer could change or be reused or released anytime (it shouldn't be stored as a reference, so either read and discard or copy its contents somewhere) */
-} nyas_buffer_flags_;
-
-typedef struct nyas_buffer {
-	void *buf;
-	ptrdiff_t size;
-	nyas_buffer_flags flags;
-} nyas_buffer;
-
-
 
 #endif // NYAS_NYAS_CORE_H

@@ -1,6 +1,6 @@
-#include "core/nyas_core.h"
-#include "core/io.h"
-#include "core/mem.h"
+#include <nyas_core.h>
+#include "io.h"
+#include "mem.h"
 #include "sched.h"
 #include <stdlib.h>
 #include <pthread.h>
@@ -157,7 +157,7 @@ nyas_sched_destroy(nysched *s)
 		if (!i) {
 			/* That scheduler does not exist in the schedulers list */
 			pthread_mutex_unlock(&scheds_mtx);
-			return NYAS_ERR_INVALID_PTR;
+			return NYAS_ERR_BADARG;
 		}
 	}
 

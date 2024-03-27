@@ -1,65 +1,12 @@
 #ifndef NYAS_INTERNAL_DRAW_H
 #define NYAS_INTERNAL_DRAW_H
 
-#include "core/nyas_core.h"
-#include "nyas_draw.h"
+#include <nyas_core.h>
+#include <nyas_draw.h>
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-typedef int nyas_resource_flags;
-enum nyas_resource_flags {
-	NYAS_IRF_DIRTY = 1U << 3,
-	NYAS_IRF_CREATED = 1U << 4,
-	NYAS_IRF_RELEASE_APP_STORAGE = 1U << 5,
-	NYAS_IRF_MAPPED = 1U << 7,
-};
-
-struct nyas_resource_internal {
-	uint32_t id;
-	nyas_resource_flags flags;
-};
-
-struct nyas_mesh_internal {
-	struct nyas_resource_internal res;
-	struct nyas_resource_internal res_vb; // vertex buffer resource
-	struct nyas_resource_internal res_ib; // index buffer resource
-	float *vtx;
-	nyas_idx *idx;
-	int64_t elem_count;
-	uint32_t vtx_size;
-	nyas_vertex_attrib attrib;
-};
-
-struct nyas_texture_image {
-	void *pix;
-	nyas_enum face;
-	int lod;
-};
-
-typedef struct nyas_texture_image nyteximg;
-NYAS_DECL_ARR(nyteximg);
-
-struct nyas_texture_internal {
-	struct nyas_resource_internal res;
-	struct nyas_texture_desc data;
-	struct nyarr_nyteximg *img;
-};
-
-struct nyas_shader_internal {
-	struct nyas_resource_internal res;
-	const char *name;
-	struct {
-		int data, tex, cubemap;
-	} loc[2], count[2]; // 0: unit, 1: common
-	void *common;
-};
-
-struct nyas_framebuffer_internal {
-	struct nyas_resource_internal res;
-	struct nyas_texture_target target[8];
-};
 
 void nypx_tex_create(struct nyas_texture_internal *t);
 void nypx_tex_set(struct nyas_texture_internal *t);
@@ -107,25 +54,9 @@ void nypx_stencil_disable_mask(void);
 void nypx_viewport(struct nyas_rect rect);
 void nypx_scissor(struct nyas_rect rect);
 
-typedef struct nyas_mesh_internal mesh;
-NYAS_DECL_ARR(mesh);
-NYAS_DECL_POOL(mesh);
-
-typedef struct nyas_texture_internal tex;
-NYAS_DECL_ARR(tex);
-NYAS_DECL_POOL(tex);
-
-typedef struct nyas_shader_internal shad;
-NYAS_DECL_ARR(shad);
-NYAS_DECL_POOL(shad);
-
-typedef struct nyas_framebuffer_internal fb;
-NYAS_DECL_ARR(fb);
-NYAS_DECL_POOL(fb);
-
-extern struct nypool_mesh mesh_pool;
-extern struct nypool_tex tex_pool;
-extern struct nypool_shad shader_pool;
-extern struct nypool_fb framebuffer_pool;
+void _draw_target(nyas_framebuffer fb);
+void _draw_shader(nyas_mat shader_mat);
+void _draw_state(const nyas_draw_state *state);
+void _draw_units(const nyas_draw_unit *units, int unit_count);
 
 #endif //NYAS_INTERNAL_DRAW_H

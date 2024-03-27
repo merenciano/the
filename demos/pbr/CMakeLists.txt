@@ -19,7 +19,8 @@ target_sources(matballs PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/gui.c
 )
 
-add_executable(inspector ${CMAKE_CURRENT_SOURCE_DIR}/inspector.c)
+#[===[
+add_executable(inspector)
 set_target_properties(inspector PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(inspector PRIVATE -Wall -Wpedantic)
 target_include_directories(inspector PRIVATE
@@ -38,3 +39,4 @@ target_sources(inspector PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/inspector.c
 	${CMAKE_CURRENT_SOURCE_DIR}/gui.c
 )
+]===]

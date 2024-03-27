@@ -38,14 +38,6 @@ NYAS_IMPL_POOL(fb);
 
 NYAS_IMPL_ARR(nyteximg);
 
-static void
-dummyfree(void *p)
-{
-	(void)p;
-}
-
-NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc, dummyfree);
-
 static inline void
 nypx__check_handle(int h, void *arr)
 {
@@ -706,104 +698,110 @@ nyas__fb_sync(nyas_framebuffer framebuffer)
 }
 
 void
-nyas_draw(struct nyas_draw *dl)
+nyas_draw(nyas_draw_cmd *cmd)
 {
-	{ // target
-		nyas_framebuffer framebuf = dl->state.target.fb;
-		if (framebuf != NYAS_NOOP) {
-			if (framebuf == NYAS_DEFAULT) {
-				nypx_fb_use(0);
-			} else {
-				nypx__check_handle(framebuf, &framebuffer_pool);
-				nyas__fb_sync(framebuf);
-			}
+	_draw_target(cmd->fb);
+	_draw_shader(cmd->shader_mat);
+	_draw_state(&cmd->state);
+	_draw_units(cmd->units, cmd->unit_count);
+}
+
+void
+_draw_target(nyas_framebuffer fb)
+{
+	if (fb != NYAS_NOOP) {
+		if (fb == NYAS_DEFAULT) {
+			nypx_fb_use(0);
+		} else {
+			nypx__check_handle(fb, &framebuffer_pool);
+			nyas__fb_sync(fb);
 		}
 	}
+}
 
-	{ // pipeline
-		nyas_mat mat = dl->state.pipeline.shader_mat;
-		if (mat.shader != NYAS_NOOP) {
-			nypx__check_handle(mat.shader, &shader_pool);
-			shad *s = &shader_pool.buf->at[mat.shader];
-			nyas__sync_shader(s);
-			nypx_shader_use(s->res.id);
-			nyas__set_shader_data(s, mat.ptr, true);
-		}
-		// TODO: Mesh attrib
+void
+_draw_shader(nyas_mat mat)
+{
+	if (mat.shader != NYAS_NOOP) {
+		nypx__check_handle(mat.shader, &shader_pool);
+		shad *s = &shader_pool.buf->at[mat.shader];
+		nyas__sync_shader(s);
+		nypx_shader_use(s->res.id);
+		nyas__set_shader_data(s, mat.ptr, true);
+	}
+}
+
+void
+_draw_state(const nyas_draw_state *s)
+{
+    nypx_clear_color(s->bg_color_r, s->bg_color_g, s->bg_color_b, s->bg_color_a);
+	nypx_clear(s->enable_flags & NYAS_FLAG_DO_COLOR_CLEAR, s->enable_flags & NYAS_FLAG_DO_DEPTH_CLEAR,
+	  s->enable_flags & NYAS_FLAG_DO_STENCIL_CLEAR);
+
+    nypx_viewport((struct nyas_rect){s->viewport_min_x, s->viewport_min_y, s->viewport_max_x, s->viewport_max_y});
+    nypx_scissor((struct nyas_rect){s->scissor_min_x, s->scissor_min_y, s->scissor_max_x, s->scissor_max_y});
+
+	if (s->disable_flags & NYAS_FLAG_DO_DEPTH_TEST) {
+		nypx_depth_disable_test();
+	} else if (s->enable_flags & NYAS_FLAG_DO_DEPTH_TEST) {
+		nypx_depth_enable_test();
 	}
 
-	{ // ops
-		const struct nyas_draw_ops *ops = &dl->state.ops;
-		struct nyas_color bg = dl->state.target.bgcolor;
-		nypx_clear_color(bg.r, bg.g, bg.b, bg.a);
-		nypx_clear(
-		  ops->enable & NYAS_FLAG_DO_COLOR_CLEAR, ops->enable & NYAS_FLAG_DO_DEPTH_CLEAR,
-		  ops->enable & NYAS_FLAG_DO_STENCIL_CLEAR);
-
-		nypx_viewport(ops->viewport);
-		nypx_scissor(ops->scissor);
-
-		if (ops->disable & NYAS_FLAG_DO_DEPTH_TEST) {
-			nypx_depth_disable_test();
-		} else if (ops->enable & NYAS_FLAG_DO_DEPTH_TEST) {
-			nypx_depth_enable_test();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_DEPTH_WRITE) {
-			nypx_depth_disable_mask();
-		} else if (ops->enable & NYAS_FLAG_DO_DEPTH_WRITE) {
-			nypx_depth_enable_mask();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_STENCIL_TEST) {
-			nypx_stencil_disable_test();
-		} else if (ops->enable & NYAS_FLAG_DO_STENCIL_TEST) {
-			nypx_stencil_enable_test();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_STENCIL_WRITE) {
-			nypx_stencil_disable_mask();
-		} else if (ops->enable & NYAS_FLAG_DO_STENCIL_WRITE) {
-			nypx_stencil_enable_mask();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_BLEND) {
-			nypx_blend_disable();
-		} else if (ops->enable & NYAS_FLAG_DO_BLEND) {
-			nypx_blend_enable();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_CULL) {
-			nypx_cull_disable();
-		} else if (ops->enable & NYAS_FLAG_DO_CULL) {
-			nypx_cull_enable();
-		}
-
-		if (ops->disable & NYAS_FLAG_DO_SCISSOR) {
-			nypx_scissor_disable();
-		} else if (ops->enable & NYAS_FLAG_DO_SCISSOR) {
-			nypx_scissor_enable();
-		}
-
-		nypx_depth_set(ops->depth_fun);
-		nypx_blend_set(ops->blend_src, ops->blend_dst);
-		nypx_cull_set(ops->cull_face);
+	if (s->disable_flags & NYAS_FLAG_DO_DEPTH_WRITE) {
+		nypx_depth_disable_mask();
+	} else if (s->enable_flags & NYAS_FLAG_DO_DEPTH_WRITE) {
+		nypx_depth_enable_mask();
 	}
 
-	// commands
-	for (int cmd = 0; cmd < dl->cmds->count; ++cmd) {
-		nyas_mesh msh = dl->cmds->at[cmd].mesh;
-		nyas_mat mat = dl->cmds->at[cmd].material;
-		mesh *imsh = &mesh_pool.buf->at[msh];
-		nypx__check_handle(msh, &mesh_pool);
+	if (s->disable_flags & NYAS_FLAG_DO_STENCIL_TEST) {
+		nypx_stencil_disable_test();
+	} else if (s->enable_flags & NYAS_FLAG_DO_STENCIL_TEST) {
+		nypx_stencil_enable_test();
+	}
+
+	if (s->disable_flags & NYAS_FLAG_DO_STENCIL_WRITE) {
+		nypx_stencil_disable_mask();
+	} else if (s->enable_flags & NYAS_FLAG_DO_STENCIL_WRITE) {
+		nypx_stencil_enable_mask();
+	}
+
+	if (s->disable_flags & NYAS_FLAG_DO_BLEND) {
+		nypx_blend_disable();
+	} else if (s->enable_flags & NYAS_FLAG_DO_BLEND) {
+		nypx_blend_enable();
+	}
+
+	if (s->disable_flags & NYAS_FLAG_DO_CULL) {
+		nypx_cull_disable();
+	} else if (s->enable_flags & NYAS_FLAG_DO_CULL) {
+		nypx_cull_enable();
+	}
+
+	if (s->disable_flags & NYAS_FLAG_DO_SCISSOR) {
+		nypx_scissor_disable();
+	} else if (s->enable_flags & NYAS_FLAG_DO_SCISSOR) {
+		nypx_scissor_enable();
+	}
+
+	nypx_depth_set(s->depth_fn);
+	nypx_blend_set(s->blend_src_fn, s->blend_dst_fn);
+	nypx_cull_set(s->face_culling);
+}
+
+void
+_draw_units(const nyas_draw_unit *units, int unit_count)
+{
+	for (int i = 0; i < unit_count; ++i) {
+		mesh *imsh = &mesh_pool.buf->at[units[i].mesh];
+		nypx__check_handle(units[i].mesh, &mesh_pool);
 		NYAS_ASSERT(imsh->elem_count && "Attempt to draw an uninitialized mesh");
 
 		if (imsh->res.flags & NYAS_IRF_DIRTY) {
-			nyas__sync_gpu_mesh(msh, mat.shader);
+			nyas__sync_gpu_mesh(units[i].mesh, units[i].material.shader);
 		}
 
-		shad *s = &shader_pool.buf->at[mat.shader];
-		nyas__set_shader_data(s, mat.ptr, false);
+		shad *s = &shader_pool.buf->at[units[i].material.shader];
+		nyas__set_shader_data(s, units[i].material.ptr, false);
 		nypx_mesh_use(imsh, s);
 		nypx_draw(imsh->elem_count, sizeof(nyas_idx) == 4);
 	}
