@@ -1,7 +1,7 @@
 #ifndef NYAS_UTILS_H
 #define NYAS_UTILS_H
 
-#include "core/nyas_core.h"
+#include "core/common.h"
 #include "core/sched.h"
 #include "render/pixels.h"
 

@@ -1,4 +1,4 @@
-#include "core/nyas_core.h"
+#include "core/common.h"
 #include "core/io.h"
 #include "core/mem.h"
 #include "sched.h"

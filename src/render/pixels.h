@@ -1,7 +1,7 @@
 #ifndef NYAS_PIXELS_H
 #define NYAS_PIXELS_H
 
-#include "core/nyas_core.h"
+#include "core/common.h"
 
 #include <stdbool.h>
 #include <stddef.h>

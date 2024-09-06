@@ -14,7 +14,7 @@ struct header {
 	size_t lut;
 };
 
-static const nyas_shader_desc eqr_to_cubemap_shader_desc = {
+static const struct nyas_shader_desc eqr_to_cubemap_shader_desc = {
 	.name = "eqr-to-cube", // environment image to cubemap
 	.data_count = 4 * 4,
 	.tex_count = 0,
@@ -24,7 +24,7 @@ static const nyas_shader_desc eqr_to_cubemap_shader_desc = {
 	.common_cubemap_count = 0
 };
 
-static const nyas_shader_desc prefilter_shader_desc = {
+static const struct nyas_shader_desc prefilter_shader_desc = {
 	.name = "prefilter-env", // environment prefilter
 	.data_count = 5 * 4,
 	.tex_count = 0,
@@ -34,7 +34,7 @@ static const nyas_shader_desc prefilter_shader_desc = {
 	.common_cubemap_count = 1
 };
 
-static const nyas_shader_desc lut_shader_desc = {
+static const struct nyas_shader_desc lut_shader_desc = {
 	.name = "env-dfg", // look-up table
 	.data_count = 0,
 	.tex_count = 0,
@@ -45,9 +45,9 @@ static const nyas_shader_desc lut_shader_desc = {
 };
 
 struct ShaderDescriptors {
-	const nyas_shader_desc *prefilter;
-	const nyas_shader_desc *cubemap_from_equirect;
-	const nyas_shader_desc *lut;
+	const struct nyas_shader_desc *prefilter;
+	const struct nyas_shader_desc *cubemap_from_equirect;
+	const struct nyas_shader_desc *lut;
 };
 
 static const struct ShaderDescriptors g_shader_descriptors = {
@@ -109,15 +109,15 @@ GenerateRenderToCubeVP(void)
 	return vp;
 }
 
-static nyas_cmd *
+static struct nyas_cmd *
 ConvertEqrToCubeCommandList(
   nyas_shader eqr_sh,
   nyas_tex tex_in,
   nyas_tex tex_out,
   nyas_framebuffer fb,
-  nyas_cmd *last_command)
+  struct nyas_draw_cmd *last_command)
 {
-	nyas_cmd *use_tocube = nyas_cmd_alloc();
+	struct nyas_draw_cmd *use_tocube = nyas_cmd_alloc();
 	*nyas_shader_tex(eqr_sh) = tex_in;
 	use_tocube->data.mat = nyas_mat_copy_shader(eqr_sh);
 	use_tocube->execute = nyas_setshader_fn;

@@ -1,7 +1,7 @@
 #ifndef NYAS_CORE_IO_H
 #define NYAS_CORE_IO_H
 
-#include "nyas_core.h"
+#include "common.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>

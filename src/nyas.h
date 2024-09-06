@@ -10,6 +10,7 @@
  */
 
 #include "core/io.h"
+#include "core/utils.h"
 #include "core/mem.h"
 #include "core/scene.h"
 #include "core/sched.h"
