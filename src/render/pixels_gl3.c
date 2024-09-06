@@ -471,7 +471,7 @@ nypx__gl_blend(int blend_func)
 	case NYAS_BLEND_SRC_ALPHA: return GL_SRC_ALPHA;
 	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
 	case NYAS_BLEND_ZERO: return GL_ZERO;
-	default: NYAS_ASSERT(false);
+	default: NYAS_ASSERT(false); return -1;
 	}
 }
 

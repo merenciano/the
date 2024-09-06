@@ -1,70 +1,57 @@
 #!/bin/bash
 
 # Config
-POSTFIX=_d
 BUILD_PATH=./build
-C_COMP=clang
-CXX_COMP=clang++
-
-# Defaults
 BUILD_TYPE=Debug
-GENERATE=1
-BUILD=1
-CLEAN=0
-GENERATOR=/usr/bin/make
+COMPILER=gcc
+GENERATOR=make
 
-
-function BuildEmscripten()
+function help()
 {
-  mkdir -p build/emsc
-  cd build/emsc
-  cmake -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DNYAS_EMSC=1 -DNYAS_GLES2=1 ../..
-  emmake make
-  exit
+	echo "build.sh - Generate and compile the CMake project"
+	echo "example usage: ./build.sh"
+	echo "verbose example equivalent: ./build.sh -t Debug -c gcc -g make"
+	echo ""
+	echo "Default options:"
+	echo "  Compiler - gcc"
+	echo "  Generator - make"
+	echo "  Build type - Debug"
+	echo ""
+	echo "Args:"
+	echo "  -t [Debug/Release/RelWithDebInfo/MinSizeRel]: Specify the build type"
+	echo "  -g [make/gmake/ninja/...]: Specify the native build system (can be an absolute path)"
+	echo "  -c [gcc/clang/...]: Specify the C compiler (can be an absolute path)"
+	echo "  -h: Show this message"
+	echo "  -r: Equivalent to -t Release"
+	echo "  -d: Equivalent to -t Debug"
+	echo ""
 }
 
-while getopts ":bdrecg:" ARGOPT; do
+while getopts ":hdrc:g:t:" ARGOPT; do
 	case $ARGOPT in
-		b)
-			BUILD=1
-			GENERATE=0
-			;;
-		g)
-			GENERATE=1
-			BUILD=0
-			GENERATOR=/usr/bin/${OPTARG}
-			;;
 		d)
 			BUILD_TYPE=Debug
-			POSTFIX=_d
 			;;
 		r)
 			BUILD_TYPE=Release
-			POSTFIX=
 			;;
 		c)
-			BUILD=0
-			GENERATE=0
-			CLEAN=1
+			COMPILER=${OPTARG}
 			;;
-	  e)
-	    BuildEmscripten
-	    ;;
+		g)
+			GENERATOR=${OPTARG}
+			;;
+		t)
+			BUILD_TYPE=${OPTARG}
+			;;
+		h|\?)
+			help
+			exit 0
+			;;
 	esac
 done
 
-if [[ ${CLEAN} -eq 1 ]]; then
-	rm -drf ${BUILD_PATH}
-fi
-
 mkdir -p ${BUILD_PATH}/${BUILD_TYPE}
 cd ${BUILD_PATH}/${BUILD_TYPE}
-
-if [[ GENERATE -eq 1 ]]; then
-	cmake -DNYAS_GL3=1 -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DCMAKE_C_COMPILER=${C_COMP} -DCMAKE_CXX_COMPILER=${CXX_COMP} -DCMAKE_MAKE_PROGRAM=${GENERATOR} ../..
-fi
-
-if [[ BUILD -eq 1 ]]; then
-	cmake --build .
-fi
-
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DCMAKE_C_COMPILER=${COMPILER} -DCMAKE_MAKE_PROGRAM=${GENERATOR} ../..
+cmake --build .

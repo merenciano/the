@@ -49,8 +49,9 @@ NYAS_IMPL_ARR_MA(nydrawcmd, nyas_falloc, dummyfree);
 static inline void
 nypx__check_handle(int h, void *arr)
 {
-	(void)h;
 	struct nypool_tex *pool = arr;
+	(void)h;
+	(void)pool;
 	NYAS_ASSERT(arr && h >= 0 && pool->buf->count > h && "Invalid handle range.");
 }
 
@@ -810,8 +811,8 @@ nyas_draw(struct nyas_draw *dl)
 	}
 }
 
-#if defined(NYAS_GL3)
-#include "pixels_gl3.c"
-#elif defined(NYAS_GLES2)
+#if defined(NYAS_GLES2)
 #include "pixels_gles2.c"
+#else
+#include "pixels_gl3.c"
 #endif

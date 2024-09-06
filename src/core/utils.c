@@ -272,11 +272,21 @@ void
 nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nyas_tex *pref)
 {
 	FILE *f = fopen(path, "r");
+	if (!f) {
+		NYAS_LOG_ERR("Failed to open file %s", path);
+		return;
+	}
 	char hdr[9];
-	fread(hdr, 8, 1, f);
+	if (fread(hdr, 8, 1, f) != 1) {
+		NYAS_LOG_ERR("Header of .env file is invalid. Aborting load_env of %s.", path);
+		fclose(f);
+		return;
+	}
+
 	hdr[8] = '\0';
 	if (strncmp("NYAS_ENV", hdr, 9) != 0) {
 		NYAS_LOG_ERR("Header of .env file is invalid. Aborting load_env of %s.", path);
+		fclose(f);
 		return;
 	}
 
@@ -301,7 +311,12 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 		img->lod = 0;
 		img->face = i;
 		img->pix = nyas_alloc(size);
-		fread(img->pix, size, 1, f);
+		if (fread(img->pix, size, 1, f) != 1) {
+			NYAS_LOG_ERR("Error reading .env file. Aborting %s.", path);
+			fclose(f);
+			return;
+		}
+
 		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	}
 
@@ -325,7 +340,12 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 		img->lod = 0;
 		img->face = i;
 		img->pix = nyas_alloc(size);
-		fread(img->pix, size, 1, f);
+		if (fread(img->pix, size, 1, f) != 1) {
+			NYAS_LOG_ERR("Error reading .env file. Aborting %s.", path);
+			fclose(f);
+			return;
+		}
+
 		NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	}
 
@@ -351,7 +371,11 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 			img->lod = lod;
 			img->face = face;
 			img->pix = nyas_alloc(size);
-			fread(img->pix, size, 1, f);
+			if (fread(img->pix, size, 1, f) != 1) {
+				NYAS_LOG_ERR("Error reading .env file. Aborting %s.", path);
+				fclose(f);
+				return;
+			}
 			NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 		}
 		size /= 4;
@@ -377,7 +401,11 @@ nyut_env_load(const char *path, nyas_tex *lut, nyas_tex *sky, nyas_tex *irr, nya
 
 	img->lod = 0;
 	img->pix = nyas_alloc(size);
-	fread(img->pix, size, 1, f);
+	if (fread(img->pix, size, 1, f) != 1) {
+		NYAS_LOG_ERR("Error reading .env file. Aborting %s.", path);
+		fclose(f);
+		return;
+	}
 	NYAS_ASSERT(img->pix && "The image couldn't be loaded");
 	fclose(f);
 }

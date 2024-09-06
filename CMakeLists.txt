@@ -14,16 +14,11 @@ set_target_properties(${LIB_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CU
 
 target_compile_definitions(${LIB_NAME} PUBLIC
 	_GLFW_X11
-	NYAS_DEBUG
-	NYAS_PIXEL_CHECKS
-	NYAS_OPENGL
 	NYAS_ELEM_SIZE_16
 )
 
 target_compile_options(${LIB_NAME} PUBLIC
 	-Wall
-	-Wextra
-	-Wpedantic
 )
 
 target_include_directories(${LIB_NAME} PUBLIC
