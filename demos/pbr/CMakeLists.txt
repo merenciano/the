@@ -7,7 +7,7 @@ target_include_directories(pbr PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/../../extern/include
 )
 target_link_libraries(pbr PRIVATE
-	nyas
+	the
 	GL
 	X11
 	dl

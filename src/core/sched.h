@@ -1,16 +1,16 @@
-#ifndef NYAS_SCHEDULER_H
-#define NYAS_SCHEDULER_H
+#ifndef THE_SCHEDULER_H
+#define THE_SCHEDULER_H
 
-typedef struct nysched nysched;
+typedef struct thesched thesched;
 
-struct nyas_job {
+struct the_job {
 	void (*job)(void*);
 	void *args;
 };
 
-nysched *nyas_sched_create(int thread_count);
-void nyas_sched_do(nysched *s, struct nyas_job job);
-void nyas_sched_wait(nysched *s);
-int nyas_sched_destroy(nysched *s);
+thesched *the_sched_create(int thread_count);
+void the_sched_do(thesched *s, struct the_job job);
+void the_sched_wait(thesched *s);
+int the_sched_destroy(thesched *s);
 
-#endif // NYAS_SCHEDULER_H
+#endif // THE_SCHEDULER_H

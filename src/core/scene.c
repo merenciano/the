@@ -5,46 +5,46 @@
 
 #define VEC3_UP ((float[3]){ 0.0f, 1.0f, 0.0f })
 
-NYAS_IMPL_ARR(nyent);
-NYAS_IMPL_POOL(nyent);
+THE_IMPL_ARR(theent);
+THE_IMPL_POOL(theent);
 
-struct nypool_nyent entity_pool = {.buf = NULL, .next = 0, .count = 0};
-struct nyas_cam camera;
+struct thepool_theent entity_pool = {.buf = NULL, .next = 0, .count = 0};
+struct the_cam camera;
 
-static inline struct nyas_vec3
-nyas_camera_fwd(struct nyas_cam *cam)
+static inline struct the_vec3
+the_camera_fwd(struct the_cam *cam)
 {
-	return (struct nyas_vec3){ cam->view[2], cam->view[6], cam->view[10] };
+	return (struct the_vec3){ cam->view[2], cam->view[6], cam->view[10] };
 }
 
 void
-nyas_camera_init(struct nyas_cam *cam, struct nyas_vec3 pos, struct nyas_vec3 target)
+the_camera_init(struct the_cam *cam, struct the_vec3 pos, struct the_vec3 target)
 {
 	mat4_look_at(cam->view, (float*)&pos, (float*)&target, VEC3_UP);
 	mat4_perspective_fov(
-	  cam->proj, to_radians(cam->fov), nyas_io->window_size.x, nyas_io->window_size.y, 0.01f,
+	  cam->proj, to_radians(cam->fov), the_io->window_size.x, the_io->window_size.y, 0.01f,
 	  cam->far);
 }
 
 void
-nyas_camera_init_default(struct nyas_cam *cam)
+the_camera_init_default(struct the_cam *cam)
 {
 	cam->fov = 70.0f;
 	cam->far = 300.0f;
-	nyas_camera_init(
-	  cam, (struct nyas_vec3){ 0.0f, 2.0f, 2.0f }, (struct nyas_vec3){ 0.0f, 0.0f, -1.0f });
+	the_camera_init(
+	  cam, (struct the_vec3){ 0.0f, 2.0f, 2.0f }, (struct the_vec3){ 0.0f, 0.0f, -1.0f });
 }
 
-struct nyas_vec3
-nyas_camera_eye(struct nyas_cam *cam)
+struct the_vec3
+the_camera_eye(struct the_cam *cam)
 {
-	nyas_mat4 inv;
+	the_mat4 inv;
 	mat4_inverse(inv, cam->view);
-	return (struct nyas_vec3){ inv[12], inv[13], inv[14] };
+	return (struct the_vec3){ inv[12], inv[13], inv[14] };
 }
 
 float *
-nyas_camera_static_vp(struct nyas_cam *cam, nyas_mat4 out)
+the_camera_static_vp(struct the_cam *cam, the_mat4 out)
 {
 	mat4_assign(out, cam->view);
 	out[3] = 0.0f;
@@ -58,23 +58,23 @@ nyas_camera_static_vp(struct nyas_cam *cam, nyas_mat4 out)
 }
 
 void
-nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
+the_camera_control(struct the_cam *cam, struct the_control_config cfg)
 {
-	struct nyas_vec3 eye = nyas_camera_eye(cam);
-	struct nyas_vec3 fwd = nyas_camera_fwd(cam);
+	struct the_vec3 eye = the_camera_eye(cam);
+	struct the_vec3 fwd = the_camera_fwd(cam);
 	vec3_negative((float*)&fwd, vec3_normalize((float*)&fwd, (float*)&fwd));
-	static struct nyas_vec2 mouse_down_pos = { 0.0f, 0.0f };
+	static struct the_vec2 mouse_down_pos = { 0.0f, 0.0f };
 	float speed = cfg.speed * cfg.deltatime;
 
 	// Rotation
-	if (nyas_io->mouse_button[NYAS_MOUSE_RIGHT] == NYAS_KEYSTATE_DOWN) {
-		mouse_down_pos = nyas_io->mouse_pos;
+	if (the_io->mouse_button[THE_MOUSE_RIGHT] == THE_KEYSTATE_DOWN) {
+		mouse_down_pos = the_io->mouse_pos;
 	}
 
 	float tmp_vec[3];
-	if (nyas_io->mouse_button[NYAS_MOUSE_RIGHT] == NYAS_KEYSTATE_PRESSED) {
-		struct nyas_vec2 curr_pos = nyas_io->mouse_pos;
-		struct nyas_vec2 offset = {
+	if (the_io->mouse_button[THE_MOUSE_RIGHT] == THE_KEYSTATE_PRESSED) {
+		struct the_vec2 curr_pos = the_io->mouse_pos;
+		struct the_vec2 offset = {
 			(curr_pos.x - mouse_down_pos.x) * cfg.sensitivity,
 			(mouse_down_pos.y - curr_pos.y) * cfg.sensitivity
 		};
@@ -87,38 +87,38 @@ nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg)
 	}
 
 	// Position
-	if (nyas_io->keys[NYAS_KEY_W] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_W] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, (float*)&fwd, speed));
 	}
 
-	if (nyas_io->keys[NYAS_KEY_S] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_S] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, (float*)&fwd, -speed));
 	}
 
-	if (nyas_io->keys[NYAS_KEY_A] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_A] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, (float*)&fwd), speed));
 	}
 
-	if (nyas_io->keys[NYAS_KEY_D] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_D] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, vec3_cross(tmp_vec, VEC3_UP, (float*)&fwd), -speed));
 	}
 
-	if (nyas_io->keys[NYAS_KEY_SPACE] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_SPACE] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, VEC3_UP, speed));
 	}
 
-	if (nyas_io->keys[NYAS_KEY_LEFT_SHIFT] == NYAS_KEYSTATE_PRESSED) {
+	if (the_io->keys[THE_KEY_LEFT_SHIFT] == THE_KEYSTATE_PRESSED) {
 		vec3_add((float*)&eye, (float*)&eye, vec3_multiply_f(tmp_vec, VEC3_UP, -speed));
 	}
 
 	mat4_look_at(cam->view, (float*)&eye, vec3_add(tmp_vec, (float*)&eye, (float*)&fwd), VEC3_UP);
 
 	// Zoom
-	if (nyas_io->mouse_scroll.y != 0.0f) {
-		cam->fov -= nyas_io->mouse_scroll.y * cfg.scroll_sensitivity;
+	if (the_io->mouse_scroll.y != 0.0f) {
+		cam->fov -= the_io->mouse_scroll.y * cfg.scroll_sensitivity;
 		cam->fov = clampf(cam->fov, 1.0f, 120.0f);
 		mat4_perspective(
 		  cam->proj, to_radians(cam->fov),
-		  (float)nyas_io->window_size.x / (float)nyas_io->window_size.y, 0.1f, cam->far);
+		  (float)the_io->window_size.x / (float)the_io->window_size.y, 0.1f, cam->far);
 	}
 }

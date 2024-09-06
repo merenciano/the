@@ -1,26 +1,26 @@
-#ifndef NYAS_CORE_COMMON_H
-#define NYAS_CORE_COMMON_H
+#ifndef THE_CORE_COMMON_H
+#define THE_CORE_COMMON_H
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define NYAS_ASSERT(X) (assert(X))
+#define THE_ASSERT(X) (assert(X))
 
-#define NYAS_DECL_ARR(T)                         \
-	struct nyarr_##T {                           \
+#define THE_DECL_ARR(T)                         \
+	struct thearr_##T {                           \
 		ptrdiff_t count;                         \
 		T at[];                                  \
 	};                                           \
-	T *nyarr_##T##_push(struct nyarr_##T **arr); \
-	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value); \
-	void nyarr_##T##_release(void *arr)
-#define NYAS_IMPL_ARR_MA(T, MALLOC, FREE)                                                \
-	T *nyarr_##T##_push(struct nyarr_##T **arr)                                          \
+	T *thearr_##T##_push(struct thearr_##T **arr); \
+	void thearr_##T##_push_value(struct thearr_##T **arr, T value); \
+	void thearr_##T##_release(void *arr)
+#define THE_IMPL_ARR_MA(T, MALLOC, FREE)                                                \
+	T *thearr_##T##_push(struct thearr_##T **arr)                                          \
 	{                                                                                    \
 		ptrdiff_t count = *arr ? (*arr)->count : 0;                                      \
 		if (!(count & (count + 1))) {                                                    \
-			struct nyarr_##T *mem = MALLOC(sizeof(**arr) + (count + 1) * 2 * sizeof(T)); \
+			struct thearr_##T *mem = MALLOC(sizeof(**arr) + (count + 1) * 2 * sizeof(T)); \
 			if (!mem) {                                                                  \
 				return NULL;                                                             \
 			}                                                                            \
@@ -33,30 +33,30 @@
 		return &(*arr)->at[count];                                                       \
 	}                                                                                    \
                                                                                          \
-	void nyarr_##T##_push_value(struct nyarr_##T **arr, T value)                         \
+	void thearr_##T##_push_value(struct thearr_##T **arr, T value)                         \
 	{                                                                                    \
-		*(nyarr_##T##_push(arr)) = value;                                                \
+		*(thearr_##T##_push(arr)) = value;                                                \
 	}                                                                                       \
                                                                                          \
-	void nyarr_##T##_release(void *arr)                                                     \
+	void thearr_##T##_release(void *arr)                                                     \
 	{                                                   \
 		FREE(arr);\
 	}\
 	int main(int argc, char **argv)
 
-#define NYAS_IMPL_ARR(TYPE) NYAS_IMPL_ARR_MA(TYPE, malloc, free)
+#define THE_IMPL_ARR(TYPE) THE_IMPL_ARR_MA(TYPE, malloc, free)
 
-#define NYAS_DECL_POOL(TYPE)                             \
-	struct nypool_##TYPE {                               \
-		struct nyarr_##TYPE *buf;                        \
+#define THE_DECL_POOL(TYPE)                             \
+	struct thepool_##TYPE {                               \
+		struct thearr_##TYPE *buf;                        \
 		int next;                                        \
 		int count;                                       \
 	};                                                   \
-	int nypool_##TYPE##_add(struct nypool_##TYPE *pool); \
-	void nypool_##TYPE##_rm(struct nypool_##TYPE *pool, int i)
+	int thepool_##TYPE##_add(struct thepool_##TYPE *pool); \
+	void thepool_##TYPE##_rm(struct thepool_##TYPE *pool, int i)
 
-#define NYAS_IMPL_POOL(TYPE)                                   \
-	int nypool_##TYPE##_add(struct nypool_##TYPE *pool)        \
+#define THE_IMPL_POOL(TYPE)                                   \
+	int thepool_##TYPE##_add(struct thepool_##TYPE *pool)        \
 	{                                                          \
 		if (!pool) {                                           \
 			return -1;                                         \
@@ -64,7 +64,7 @@
                                                                \
 		int cap = pool->buf ? pool->buf->count : 0;            \
 		if (pool->next == cap) {                               \
-			nyarr_##TYPE##_push(&pool->buf);                   \
+			thearr_##TYPE##_push(&pool->buf);                   \
 			pool->next = pool->buf->count;                     \
 			pool->count++;                                     \
 			return pool->buf->count - 1;                       \
@@ -76,7 +76,7 @@
 		return ret;                                            \
 	}                                                          \
                                                                \
-	void nypool_##TYPE##_rm(struct nypool_##TYPE *pool, int i) \
+	void thepool_##TYPE##_rm(struct thepool_##TYPE *pool, int i) \
 	{                                                          \
 		if (!pool) {                                           \
 			return;                                            \
@@ -90,17 +90,17 @@
 	}                                                          \
 	int main(int argc, char **argv)
 
-#define NYAS_DECL_STACK(TYPE)                                  \
-	struct nystack_##TYPE {                                    \
-		struct nyarr_##TYPE *buf;                              \
+#define THE_DECL_STACK(TYPE)                                  \
+	struct thestack_##TYPE {                                    \
+		struct thearr_##TYPE *buf;                              \
 		ptrdiff_t tail;                                        \
 	};                                                         \
                                                                \
-	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack); \
-	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack)
+	TYPE *thestack_##TYPE##_push(struct thestack_##TYPE *stack); \
+	TYPE *thestack_##TYPE##_pop(struct thestack_##TYPE *stack)
 
-#define NYAS_IMPL_STACK(TYPE)                                   \
-	TYPE *nystack_##TYPE##_push(struct nystack_##TYPE *stack)   \
+#define THE_IMPL_STACK(TYPE)                                   \
+	TYPE *thestack_##TYPE##_push(struct thestack_##TYPE *stack)   \
 	{                                                           \
 		if (!stack) {                                           \
 			return NULL;                                        \
@@ -108,13 +108,13 @@
                                                                 \
 		int cap = stack->buf ? stack->buf->count : 0;           \
 		if (stack->tail == cap) {                               \
-			nyarr_##TYPE##_push(&stack->buf);                   \
+			thearr_##TYPE##_push(&stack->buf);                   \
 		}                                                       \
 		stack->tail++;                                          \
 		return &stack->buf->at[stack->tail - 1];                \
 	}                                                           \
                                                                 \
-	TYPE *nystack_##TYPE##_pop(struct nystack_##TYPE *stack)    \
+	TYPE *thestack_##TYPE##_pop(struct thestack_##TYPE *stack)    \
 	{                                                           \
 		if (!stack || !(stack->tail) || !(stack->buf->count)) { \
 			return NULL;                                        \
@@ -123,67 +123,67 @@
 	}                                                           \
 	int main(int argc, char **argv)
 
-enum nyas_defs {
-	NYAS_ERR = 0,
-	NYAS_OK = 1,
-	NYAS_END = -2,
-	NYAS_NULL = -3,
-	NYAS_ERR_SWITCH_DEFAULT = -4,
-	NYAS_ERR_INVALID_PTR = -5,
-	NYAS_ERR_ALLOC = -10,
-	NYAS_ERR_FILE = -20,
-	NYAS_ERR_THREAD = -30,
-	NYAS_DEFAULT = -50,
-	NYAS_NOOP = -51,
-	NYAS_INVALID = -52,
-	NYAS_NONE = -53,
+enum the_defs {
+	THE_ERR = 0,
+	THE_OK = 1,
+	THE_END = -2,
+	THE_NULL = -3,
+	THE_ERR_SWITCH_DEFAULT = -4,
+	THE_ERR_INVALID_PTR = -5,
+	THE_ERR_ALLOC = -10,
+	THE_ERR_FILE = -20,
+	THE_ERR_THREAD = -30,
+	THE_DEFAULT = -50,
+	THE_NOOP = -51,
+	THE_INVALID = -52,
+	THE_NONE = -53,
 };
 
-struct nyas_point {
+struct the_point {
 	int x, y;
 };
 
-struct nyas_rect {
+struct the_rect {
 	int x, y, w, h;
 };
 
-struct nyas_vec2 {
+struct the_vec2 {
 	float x, y;
 };
 
-struct nyas_vec3 {
+struct the_vec3 {
 	float x, y, z;
 };
 
-struct nyas_vec4 {
+struct the_vec4 {
 	float x, y, z, w;
 };
 
-struct nyas_color {
+struct the_color {
 	float r, g, b, a;
 };
 
-union nyas4f {
-	struct nyas_vec4 p;
-	struct nyas_color c;
+union the4f {
+	struct the_vec4 p;
+	struct the_color c;
 	float v[4];
 };
 
-typedef float nyas_mat4[16];
+typedef float the_mat4[16];
 
-union nyas_mat4 {
-	struct nyas_vec4 r[4];
-	struct nyas_4x4 {
-		struct nyas_vec4 x;
-		struct nyas_vec4 y;
-		struct nyas_vec4 z;
-		struct nyas_vec4 w;
+union the_mat4 {
+	struct the_vec4 r[4];
+	struct the_4x4 {
+		struct the_vec4 x;
+		struct the_vec4 y;
+		struct the_vec4 z;
+		struct the_vec4 w;
 	} row;
 	float v[16];
 	float p[4][4];
-	struct nyas_mat4x4 {
+	struct the_mat4x4 {
 		float m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33;
 	} m;
 };
 
-#endif // NYAS_CORE_COMMON_H
+#endif // THE_CORE_COMMON_H

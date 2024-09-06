@@ -1,18 +1,18 @@
-#ifndef NYAS_CORE_MEM_H
-#define NYAS_CORE_MEM_H
+#ifndef THE_CORE_MEM_H
+#define THE_CORE_MEM_H
 
 #include <stddef.h>
 
-#define NYAS_ALLOC nyas_alloc
-#define NYAS_CALLOC nyas_calloc
-#define NYAS_REALLOC nyas_realloc
-#define NYAS_FREE nyas_free
+#define THE_ALLOC the_alloc
+#define THE_CALLOC the_calloc
+#define THE_REALLOC the_realloc
+#define THE_FREE the_free
 
-#define NYAS_KB(X) ((X)*1024)
-#define NYAS_MB(X) (NYAS_KB(X) * 1024)
-#define NYAS_GB(X) (NYAS_MB((size_t)X) * 1024)
+#define THE_KB(X) ((X)*1024)
+#define THE_MB(X) (THE_KB(X) * 1024)
+#define THE_GB(X) (THE_MB((size_t)X) * 1024)
 
-struct nyas_mem {
+struct the_mem {
 	ptrdiff_t cap;
 	ptrdiff_t tail;
 	char buff[];
@@ -20,18 +20,18 @@ struct nyas_mem {
 
 /*
  * Sets the memory buffer that will be used by this module for it's allocations.
- * - General allocation functions (i.e. nyas_alloc, nyas_calloc, nyas_realloc and nyas_free)
+ * - General allocation functions (i.e. the_alloc, the_calloc, the_realloc and the_free)
  *     may call stdlib.h implementation.
  * - Every other allocator will use this buffer.
  */
-int nyas_mem_init(void *buffer, ptrdiff_t size);
+int the_mem_init(void *buffer, ptrdiff_t size);
 
 /*
  * Persistent alloc
  * - No realloc
  * - No free
  */
-void *nyas_palloc(ptrdiff_t size);
+void *the_palloc(ptrdiff_t size);
 
 /*
  * Circular alloc
@@ -40,7 +40,7 @@ void *nyas_palloc(ptrdiff_t size);
  * - No realloc (circalloc + memcpy if needed).
  * - No explicit free.
  */
-static inline void *nyas_circalloc(struct nyas_mem *mem, ptrdiff_t bytes)
+static inline void *the_circalloc(struct the_mem *mem, ptrdiff_t bytes)
 {
 	if (mem->tail + bytes > mem->cap) {
 		mem->tail = bytes;
@@ -56,9 +56,9 @@ static inline void *nyas_circalloc(struct nyas_mem *mem, ptrdiff_t bytes)
  * - Same behaviour as stdlib.h ones regardless of intenral implementation.
  * - alloc, calloc, realloc and free.
  */
-void *nyas_alloc(size_t size);
-void *nyas_calloc(size_t elem_count, size_t elem_size);
-void *nyas_realloc(void *ptr, size_t size);
-void nyas_free(void *ptr);
+void *the_alloc(size_t size);
+void *the_calloc(size_t elem_count, size_t elem_size);
+void *the_realloc(void *ptr, size_t size);
+void the_free(void *ptr);
 
-#endif // NYAS_CORE_MEM_H
+#endif // THE_CORE_MEM_H

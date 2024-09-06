@@ -1,5 +1,5 @@
 target_sources(${LIB_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/nyas.h
+	${CMAKE_CURRENT_SOURCE_DIR}/the.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/common.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.h
 	${CMAKE_CURRENT_SOURCE_DIR}/core/io.c

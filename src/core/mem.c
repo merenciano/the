@@ -6,10 +6,10 @@
 #define MEM_ALIGN 8
 #define MEM_ALIGN_MOD(ADDRESS) ((ADDRESS) & (MEM_ALIGN - 1))
 
-static struct nyas_mem *persistent = NULL;
+static struct the_mem *persistent = NULL;
 
 void *
-nyas_palloc(ptrdiff_t size)
+the_palloc(ptrdiff_t size)
 {
 	void *ptr = &persistent->buff[persistent->tail];
 	persistent->tail += size;
@@ -17,38 +17,38 @@ nyas_palloc(ptrdiff_t size)
 }
 
 int
-nyas_mem_init(void *buffer, ptrdiff_t size)
+the_mem_init(void *buffer, ptrdiff_t size)
 {
 	if (!buffer) {
-		NYAS_LOG_ERR("Invalid buffer");
-		return NYAS_ERR_INVALID_PTR;
+		THE_LOG_ERR("Invalid buffer");
+		return THE_ERR_INVALID_PTR;
 	}
 	persistent = buffer;
 	persistent->cap = size - sizeof(*persistent);
 	persistent->tail = 0;
-	return NYAS_OK;
+	return THE_OK;
 }
 
 void *
-nyas_alloc(size_t size)
+the_alloc(size_t size)
 {
 	return malloc(size);
 }
 
 void *
-nyas_calloc(size_t elem_count, size_t elem_size)
+the_calloc(size_t elem_count, size_t elem_size)
 {
 	return calloc(elem_count, elem_size);
 }
 
 void *
-nyas_realloc(void *ptr, size_t size)
+the_realloc(void *ptr, size_t size)
 {
 	return realloc(ptr, size);
 }
 
 void
-nyas_free(void *ptr)
+the_free(void *ptr)
 {
 	free(ptr);
 }

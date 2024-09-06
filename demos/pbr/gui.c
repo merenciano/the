@@ -30,7 +30,7 @@ struct nk_context *ctx;
 void
 nuklear_init(void)
 {
-	ctx = nk_glfw3_init(&glfw, nyas_io->internal_window, NK_GLFW3_INSTALL_CALLBACKS);
+	ctx = nk_glfw3_init(&glfw, the_io->internal_window, NK_GLFW3_INSTALL_CALLBACKS);
 	struct nk_font_atlas *atlas;
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);
@@ -46,23 +46,23 @@ nuklear_draw(void)
 	             NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 	               NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
 		for (int i = 0; i < entity_pool.count; ++i) {
-			struct nyas_entity *e = entity_pool.buf->at + i;
+			struct the_entity *e = entity_pool.buf->at + i;
 			// Mesh
 			nk_layout_row_dynamic(ctx, 30, 1);
 			nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, mesh_path, 512, NULL);
 			nk_layout_row_dynamic(ctx, 30, 4);
 			if (nk_button_label(ctx, "Reload")) {
-				nyas_mesh_reload_file(e->mesh, mesh_path);
+				the_mesh_reload_file(e->mesh, mesh_path);
 				memset(mesh_path, 0, 512);
 			}
 			if (nk_button_label(ctx, "Load Cube")) {
-				nyut_mesh_set_geometry(e->mesh, NYAS_CUBE);
+				tut_mesh_set_geometry(e->mesh, THE_CUBE);
 			}
 			if (nk_button_label(ctx, "Load Sphere")) {
-				nyut_mesh_set_geometry(e->mesh, NYAS_SPHERE);
+				tut_mesh_set_geometry(e->mesh, THE_SPHERE);
 			}
 			if (nk_button_label(ctx, "Load Quad")) {
-				nyut_mesh_set_geometry(e->mesh, NYAS_QUAD);
+				tut_mesh_set_geometry(e->mesh, THE_QUAD);
 			}
 
 			// Material
@@ -70,11 +70,11 @@ nuklear_draw(void)
 			                        nk_strlen(NK_FILE_LINE), i)) {
 				struct pbr_desc_unit *unit = e->mat.ptr;
 				struct pbr_desc_scene *scene = (shader_pool.buf->at + e->mat.shader)->common;
-				struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
+				struct the_texture_internal *tex = &tex_pool.buf->at[*the_mat_tex(e->mat)];
 
 				if (nk_tree_push_hashed(ctx, NK_TREE_TAB, "Albedo", NK_MINIMIZED, NK_FILE_LINE,
 				                        nk_strlen(NK_FILE_LINE), i)) {
-					struct nyas_texture_internal *tex = &tex_pool.buf->at[*nyas_mat_tex(e->mat)];
+					struct the_texture_internal *tex = &tex_pool.buf->at[*the_mat_tex(e->mat)];
 					nk_layout_row_static(ctx, 256, 256, 1);
 					nk_image(ctx, nk_image_id(tex->res.id));
 					nk_layout_row_dynamic(ctx, 30, 2);
@@ -135,20 +135,20 @@ nuklear_draw(void)
 
 		if (nk_tree_push(ctx, NK_TREE_TAB, "Resources", NK_MINIMIZED)) {
 			nk_labelf(ctx, NK_TEXT_LEFT, "Textures: %d / %ld (%lu Bytes)", tex_pool.count,
-			          tex_pool.buf->count, sizeof(struct nyas_texture_internal));
+			          tex_pool.buf->count, sizeof(struct the_texture_internal));
 			nk_labelf(ctx, NK_TEXT_LEFT, "Meshes: %d / %ld (%lu Bytes)", mesh_pool.count,
-			          mesh_pool.buf->count, sizeof(struct nyas_mesh_internal));
+			          mesh_pool.buf->count, sizeof(struct the_mesh_internal));
 			nk_labelf(ctx, NK_TEXT_LEFT, "Framebuffers: %d / %ld (%lu Bytes)",
 			          framebuffer_pool.count, framebuffer_pool.buf->count,
-			          sizeof(struct nyas_framebuffer_internal));
+			          sizeof(struct the_framebuffer_internal));
 			nk_labelf(
 			  ctx, NK_TEXT_LEFT, "Shaders: %d / %ld (%lu Bytes)", shader_pool.count,
-			  shader_pool.buf->count, sizeof(struct nyas_shader_internal));
+			  shader_pool.buf->count, sizeof(struct the_shader_internal));
 			if (nk_tree_push(ctx, NK_TREE_TAB, "Shaders", NK_MINIMIZED)) {
 				for (int i = 0; i < shader_pool.count; ++i) {
 					nk_label(ctx, shader_pool.buf->at[i].name, NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Reload")) {
-						nyas_shader_reload(i);
+						the_shader_reload(i);
 					}
 				}
 				nk_tree_pop(ctx);

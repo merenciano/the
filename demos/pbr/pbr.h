@@ -1,4 +1,4 @@
-#include "nyas.h"
+#include "the.h"
 
 struct pbr_desc_unit {
 	float model[16];
@@ -16,19 +16,19 @@ struct pbr_desc_unit {
 
 struct pbr_desc_scene {
 	float view_projection[16];
-	struct nyas_vec3 camera_position;
+	struct the_vec3 camera_position;
 	float padding;
 	float sunlight[4];
 };
 
 struct pbr_maps {
-	nyas_tex a, n, r, m;
+	the_tex a, n, r, m;
 };
 
 static const struct {
-	const struct nyas_shader_desc pbr;
-	const struct nyas_shader_desc fullscreen_img;
-	const struct nyas_shader_desc sky;
+	const struct the_shader_desc pbr;
+	const struct the_shader_desc fullscreen_img;
+	const struct the_shader_desc sky;
 } g_shader_descriptors = {
 	.pbr = {
 		.name = "pbr",

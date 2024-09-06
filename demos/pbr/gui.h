@@ -1,7 +1,7 @@
-#ifndef NYAS_TOOLS_IMGUI_H
-#define NYAS_TOOLS_IMGUI_H
+#ifndef THE_TOOLS_IMGUI_H
+#define THE_TOOLS_IMGUI_H
 
 void nuklear_init(void);
 void nuklear_draw(void);
 
-#endif // NYAS_TOOLS_IMGUI_H
+#endif // THE_TOOLS_IMGUI_H

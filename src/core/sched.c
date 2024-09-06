@@ -5,15 +5,15 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-typedef struct nyas_job job;
-NYAS_DECL_ARR(job);
-NYAS_IMPL_ARR(job);
-NYAS_DECL_STACK(job);
-NYAS_IMPL_STACK(job);
+typedef struct the_job job;
+THE_DECL_ARR(job);
+THE_IMPL_ARR(job);
+THE_DECL_STACK(job);
+THE_IMPL_STACK(job);
 
 typedef pthread_t thread;
-NYAS_DECL_ARR(thread);
-NYAS_IMPL_ARR(thread);
+THE_DECL_ARR(thread);
+THE_IMPL_ARR(thread);
 
 enum sched_states {
 	SCHED_UNINIT = 0,
@@ -22,24 +22,24 @@ enum sched_states {
 	SCHED_CLOSED
 };
 
-struct nysched {
-	struct nysched *next;
-	struct nystack_job queue;
-	struct nyarr_thread *threads;
+struct thesched {
+	struct thesched *next;
+	struct thestack_job queue;
+	struct thearr_thread *threads;
 	pthread_mutex_t mtx;
 	pthread_cond_t cond;
 	int waiting;
 	enum sched_states state;
 };
 
-static nysched *scheds = NULL;
+static thesched *scheds = NULL;
 static pthread_mutex_t scheds_mtx;
 static bool initialized = false;
 
 static void *
-nyas__worker(void *data)
+the__worker(void *data)
 {
-	nysched *s = data;
+	thesched *s = data;
 	while (1) {
 		++s->waiting;
 		pthread_mutex_lock(&s->mtx);
@@ -53,7 +53,7 @@ nyas__worker(void *data)
 		}
 
 		--s->waiting;
-		struct nyas_job job = *(nystack_job_pop(&s->queue));
+		struct the_job job = *(thestack_job_pop(&s->queue));
 		pthread_mutex_unlock(&s->mtx);
 		(*(job.job))(job.args);
 	}
@@ -62,25 +62,25 @@ exit_worker:
 	return NULL;
 }
 
-nysched *
-nyas_sched_create(int thread_count)
+thesched *
+the_sched_create(int thread_count)
 {
 	if (!initialized) {
 		pthread_mutex_init(&scheds_mtx, NULL);
 		initialized = true;
 	}
 
-	nysched *s = NYAS_ALLOC(sizeof(struct nysched));
+	thesched *s = THE_ALLOC(sizeof(struct thesched));
 	s->waiting = 0;
 	s->threads = NULL;
-	s->queue = (struct nystack_job){.buf = NULL, .tail = 0};
+	s->queue = (struct thestack_job){.buf = NULL, .tail = 0};
 
 	pthread_mutex_init(&s->mtx, NULL);
 	pthread_cond_init(&s->cond, NULL);
 
 	for (int i = 0; i < thread_count; ++i) {
-		if (pthread_create(nyarr_thread_push(&s->threads), NULL, nyas__worker, s)) {
-			NYAS_LOG_ERR("Thread creation error.");
+		if (pthread_create(thearr_thread_push(&s->threads), NULL, the__worker, s)) {
+			THE_LOG_ERR("Thread creation error.");
 			return NULL;
 		}
 	}
@@ -94,21 +94,21 @@ nyas_sched_create(int thread_count)
 }
 
 void
-nyas_sched_do(nysched *s, struct nyas_job job)
+the_sched_do(thesched *s, struct the_job job)
 {
 	if (!s->threads->count) {
 		(*(job.job))(job.args);
 		return;
 	}
 	pthread_mutex_lock(&s->mtx);
-	struct nyas_job *next = nystack_job_push(&s->queue);
+	struct the_job *next = thestack_job_push(&s->queue);
 	*next = job;
 	pthread_cond_signal(&s->cond);
 	pthread_mutex_unlock(&s->mtx);
 }
 
 void
-nyas_sched_wait(nysched *s)
+the_sched_wait(thesched *s)
 {
 	if (!s || !s->threads || !s->threads->count) {
 		return;
@@ -121,7 +121,7 @@ nyas_sched_wait(nysched *s)
 }
 
 int
-nyas_sched_destroy(nysched *s)
+the_sched_destroy(thesched *s)
 {
 	pthread_mutex_lock(&s->mtx);
 	s->state = SCHED_CLOSING;
@@ -131,10 +131,10 @@ nyas_sched_destroy(nysched *s)
 		pthread_join(s->threads->at[i], NULL);
 	}
 
-	nyarr_thread_release(s->threads);
-	nyarr_job_release(s->queue.buf);
+	thearr_thread_release(s->threads);
+	thearr_job_release(s->queue.buf);
 	s->threads = NULL;
-	s->queue = (struct nystack_job){.buf = NULL, .tail = 0};
+	s->queue = (struct thestack_job){.buf = NULL, .tail = 0};
 	pthread_mutex_lock(&s->mtx);
 	pthread_mutex_unlock(&s->mtx);
 	pthread_mutex_destroy(&s->mtx);
@@ -145,7 +145,7 @@ nyas_sched_destroy(nysched *s)
 	if (s == scheds) {
 		scheds = scheds->next;
 	} else {
-		nysched *i = scheds;
+		thesched *i = scheds;
 		while (i) {
 			if (s == i->next) {
 				i->next = s->next;
@@ -157,11 +157,11 @@ nyas_sched_destroy(nysched *s)
 		if (!i) {
 			/* That scheduler does not exist in the schedulers list */
 			pthread_mutex_unlock(&scheds_mtx);
-			return NYAS_ERR_INVALID_PTR;
+			return THE_ERR_INVALID_PTR;
 		}
 	}
 
 	pthread_mutex_unlock(&scheds_mtx);
-	NYAS_FREE(s);
-	return NYAS_OK;
+	THE_FREE(s);
+	return THE_OK;
 }

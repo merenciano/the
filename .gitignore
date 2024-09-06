@@ -5,11 +5,7 @@ build/
 lib/*.a
 lib/*.so
 cmake-build**/
-demos/*/imgui.ini
-demos/pbr/matballs
-demos/pbr/inspector
-demos/hello/hello
-demos/emsc/emsc.**
+demos/pbr/pbr
 tools/tomesh
 tools/genenv
 compile_commands.json

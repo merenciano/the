@@ -1,4 +1,4 @@
-project (nyas_tools VERSION 1.0.0)
+project (the_tools VERSION 1.0.0)
 add_executable(genenv)
 set_target_properties(genenv PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(genenv PRIVATE
@@ -13,7 +13,7 @@ target_sources(genenv PRIVATE
 )
 
 target_link_libraries(genenv PRIVATE
-	nyas_d
+	the_d
 	GL
 	X11
 	m

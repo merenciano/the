@@ -4,9 +4,9 @@ set(CMAKE_DEBUG_POSTFIX _d)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-set(LIB_NAME nyas)
+set(LIB_NAME the)
 
-project(Nyas VERSION 0.1.0)
+project(The VERSION 0.1.0)
 
 add_library(${LIB_NAME} STATIC)
 set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -14,7 +14,7 @@ set_target_properties(${LIB_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CU
 
 target_compile_definitions(${LIB_NAME} PUBLIC
 	_GLFW_X11
-	NYAS_ELEM_SIZE_16
+	THE_ELEM_SIZE_16
 )
 
 target_compile_options(${LIB_NAME} PUBLIC

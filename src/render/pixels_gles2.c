@@ -17,21 +17,21 @@ struct texcnfg {
 /*
   Attribute's number of elements for each vertex.
   The array's position must match with the
-  enum (nyas_VertexAttributes) value of the attribute.
+  enum (the_VertexAttributes) value of the attribute.
 */
 static const GLint attrib_sizes[VTXATTR_COUNT] = { 3, 3, 3, 3, 2 };
 
 /*
   Attribute's layout name in the shader.
   The array's position must match with the attribute's
-  value at enum nyas_VertexAttributes.
+  value at enum the_VertexAttributes.
 */
 static const char *attrib_names[VTXATTR_COUNT] = { "a_position", "a_normal",
 	                                               "a_tangent", "a_bitangent",
 	                                               "a_uv" };
 
 static struct texcnfg
-nypx__texcnfg(int flags)
+thepx__texcnfg(int flags)
 {
 	if (flags & TF_DEPTH) {
 		struct texcnfg depthcnfg = {
@@ -93,9 +93,9 @@ nypx__texcnfg(int flags)
 }
 
 void
-deprecated_nypx_tex_create(uint32_t *id, int type)
+deprecated_thepx_tex_create(uint32_t *id, int type)
 {
-	struct texcnfg cnfg = nypx__texcnfg(type);
+	struct texcnfg cnfg = thepx__texcnfg(type);
 	glGenTextures(1, id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(cnfg.target, *id);
@@ -106,9 +106,9 @@ deprecated_nypx_tex_create(uint32_t *id, int type)
 }
 
 void
-deprecated_nypx_tex_set(uint32_t id, int type, int width, int height, void **pix)
+deprecated_thepx_tex_set(uint32_t id, int type, int width, int height, void **pix)
 {
-	struct texcnfg cnfg = nypx__texcnfg(type);
+	struct texcnfg cnfg = thepx__texcnfg(type);
 	int sides = 1;
 	GLenum target = cnfg.target;
 	glActiveTexture(GL_TEXTURE0);
@@ -130,13 +130,13 @@ deprecated_nypx_tex_set(uint32_t id, int type, int width, int height, void **pix
 }
 
 void
-nypx_tex_release(uint32_t *id)
+thepx_tex_release(uint32_t *id)
 {
 	glDeleteTextures(1, id);
 }
 
 void
-nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
+thepx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
 {
 	(void)id;
 	glGenBuffers(1, vid);
@@ -144,7 +144,7 @@ nypx_mesh_create(uint32_t *id, uint32_t *vid, uint32_t *iid)
 }
 
 static GLsizei
-nypx__get_attrib_stride(int32_t attr_flags)
+thepx__get_attrib_stride(int32_t attr_flags)
 {
 	GLsizei stride = 0;
 	for (int i = 0; i < VTXATTR_COUNT; ++i) {
@@ -156,7 +156,7 @@ nypx__get_attrib_stride(int32_t attr_flags)
 }
 
 void
-nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s)
+thepx_mesh_use(struct the_mesh_internal *m, struct the_shader_internal *s)
 {
 	if (!m || !s) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -167,7 +167,7 @@ nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s)
 	glBindBuffer(GL_ARRAY_BUFFER, m->res_vb.id);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->res_ib.id);
 	GLint offset = 0;
-	GLsizei stride = nypx__get_attrib_stride(m->attrib);
+	GLsizei stride = thepx__get_attrib_stride(m->attrib);
 	for (int i = 0; i < VTXATTR_COUNT; ++i) {
 		if (!(m->attrib & (1 << i))) {
 			continue;
@@ -185,25 +185,25 @@ nypx_mesh_use(struct nyas_mesh_internal *m, struct nyas_shader_internal *s)
 }
 
 void
-nypx_mesh_set(uint32_t id,
+thepx_mesh_set(uint32_t id,
               uint32_t vid,
               uint32_t iid,
               uint32_t shader_id,
               int attrib,
               float *vtx,
               size_t vsize,
-              nypx_index *idx,
+              thepx_index *idx,
               size_t elements)
 {
 	(void)id;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iid);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(nypx_index),
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements * sizeof(thepx_index),
 	             (const void *)idx, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, vid);
 	glBufferData(GL_ARRAY_BUFFER, vsize, vtx, GL_STATIC_DRAW);
 
 	GLint offset = 0;
-	GLsizei stride = nypx__get_attrib_stride(attrib);
+	GLsizei stride = thepx__get_attrib_stride(attrib);
 	for (int i = 0; i < VTXATTR_COUNT; ++i) {
 		if (!(attrib & (1 << i))) {
 			continue;
@@ -221,7 +221,7 @@ nypx_mesh_set(uint32_t id,
 }
 
 void
-nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid)
+thepx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid)
 {
 	(void)id;
 	glDeleteBuffers(1, vid);
@@ -229,13 +229,13 @@ nypx_mesh_release(uint32_t *id, uint32_t *vid, uint32_t *iid)
 }
 
 void
-nypx_shader_create(uint32_t *id)
+thepx_shader_create(uint32_t *id)
 {
 	*id = glCreateProgram();
 }
 
 void
-nypx_shader_compile(uint32_t id, const char *name)
+thepx_shader_compile(uint32_t id, const char *name)
 {
 	// For shader hot-recompilations
 	GLuint shaders[8];
@@ -261,8 +261,8 @@ nypx_shader_compile(uint32_t id, const char *name)
 	GLuint vert = glCreateShader(GL_VERTEX_SHADER);
 	GLuint frag = glCreateShader(GL_FRAGMENT_SHADER);
 
-	if (nyas_file_read(vert_path, &shsrc, &shsrc_size) != NYAS_OK) {
-		NYAS_ASSERT(!"Error loading shader vert file.");
+	if (the_file_read(vert_path, &shsrc, &shsrc_size) != THE_OK) {
+		THE_ASSERT(!"Error loading shader vert file.");
 	}
 
 	glShaderSource(vert, 1, (const char *const *)&shsrc, NULL);
@@ -270,12 +270,12 @@ nypx_shader_compile(uint32_t id, const char *name)
 	glGetShaderiv(vert, GL_COMPILE_STATUS, &err);
 	if (!err) {
 		glGetShaderInfoLog(vert, 1024, NULL, output_log);
-		NYAS_LOG_ERR("%s vert:\n%s\n", name, output_log);
+		THE_LOG_ERR("%s vert:\n%s\n", name, output_log);
 	}
-	nyas_free(shsrc);
+	the_free(shsrc);
 
-	if (nyas_file_read(frag_path, &shsrc, &shsrc_size) != NYAS_OK) {
-		NYAS_ASSERT(!"Error loading shader frag file.");
+	if (the_file_read(frag_path, &shsrc, &shsrc_size) != THE_OK) {
+		THE_ASSERT(!"Error loading shader frag file.");
 	}
 
 	glShaderSource(frag, 1, (const char *const *)&shsrc, NULL);
@@ -283,9 +283,9 @@ nypx_shader_compile(uint32_t id, const char *name)
 	glGetShaderiv(frag, GL_COMPILE_STATUS, &err);
 	if (!err) {
 		glGetShaderInfoLog(frag, 1024, NULL, output_log);
-		NYAS_LOG_ERR("%s frag:\n%s\n", name, output_log);
+		THE_LOG_ERR("%s frag:\n%s\n", name, output_log);
 	}
-	nyas_free(shsrc);
+	the_free(shsrc);
 
 	glAttachShader(id, vert);
 	glAttachShader(id, frag);
@@ -293,7 +293,7 @@ nypx_shader_compile(uint32_t id, const char *name)
 	glGetProgramiv(id, GL_LINK_STATUS, &err);
 	if (!err) {
 		glGetProgramInfoLog(id, 1024, NULL, output_log);
-		NYAS_LOG_ERR("%s program:\n%s\n", name, output_log);
+		THE_LOG_ERR("%s program:\n%s\n", name, output_log);
 	}
 
 	glDeleteShader(vert);
@@ -301,7 +301,7 @@ nypx_shader_compile(uint32_t id, const char *name)
 }
 
 void
-nypx_shader_loc(uint32_t id, int *o_loc, const char **i_unif, int count)
+thepx_shader_loc(uint32_t id, int *o_loc, const char **i_unif, int count)
 {
 	for (int i = 0; i < count; ++i) {
 		o_loc[i] = glGetUniformLocation(id, i_unif[i]);
@@ -309,13 +309,13 @@ nypx_shader_loc(uint32_t id, int *o_loc, const char **i_unif, int count)
 }
 
 void
-nypx_shader_set_data(int loc, float *data, int v4count)
+thepx_shader_set_data(int loc, float *data, int v4count)
 {
 	glUniform4fv(loc, v4count, data);
 }
 
 static void
-nypx__set_tex(int loc, int *t, int c, int unit, GLenum target)
+thepx__set_tex(int loc, int *t, int c, int unit, GLenum target)
 {
 	for (int i = 0; i < c; ++i) {
 		glActiveTexture(GL_TEXTURE0 + unit + i);
@@ -326,37 +326,37 @@ nypx__set_tex(int loc, int *t, int c, int unit, GLenum target)
 }
 
 void
-nypx_shader_set_tex(int loc, int *tex, int count, int texunit_offset)
+thepx_shader_set_tex(int loc, int *tex, int count, int texunit_offset)
 {
-	nypx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_2D);
+	thepx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_2D);
 }
 
 void
-nypx_shader_set_cube(int loc, int *tex, int count, int texunit_offset)
+thepx_shader_set_cube(int loc, int *tex, int count, int texunit_offset)
 {
-	nypx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_CUBE_MAP);
+	thepx__set_tex(loc, tex, count, texunit_offset, GL_TEXTURE_CUBE_MAP);
 }
 
 void
-nypx_shader_use(uint32_t id)
+thepx_shader_use(uint32_t id)
 {
 	glUseProgram(id);
 }
 
 void
-nypx_shader_release(uint32_t id)
+thepx_shader_release(uint32_t id)
 {
 	glDeleteProgram(id);
 }
 
 void
-nypx_fb_create(uint32_t *id)
+thepx_fb_create(uint32_t *id)
 {
 	glGenFramebuffers(1, id);
 }
 
 int
-nypx__fb_attach_gl(int slot)
+thepx__fb_attach_gl(int slot)
 {
 	switch (slot) {
 	case NYPX_SLOT_DEPTH:
@@ -371,29 +371,29 @@ nypx__fb_attach_gl(int slot)
 }
 
 void
-nypx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face)
+thepx_fb_set(uint32_t id, uint32_t texid, int slot, int level, int face)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, id);
 	GLenum target = face >= 0 ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face :
 								GL_TEXTURE_2D;
-	slot = nypx__fb_attach_gl(slot);
+	slot = thepx__fb_attach_gl(slot);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, slot, target, texid, level);
 }
 
 void
-nypx_fb_use(uint32_t id)
+thepx_fb_use(uint32_t id)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, id);
 }
 
 void
-nypx_fb_release(uint32_t *id)
+thepx_fb_release(uint32_t *id)
 {
 	glDeleteFramebuffers(1, id);
 }
 
 void
-nypx_clear(int color, int depth, int stencil)
+thepx_clear(int color, int depth, int stencil)
 {
 	GLbitfield mask = 0;
 	mask |= (GL_COLOR_BUFFER_BIT * color);
@@ -403,41 +403,41 @@ nypx_clear(int color, int depth, int stencil)
 }
 
 void
-nypx_draw(int elem_count, int index_type)
+thepx_draw(int elem_count, int index_type)
 {
 	glDrawElements(GL_TRIANGLES, elem_count,
 	               index_type ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT, 0);
 }
 
 void
-nypx_clear_color(float r, float g, float b, float a)
+thepx_clear_color(float r, float g, float b, float a)
 {
 	glClearColor(r, g, b, a);
 }
 
 void
-nypx_blend_enable(void)
+thepx_blend_enable(void)
 {
 	glEnable(GL_BLEND);
 }
 
 void
-nypx_blend_disable(void)
+thepx_blend_disable(void)
 {
 	glDisable(GL_BLEND);
 }
 
 static GLenum
-nypx__gl_blend(int blend_func)
+thepx__gl_blend(int blend_func)
 {
 	switch (blend_func) {
-	case NYAS_BLEND_ONE:
+	case THE_BLEND_ONE:
 		return GL_ONE;
-	case NYAS_BLEND_SRC_ALPHA:
+	case THE_BLEND_SRC_ALPHA:
 		return GL_SRC_ALPHA;
-	case NYAS_BLEND_ONE_MINUS_SRC_ALPHA:
+	case THE_BLEND_ONE_MINUS_SRC_ALPHA:
 		return GL_ONE_MINUS_SRC_ALPHA;
-	case NYAS_BLEND_ZERO:
+	case THE_BLEND_ZERO:
 		return GL_ZERO;
 	default:
 		return -1;
@@ -445,26 +445,26 @@ nypx__gl_blend(int blend_func)
 }
 
 void
-nypx_blend_set(int blend_func_src, int blend_func_dst)
+thepx_blend_set(int blend_func_src, int blend_func_dst)
 {
-	glBlendFunc(nypx__gl_blend(blend_func_src),
-	            nypx__gl_blend(blend_func_dst));
+	glBlendFunc(thepx__gl_blend(blend_func_src),
+	            thepx__gl_blend(blend_func_dst));
 }
 
 void
-nypx_cull_enable(void)
+thepx_cull_enable(void)
 {
 	glEnable(GL_CULL_FACE);
 }
 
 void
-nypx_cull_disable(void)
+thepx_cull_disable(void)
 {
 	glDisable(GL_CULL_FACE);
 }
 
 static GLenum
-nypx__gl_cull(enum nyas_cull_face cull)
+thepx__gl_cull(enum the_cull_face cull)
 {
 	switch (cull) {
 	case NYPX_CULL_BACK:
@@ -479,37 +479,37 @@ nypx__gl_cull(enum nyas_cull_face cull)
 }
 
 void
-nypx_cull_set(int cull_face)
+thepx_cull_set(int cull_face)
 {
-	glCullFace(nypx__gl_cull(cull_face));
+	glCullFace(thepx__gl_cull(cull_face));
 }
 
 void
-nypx_depth_enable_test(void)
+thepx_depth_enable_test(void)
 {
 	glEnable(GL_DEPTH_TEST);
 }
 
 void
-nypx_depth_disable_test(void)
+thepx_depth_disable_test(void)
 {
 	glDisable(GL_DEPTH_TEST);
 }
 
 void
-nypx_depth_enable_mask(void)
+thepx_depth_enable_mask(void)
 {
 	glDepthMask(GL_TRUE);
 }
 
 void
-nypx_depth_disable_mask(void)
+thepx_depth_disable_mask(void)
 {
 	glDepthMask(GL_FALSE);
 }
 
 static GLenum
-nypx__gl_depth(enum nyas_depth_func df)
+thepx__gl_depth(enum the_depth_func df)
 {
 	switch (df) {
 	case NYPX_DEPTH_LEQUAL:
@@ -522,13 +522,13 @@ nypx__gl_depth(enum nyas_depth_func df)
 }
 
 void
-nypx_depth_set(int depth_func)
+thepx_depth_set(int depth_func)
 {
-	glDepthFunc(nypx__gl_depth(depth_func));
+	glDepthFunc(thepx__gl_depth(depth_func));
 }
 
 void
-nypx_viewport(int x, int y, int width, int height)
+thepx_viewport(int x, int y, int width, int height)
 {
 	glViewport(x, y, width, height);
 }

@@ -1,41 +1,41 @@
-#ifndef NYAS_SCENE_H
-#define NYAS_SCENE_H
+#ifndef THE_SCENE_H
+#define THE_SCENE_H
 
 #include "render/pixels.h"
 
-struct nyas_cam {
+struct the_cam {
 	float view[16];
 	float proj[16];
 	float far;
 	float fov;
 };
 
-struct nyas_control_config {
+struct the_control_config {
 	float speed;
 	float sensitivity;
 	float scroll_sensitivity;
 	float deltatime;
 };
 
-struct nyas_entity {
+struct the_entity {
 	float transform[16];
-	nyas_mesh mesh;
-	nyas_mat mat;
+	the_mesh mesh;
+	the_mat mat;
 };
 
-typedef struct nyas_entity nyent;
-NYAS_DECL_ARR(nyent);
-NYAS_DECL_POOL(nyent);
+typedef struct the_entity theent;
+THE_DECL_ARR(theent);
+THE_DECL_POOL(theent);
 
-extern struct nypool_nyent entity_pool;
-extern struct nyas_cam camera;
+extern struct thepool_theent entity_pool;
+extern struct the_cam camera;
 
-void nyas_camera_init_default(struct nyas_cam *cam);
-void nyas_camera_init(struct nyas_cam *cam, struct nyas_vec3 pos, struct nyas_vec3 target);
-struct nyas_vec3 nyas_camera_eye(struct nyas_cam *cam);
-void nyas_camera_control(struct nyas_cam *cam, struct nyas_control_config cfg);
+void the_camera_init_default(struct the_cam *cam);
+void the_camera_init(struct the_cam *cam, struct the_vec3 pos, struct the_vec3 target);
+struct the_vec3 the_camera_eye(struct the_cam *cam);
+void the_camera_control(struct the_cam *cam, struct the_control_config cfg);
 
 // Matrix with zeroed translation i.e. projection * vec4(vec3(view)). For skybox.
-float *nyas_camera_static_vp(struct nyas_cam *cam, nyas_mat4 out);
+float *the_camera_static_vp(struct the_cam *cam, the_mat4 out);
 
-#endif // NYAS_SCENE_H
+#endif // THE_SCENE_H

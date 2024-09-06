@@ -1,5 +1,5 @@
-#ifndef NYAS_PIXELS_H
-#define NYAS_PIXELS_H
+#ifndef THE_PIXELS_H
+#define THE_PIXELS_H
 
 #include "core/common.h"
 
@@ -7,161 +7,161 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef NYAS_ELEM_SIZE_16
-typedef uint16_t nyas_idx;
+#ifdef THE_ELEM_SIZE_16
+typedef uint16_t the_idx;
 #else
-typedef uint32_t nyas_idx;
+typedef uint32_t the_idx;
 #endif
 
-typedef int nyas_resource_handle;
-typedef nyas_resource_handle nyas_mesh;
-typedef nyas_resource_handle nyas_tex;
-typedef nyas_resource_handle nyas_framebuffer;
-typedef nyas_resource_handle nyas_shader;
+typedef int the_resource_handle;
+typedef the_resource_handle the_mesh;
+typedef the_resource_handle the_tex;
+typedef the_resource_handle the_framebuffer;
+typedef the_resource_handle the_shader;
 
-typedef int nyas_vertex_attrib;
-enum nyas_vertex_attrib {
-	NYAS_VA_POS = 0,
-	NYAS_VA_NORMAL,
-	NYAS_VA_TAN,
-	NYAS_VA_BITAN,
-	NYAS_VA_UV,
-	NYAS_VA_COUNT
+typedef int the_vertex_attrib;
+enum the_vertex_attrib {
+	THE_VA_POS = 0,
+	THE_VA_NORMAL,
+	THE_VA_TAN,
+	THE_VA_BITAN,
+	THE_VA_UV,
+	THE_VA_COUNT
 };
 
-typedef int nyas_blend_func;
-enum nyas_blend_func {
-	NYAS_BLEND_CURRENT = 0,
-	NYAS_BLEND_ONE,
-	NYAS_BLEND_SRC_ALPHA,
-	NYAS_BLEND_ONE_MINUS_SRC_ALPHA,
-	NYAS_BLEND_ZERO
+typedef int the_blend_func;
+enum the_blend_func {
+	THE_BLEND_CURRENT = 0,
+	THE_BLEND_ONE,
+	THE_BLEND_SRC_ALPHA,
+	THE_BLEND_ONE_MINUS_SRC_ALPHA,
+	THE_BLEND_ZERO
 };
 
-typedef int nyas_cull_face;
-enum nyas_cull_face {
-	NYAS_CULL_CURRENT = 0,
-	NYAS_CULL_FRONT,
-	NYAS_CULL_BACK,
-	NYAS_CULL_FRONT_AND_BACK
+typedef int the_cull_face;
+enum the_cull_face {
+	THE_CULL_CURRENT = 0,
+	THE_CULL_FRONT,
+	THE_CULL_BACK,
+	THE_CULL_FRONT_AND_BACK
 };
 
-typedef int nyas_depth_func;
-enum nyas_depth_func {
+typedef int the_depth_func;
+enum the_depth_func {
 	// TODO: Add as needed.
-	NYAS_DEPTH_CURRENT = 0,
-	NYAS_DEPTH_LEQUAL,
-	NYAS_DEPTH_LESS,
+	THE_DEPTH_CURRENT = 0,
+	THE_DEPTH_LEQUAL,
+	THE_DEPTH_LESS,
 };
 
-typedef int nyas_texture_face;
-enum nyas_texture_face {
-	NYAS_FACE_POS_X = 0,
-	NYAS_FACE_NEG_X,
-	NYAS_FACE_POS_Y,
-	NYAS_FACE_NEG_Y,
-	NYAS_FACE_POS_Z,
-	NYAS_FACE_NEG_Z,
-	NYAS_FACE_2D,
-	NYAS_CUBE_FACE_COUNT
+typedef int the_texture_face;
+enum the_texture_face {
+	THE_FACE_POS_X = 0,
+	THE_FACE_NEG_X,
+	THE_FACE_POS_Y,
+	THE_FACE_NEG_Y,
+	THE_FACE_POS_Z,
+	THE_FACE_NEG_Z,
+	THE_FACE_2D,
+	THE_CUBE_FACE_COUNT
 };
 
-typedef int nyas_framebuffer_attach;
-enum nyas_framebuffer_attach {
-	NYAS_ATTACH_DEPTH_STENCIL = -3,
-	NYAS_ATTACH_STENCIL = -2,
-	NYAS_ATTACH_DEPTH = -1,
-	NYAS_ATTACH_COLOR = 0,
-	NYAS_ATTACH_COLOR1,
-	NYAS_ATTACH_COLOR2,
-	NYAS_ATTACH_COLOR3,
-	NYAS_ATTACH_COLOR4,
-	NYAS_ATTACH_COLOR5,
-	NYAS_ATTACH_COLOR6
+typedef int the_framebuffer_attach;
+enum the_framebuffer_attach {
+	THE_ATTACH_DEPTH_STENCIL = -3,
+	THE_ATTACH_STENCIL = -2,
+	THE_ATTACH_DEPTH = -1,
+	THE_ATTACH_COLOR = 0,
+	THE_ATTACH_COLOR1,
+	THE_ATTACH_COLOR2,
+	THE_ATTACH_COLOR3,
+	THE_ATTACH_COLOR4,
+	THE_ATTACH_COLOR5,
+	THE_ATTACH_COLOR6
 };
 
-typedef int nyas_texture_flags;
-enum nyas_texture_flags {
-	NYAS_TEX_FLAG_DEFAULT = 0,
-	NYAS_TEX_FLAG_GENERATE_MIPMAPS = 1,
-	NYAS_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD = 1 << 1,
-	NYAS_TEX_FLAG_COUNT
+typedef int the_texture_flags;
+enum the_texture_flags {
+	THE_TEX_FLAG_DEFAULT = 0,
+	THE_TEX_FLAG_GENERATE_MIPMAPS = 1,
+	THE_TEX_FLAG_FLIP_VERTICALLY_ON_LOAD = 1 << 1,
+	THE_TEX_FLAG_COUNT
 };
 
-typedef int nyas_texture_type;
-enum nyas_texture_type {
-	NYAS_TEX_DEFAULT = 0,
-	NYAS_TEX_2D,
-	NYAS_TEX_ARRAY_2D,
-	NYAS_TEX_CUBEMAP,
-	NYAS_TEX_ARRAY_CUBEMAP,
-	NYAS_TEX_COUNT
+typedef int the_texture_type;
+enum the_texture_type {
+	THE_TEX_DEFAULT = 0,
+	THE_TEX_2D,
+	THE_TEX_ARRAY_2D,
+	THE_TEX_CUBEMAP,
+	THE_TEX_ARRAY_CUBEMAP,
+	THE_TEX_COUNT
 };
 
-typedef int nyas_texture_format; // enum nyas_texture_formats
-enum nyas_texture_format {
-	NYAS_TEX_FMT_DEFAULT = 0,
-	NYAS_TEX_FMT_DEPTH,
-	NYAS_TEX_FMT_STENCIL,
-	NYAS_TEX_FMT_DEPTH_STENCIL,
-	NYAS_TEX_FMT_SRGB,
-	NYAS_TEX_FMT_SRGBA,
-	NYAS_TEX_FMT_R8,
-	NYAS_TEX_FMT_RG8,
-	NYAS_TEX_FMT_RGB8,
-	NYAS_TEX_FMT_RGBA8,
-	NYAS_TEX_FMT_R16F,
-	NYAS_TEX_FMT_RG16F,
-	NYAS_TEX_FMT_RGB16F,
-	NYAS_TEX_FMT_RGBA16F,
-	NYAS_TEX_FMT_RGB32F,
-	NYAS_TEX_FMT_COUNT
+typedef int the_texture_format; // enum the_texture_formats
+enum the_texture_format {
+	THE_TEX_FMT_DEFAULT = 0,
+	THE_TEX_FMT_DEPTH,
+	THE_TEX_FMT_STENCIL,
+	THE_TEX_FMT_DEPTH_STENCIL,
+	THE_TEX_FMT_SRGB,
+	THE_TEX_FMT_SRGBA,
+	THE_TEX_FMT_R8,
+	THE_TEX_FMT_RG8,
+	THE_TEX_FMT_RGB8,
+	THE_TEX_FMT_RGBA8,
+	THE_TEX_FMT_R16F,
+	THE_TEX_FMT_RG16F,
+	THE_TEX_FMT_RGB16F,
+	THE_TEX_FMT_RGBA16F,
+	THE_TEX_FMT_RGB32F,
+	THE_TEX_FMT_COUNT
 };
 
-typedef int nyas_texture_filter; // enum nyas_texture_filters
-enum nyas_texture_filter {
-	NYAS_TEX_FLTR_DEFAULT = 0,
-	NYAS_TEX_FLTR_LINEAR,
-	NYAS_TEX_FLTR_LINEAR_MIPMAP_LINEAR,
-	NYAS_TEX_FLTR_LINEAR_MIPMAP_NEAR,
-	NYAS_TEX_FLTR_NEAR,
-	NYAS_TEX_FLTR_NEAR_MIPMAP_NEAR,
-	NYAS_TEX_FLTR_NEAR_MIPMAP_LINEAR,
-	NYAS_TEX_FLTR_COUNT
+typedef int the_texture_filter; // enum the_texture_filters
+enum the_texture_filter {
+	THE_TEX_FLTR_DEFAULT = 0,
+	THE_TEX_FLTR_LINEAR,
+	THE_TEX_FLTR_LINEAR_MIPMAP_LINEAR,
+	THE_TEX_FLTR_LINEAR_MIPMAP_NEAR,
+	THE_TEX_FLTR_NEAR,
+	THE_TEX_FLTR_NEAR_MIPMAP_NEAR,
+	THE_TEX_FLTR_NEAR_MIPMAP_LINEAR,
+	THE_TEX_FLTR_COUNT
 };
 
-typedef int nyas_texture_wrap;
-enum nyas_texture_wrap {
-	NYAS_TEX_WRAP_DEFAULT = 0,
-	NYAS_TEX_WRAP_CLAMP,
-	NYAS_TEX_WRAP_REPEAT,
-	NYAS_TEX_WRAP_MIRROR,
-	NYAS_TEX_WRAP_BORDER,
-	NYAS_TEX_WRAP_COUNT
+typedef int the_texture_wrap;
+enum the_texture_wrap {
+	THE_TEX_WRAP_DEFAULT = 0,
+	THE_TEX_WRAP_CLAMP,
+	THE_TEX_WRAP_REPEAT,
+	THE_TEX_WRAP_MIRROR,
+	THE_TEX_WRAP_BORDER,
+	THE_TEX_WRAP_COUNT
 };
 
-struct nyas_texture_desc {
-	nyas_texture_flags flags;
-	nyas_texture_type type;
+struct the_texture_desc {
+	the_texture_flags flags;
+	the_texture_type type;
 	int width;
 	int height;
-	nyas_texture_format fmt;
-	nyas_texture_filter min_filter;
-	nyas_texture_filter mag_filter;
-	nyas_texture_wrap wrap_s;
-	nyas_texture_wrap wrap_t;
-	nyas_texture_wrap wrap_r;
+	the_texture_format fmt;
+	the_texture_filter min_filter;
+	the_texture_filter mag_filter;
+	the_texture_wrap wrap_s;
+	the_texture_wrap wrap_t;
+	the_texture_wrap wrap_r;
 	float border_color[4];
 };
 
-struct nyas_texture_target {
-	nyas_tex tex;
-	nyas_texture_face face;
-	nyas_framebuffer_attach attach;
+struct the_texture_target {
+	the_tex tex;
+	the_texture_face face;
+	the_framebuffer_attach attach;
 	int lod_level;
 };
 
-struct nyas_shader_desc {
+struct the_shader_desc {
 	const char *name;
 	int data_count;
 	int tex_count;
@@ -171,96 +171,96 @@ struct nyas_shader_desc {
 	int common_cubemap_count;
 };
 
-typedef struct nyas_mat {
+typedef struct the_mat {
 	void *ptr; // TODO deprecar
-	nyas_shader shader;
-} nyas_mat;
+	the_shader shader;
+} the_mat;
 
-typedef int nyas_draw_flags;
-enum nyas_draw_flags {
-	NYAS_DRAW_CLEAR_COLOR,
-	NYAS_DRAW_CLEAR_DEPTH,
-	NYAS_DRAW_CLEAR_STENCIL,
-	NYAS_DRAW_TEST_DEPTH,
-	NYAS_DRAW_TEST_STENCIL,
-	NYAS_DRAW_WRITE_DEPTH,
-	NYAS_DRAW_WRITE_STENCIL,
-	NYAS_DRAW_BLEND,
-	NYAS_DRAW_CULL,
-	NYAS_DRAW_SCISSOR,
-	NYAS_DRAW_FLAGS_COUNT
+typedef int the_draw_flags;
+enum the_draw_flags {
+	THE_DRAW_CLEAR_COLOR,
+	THE_DRAW_CLEAR_DEPTH,
+	THE_DRAW_CLEAR_STENCIL,
+	THE_DRAW_TEST_DEPTH,
+	THE_DRAW_TEST_STENCIL,
+	THE_DRAW_WRITE_DEPTH,
+	THE_DRAW_WRITE_STENCIL,
+	THE_DRAW_BLEND,
+	THE_DRAW_CULL,
+	THE_DRAW_SCISSOR,
+	THE_DRAW_FLAGS_COUNT
 };
 
-struct nyas_draw_target {
-	nyas_framebuffer fb;
-	struct nyas_color bgcolor;
+struct the_draw_target {
+	the_framebuffer fb;
+	struct the_color bgcolor;
 };
 
-struct nyas_draw_pipeline {
-	nyas_mat shader_mat;
-	nyas_vertex_attrib va;
+struct the_draw_pipeline {
+	the_mat shader_mat;
+	the_vertex_attrib va;
 };
 
-struct nyas_draw_ops {
-	struct nyas_rect viewport;
-	struct nyas_rect scissor;
-	nyas_draw_flags enable;
-	nyas_draw_flags disable;
+struct the_draw_ops {
+	struct the_rect viewport;
+	struct the_rect scissor;
+	the_draw_flags enable;
+	the_draw_flags disable;
 	uint8_t blend_src;
 	uint8_t blend_dst;
 	uint8_t cull_face;
 	uint8_t depth_fun;
 };
 
-struct nyas_draw_cmd {
-	nyas_mesh mesh;
-	nyas_mat material;
+struct the_draw_cmd {
+	the_mesh mesh;
+	the_mat material;
 };
 
-struct nyas_render_state {
-	struct nyas_draw_target target;
-	struct nyas_draw_pipeline pipeline;
-	struct nyas_draw_ops ops;
+struct the_render_state {
+	struct the_draw_target target;
+	struct the_draw_pipeline pipeline;
+	struct the_draw_ops ops;
 };
 
-typedef struct nyas_draw_cmd nydrawcmd;
-NYAS_DECL_ARR(nydrawcmd);
+typedef struct the_draw_cmd thedrawcmd;
+THE_DECL_ARR(thedrawcmd);
 
-struct nyas_draw {
-	struct nyas_render_state state;
-	struct nyarr_nydrawcmd *cmds;
+struct the_draw {
+	struct the_render_state state;
+	struct thearr_thedrawcmd *cmds;
 };
 
-void nyas_falloc_set_buffer(void *buffer, ptrdiff_t size);
-void *nyas_falloc(ptrdiff_t size);
+void the_falloc_set_buffer(void *buffer, ptrdiff_t size);
+void *the_falloc(ptrdiff_t size);
 
-nyas_tex nyas_tex_create(void);
-void nyas_tex_set(nyas_tex tex, struct nyas_texture_desc *desc);
-void nyas_tex_load(nyas_tex tex, struct nyas_texture_desc *desc, const char *path);
-struct nyas_point nyas_tex_size(nyas_tex tex);
+the_tex the_tex_create(void);
+void the_tex_set(the_tex tex, struct the_texture_desc *desc);
+void the_tex_load(the_tex tex, struct the_texture_desc *desc, const char *path);
+struct the_point the_tex_size(the_tex tex);
 
-nyas_framebuffer nyas_fb_create(void);
-void nyas_fb_set_target(nyas_framebuffer fb, int index, struct nyas_texture_target target);
+the_framebuffer the_fb_create(void);
+void the_fb_set_target(the_framebuffer fb, int index, struct the_texture_target target);
 
 // TODO(Renderer): Unificar load y reload
-nyas_mesh nyas_mesh_create(void);
-nyas_mesh nyas_mesh_load_file(const char *path);
-void nyas_mesh_reload_file(nyas_mesh mesh, const char *path);
+the_mesh the_mesh_create(void);
+the_mesh the_mesh_load_file(const char *path);
+void the_mesh_reload_file(the_mesh mesh, const char *path);
 
-nyas_shader nyas_shader_create(const struct nyas_shader_desc *desc);
-void *nyas_shader_data(nyas_shader shader);
-void nyas_shader_reload(nyas_shader shader);
-nyas_tex *nyas_shader_tex(nyas_shader shader);
-nyas_tex *nyas_shader_cubemap(nyas_shader shader);
+the_shader the_shader_create(const struct the_shader_desc *desc);
+void *the_shader_data(the_shader shader);
+void the_shader_reload(the_shader shader);
+the_tex *the_shader_tex(the_shader shader);
+the_tex *the_shader_cubemap(the_shader shader);
 
 /* Creates a new material and alloc persistent memory for its data */
-nyas_mat nyas_mat_create(nyas_shader shader);
+the_mat the_mat_create(the_shader shader);
 /* Creates a new material and alloc frame-scoped memory for its data */
-nyas_mat nyas_mat_tmp(nyas_shader shader);
-nyas_mat nyas_mat_copy(nyas_mat mat);
-nyas_mat nyas_mat_copy_shader(nyas_shader shader);
-nyas_tex *nyas_mat_tex(nyas_mat mat); // Ptr to first texture.
+the_mat the_mat_tmp(the_shader shader);
+the_mat the_mat_copy(the_mat mat);
+the_mat the_mat_copy_shader(the_shader shader);
+the_tex *the_mat_tex(the_mat mat); // Ptr to first texture.
 
-void nyas_draw(struct nyas_draw *dl);
+void the_draw(struct the_draw *dl);
 
-#endif // NYAS_PIXELS_H
+#endif // THE_PIXELS_H
