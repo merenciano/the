@@ -21,7 +21,7 @@ IncludeCategories:
     Priority:        0
 IncludeIsMainRegex: "(_test)?$"
 IndentCaseLabels: false
-InsertNewlineAtEOF: true
+#InsertNewlineAtEOF: true
 MaxEmptyLinesToKeep: 1
 PenaltyBreakAssignment: 30
 PenaltyBreakBeforeFirstCallParameter: 100

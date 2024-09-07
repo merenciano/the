@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 set(LIB_NAME the)
 
-project(The VERSION 0.1.0)
+project(The VERSION 0.2.0)
 
 add_library(${LIB_NAME} STATIC)
 set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)

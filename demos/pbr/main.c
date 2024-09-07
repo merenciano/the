@@ -47,24 +47,19 @@ Init(void)
 	the_tex prefilter;
 	the_tex lut;
 
-	// TODO: create repe, porque peta sino?
-	g_shaders.fullscreen_img = the_shader_create(&g_shader_descriptors.fullscreen_img);
-	g_shaders.skybox = the_shader_create(&g_shader_descriptors.sky);
-	g_shaders.pbr = the_shader_create(&g_shader_descriptors.pbr);
-
 	struct tut_shad_ldargs fsimgargs = {
 		.desc = g_shader_descriptors.fullscreen_img,
 		.shader = &g_shaders.fullscreen_img
 	};
 
 	struct tut_shad_ldargs skyargs = {
-		.desc = g_shader_descriptors.fullscreen_img,
-		.shader = &g_shaders.fullscreen_img
+		.desc = g_shader_descriptors.sky,
+		.shader = &g_shaders.skybox
 	};
 
 	struct tut_shad_ldargs pbrargs = {
-		.desc = g_shader_descriptors.fullscreen_img,
-		.shader = &g_shaders.fullscreen_img
+		.desc = g_shader_descriptors.pbr,
+		.shader = &g_shaders.pbr
 	};
 
 	struct tut_mesh_ldargs mesh = {
@@ -445,7 +440,7 @@ main(int argc, char **argv)
 	void *mem_chunk = malloc(THE_MB(256));
 	the_mem_init(mem_chunk, THE_MB(256));
 	the_falloc_set_buffer(the_palloc(THE_MB(16)), THE_MB(16));
-	the_io_init("THE PBR Material Demo", (struct the_point){ 1920, 1080 });
+	the_io_init("THE PBR Material Demo", (struct the_point){ 1600, 900 });
 	the_camera_init_default(&camera);
 	nuklear_init();
 	Init();
