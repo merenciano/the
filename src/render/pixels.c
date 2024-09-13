@@ -811,6 +811,11 @@ the_draw(struct the_draw *dl)
 	}
 }
 
+void the_render_sync()
+{
+	thepx_sync();
+}
+
 #if defined(THE_GLES2)
 #include "pixels_gles2.c"
 #else

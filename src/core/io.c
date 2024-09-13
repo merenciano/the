@@ -1,5 +1,6 @@
 #include "io.h"
 #include "mem.h"
+#include <bits/time.h>
 
 #ifndef __EMSCRIPTEN__
 #include <glad/glad.h>
@@ -264,10 +265,16 @@ the_window_swap(void)
 	glfwSwapBuffers(io.internal_window);
 }
 
-the_chrono
-the_time(void)
+the_time
+the_now(void)
 {
 	struct timespec time;
-	clock_gettime(2, &time);
-	return time.tv_nsec + time.tv_sec * 1000000000;
+	clock_gettime(CLOCK_REALTIME, &time);
+	return (the_time){.sec = time.tv_sec, .ns = time.tv_nsec};
+}
+
+int64_t 
+the_elapsed(the_time from, the_time to)
+{
+	return 1000000000 * (to.sec - from.sec) + to.ns - from.ns;
 }

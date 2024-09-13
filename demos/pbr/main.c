@@ -444,10 +444,13 @@ main(int argc, char **argv)
 	the_camera_init_default(&camera);
 	nuklear_init();
 	Init();
-	the_chrono frame_chrono = the_time();
+	the_time frame_chrono = the_now();
 	while (!the_io->window_closed) {
-		float delta_time = the_time_sec(the_elapsed(frame_chrono));
-		frame_chrono = the_time();
+		float delta_time = the_time_sec(the_elapsed(frame_chrono, the_now()));
+		printf("Frame End: %ld\n", the_elapsed(frame_chrono, the_now()));
+		frame_chrono = the_now();
+		printf("--------------\n");
+		printf("Frame start: %ld\n", the_elapsed(frame_chrono, the_now()));
 
 		struct thearr_thedraw *frame = NULL;
 		BuildFrame(&frame, delta_time);
@@ -456,8 +459,12 @@ main(int argc, char **argv)
 		for (int i = 0; i < frame->count; ++i) {
 			the_draw(&frame->at[i]);
 		}
-		nuklear_draw();
+		printf("Before flush: %ld\n", the_elapsed(frame_chrono, the_now()));
+		//nuklear_draw();
+		the_render_sync();
+		printf("After flush: %ld\n", the_elapsed(frame_chrono, the_now()));
 		the_window_swap();
+		printf("After swap: %ld\n", the_elapsed(frame_chrono, the_now()));
 		// End render
 	}
 

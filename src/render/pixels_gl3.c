@@ -576,3 +576,9 @@ thepx_scissor(struct the_rect rect)
 		glScissor(rect.x, rect.y, rect.w, rect.h);
 	}
 }
+
+void
+thepx_sync()
+{
+	glFinish();
+}

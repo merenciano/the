@@ -106,6 +106,7 @@ void thepx_stencil_enable_mask(void);
 void thepx_stencil_disable_mask(void);
 void thepx_viewport(struct the_rect rect);
 void thepx_scissor(struct the_rect rect);
+void thepx_sync();
 
 typedef struct the_mesh_internal mesh;
 THE_DECL_ARR(mesh);

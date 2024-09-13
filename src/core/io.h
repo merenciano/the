@@ -9,42 +9,45 @@
 #define THE_PRINT printf
 #define THE__LOG_LOC THE_PRINT("%s(%u)", __FILE__, __LINE__)
 
-#define THE_LOG(...)        \
-	THE_PRINT("The [Log] ");   \
-	THE__LOG_LOC;           \
-	THE_PRINT(":\n\t");     \
-	THE_PRINT(__VA_ARGS__); \
+#define THE_LOG(...)         \
+	THE_PRINT("The [Log] "); \
+	THE__LOG_LOC;            \
+	THE_PRINT(":\n\t");      \
+	THE_PRINT(__VA_ARGS__);  \
 	THE_PRINT("\n")
 
-#define THE_LOG_WARN(...)     \
+#define THE_LOG_WARN(...)        \
 	THE_PRINT("The [Warning] "); \
-	THE__LOG_LOC;             \
-	THE_PRINT(":\n\t");       \
-	THE_PRINT(__VA_ARGS__);   \
+	THE__LOG_LOC;                \
+	THE_PRINT(":\n\t");          \
+	THE_PRINT(__VA_ARGS__);      \
 	THE_PRINT("\n")
 
-#define THE_LOG_ERR(...)    \
+#define THE_LOG_ERR(...)       \
 	THE_PRINT("The [Error] "); \
-	THE__LOG_LOC;           \
-	THE_PRINT(":\n\t");     \
-	THE_PRINT(__VA_ARGS__); \
+	THE__LOG_LOC;              \
+	THE_PRINT(":\n\t");        \
+	THE_PRINT(__VA_ARGS__);    \
 	THE_PRINT("\n")
 
-#define the_elapsed(CHRONO) (the_time() - (CHRONO))
-#define the_time_sec(CHRONO) ((CHRONO) / 1000000000.0f)
-#define the_time_milli(CHRONO) ((CHRONO) / 1000000)
-#define the_time_micro(CHRONO) ((CHRONO) / 1000)
-#define the_time_nano(CHRONO) (CHRONO)
+#define the_time_sec(NANO) ((NANO) / 1000000000.0f)
+#define the_time_milli(NANO) ((NANO) / 1000000)
+#define the_time_micro(NANO) ((NANO) / 1000)
 
-typedef int64_t the_chrono;
-the_chrono the_time(void);
+typedef struct the_time {
+	int64_t sec; // seconds
+	int64_t ns;  // nanoseconds
+} the_time;
+
+the_time the_now(void);
+int64_t the_elapsed(the_time from, the_time to); // nanosec
 
 typedef int8_t the_keystate;
 enum the_keystate {
 	THE_KEYSTATE_RELEASED = 0, /* Not pressed */
-	THE_KEYSTATE_DOWN = 1, /* From released to pressed this frame */
-	THE_KEYSTATE_UP = 2, /* From pressed to released this frame */
-	THE_KEYSTATE_PRESSED = 3, /* Pressed */
+	THE_KEYSTATE_DOWN = 1,     /* From released to pressed this frame */
+	THE_KEYSTATE_UP = 2,       /* From pressed to released this frame */
+	THE_KEYSTATE_PRESSED = 3,  /* Pressed */
 };
 
 typedef int the_mouse_button;

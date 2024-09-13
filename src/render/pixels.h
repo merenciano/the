@@ -262,5 +262,6 @@ the_mat the_mat_copy_shader(the_shader shader);
 the_tex *the_mat_tex(the_mat mat); // Ptr to first texture.
 
 void the_draw(struct the_draw *dl);
+void the_render_sync(); // Blocks until gpu sync (glFinish in OpenGL)
 
 #endif // THE_PIXELS_H
